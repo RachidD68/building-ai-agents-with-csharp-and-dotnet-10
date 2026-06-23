@@ -1,0 +1,42 @@
+{
+  "algorithm": {
+    "definition": "A step-by-step procedure or set of rules for solving a problem or accomplishing a task, especially by a computer.",
+    "synonyms": ["procedure", "method", "process", "routine", "formula"]
+  },
+  "cache": {
+    "definition": "A hardware or software component that stores data so that future requests for that data can be served faster.",
+    "synonyms": ["buffer", "store", "memory", "reserve"]
+  },
+  "concurrency": {
+    "definition": "The ability of a system to handle multiple tasks or processes simultaneously or in overlapping time periods.",
+    "synonyms": ["parallelism", "simultaneity", "multitasking"]
+  },
+  "dependency": {
+    "definition": "A relationship where one component requires another to function correctly.",
+    "synonyms": ["reliance", "requirement", "prerequisite"]
+  },
+  "endpoint": {
+    "definition": "A URL or URI that an API exposes for clients to interact with a service.",
+    "synonyms": ["route", "URL", "interface", "entry point"]
+  },
+  "framework": {
+    "definition": "A reusable set of libraries, tools, and conventions that provides a foundation for building software applications.",
+    "synonyms": ["platform", "toolkit", "library", "infrastructure"]
+  },
+  "idempotent": {
+    "definition": "An operation that produces the same result regardless of how many times it is executed with the same input.",
+    "synonyms": ["repeatable", "stable", "consistent"]
+  },
+  "middleware": {
+    "definition": "Software that acts as a bridge or intermediary between different applications, tools, or systems in a pipeline.",
+    "synonyms": ["intermediary", "bridge", "connector", "handler"]
+  },
+  "refactoring": {
+    "definition": "The process of restructuring existing code without changing its external behavior to improve readability, maintainability, or performance.",
+    "synonyms": ["restructuring", "reorganizing", "improving", "cleaning up"]
+  },
+  "serialization": {
+    "definition": "The process of converting an object or data structure into a format that can be stored or transmitted and reconstructed later.",
+    "synonyms": ["encoding", "marshalling", "conversion", "formatting"]
+  }
+}

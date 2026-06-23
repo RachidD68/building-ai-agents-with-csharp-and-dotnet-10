@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Real BPE tokenizer + vocab data (offline, no network). -->
+    <PackageReference Include="Microsoft.ML.Tokenizers" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" />
+    <!-- Bump the vulnerable Microsoft.Bcl.Memory 9.0.4 that ML.Tokenizers pulls in (GHSA-73j8-2gch-69rq). -->
+    <PackageReference Include="Microsoft.Bcl.Memory" />
+    <!-- ChatMessage / ChatRole for the message-array demonstration. -->
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+  </ItemGroup>
+
+</Project>

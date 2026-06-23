@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      The Agent Skills API is still marked [Experimental("MAAI001")] in MAF 1.10
+      across AgentSkillsProvider, AgentSkillsProviderBuilder, AgentInlineSkill,
+      AgentClassSkill, AgentSkillFrontmatter, and the AgentSkillResource /
+      AgentSkillScript attributes. The API exists and works; the diagnostic just
+      signals it may change before it stabilises. Suppress it at the project level
+      (the entire project is a Skills demo).
+    -->
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="skills\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

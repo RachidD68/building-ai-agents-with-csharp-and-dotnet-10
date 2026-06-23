@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ch13.A2APreview": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56402;http://localhost:56403"
+    }
+  }
+}

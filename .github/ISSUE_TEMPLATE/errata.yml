@@ -1,0 +1,81 @@
+name: Errata report
+description: Report a typo, factual mistake, broken code sample, or outdated information in the book.
+title: "[Errata] "
+labels: ["errata"]
+assignees: ["RachidD68"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report an erratum. Accurate corrections
+        from readers are how the book gets better — please be as specific as you
+        can about the location and what you'd expect instead.
+
+        Before filing, please skim the existing
+        [errata list](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues?q=is%3Aissue+label%3Aerrata)
+        so we don't double up.
+
+  - type: input
+    id: page
+    attributes:
+      label: Page number(s)
+      description: From the book PDF/DOCX. A range is fine if the issue spans more than one page.
+      placeholder: e.g. 42, 88-90
+    validations:
+      required: true
+
+  - type: input
+    id: chapter
+    attributes:
+      label: Chapter and section
+      description: Chapter number / title and the section heading where the issue appears.
+      placeholder: e.g. Chapter 8 — Tools and Function Calling · "The tool-calling loop"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of issue
+      options:
+        - Typo or grammar
+        - Factual mistake (incorrect information)
+        - Code sample doesn't compile or run
+        - Outdated API or feature description
+        - Broken or misleading link
+        - Image, diagram, or figure issue
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What's wrong?
+      description: Quote the exact text or code from the book if possible. Screenshots welcome.
+      placeholder: |
+        The book says "..." but the correct version is "...".
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix (optional)
+      description: If you know how the passage should be corrected, suggest it here.
+
+  - type: input
+    id: book-version
+    attributes:
+      label: Book version
+      description: Found on the title page / "A Note on Versions" section of the book.
+      placeholder: v1.0
+    validations:
+      required: true
+
+  - type: input
+    id: companion-project
+    attributes:
+      label: Companion project (if code-related)
+      description: Which companion project does this relate to, if any?
+      placeholder: e.g. src/Ch08.ToolsFunctionCalling/Ch08.WeatherTool — or not applicable

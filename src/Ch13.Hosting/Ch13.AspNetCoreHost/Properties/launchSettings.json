@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ch13.AspNetCoreHost": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56395;http://localhost:56400"
+    }
+  }
+}

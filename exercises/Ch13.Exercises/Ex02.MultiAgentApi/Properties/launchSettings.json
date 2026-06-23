@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ex02.MultiAgentApi": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56404;http://localhost:56405"
+    }
+  }
+}

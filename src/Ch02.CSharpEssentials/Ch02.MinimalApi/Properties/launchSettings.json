@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ch02.MinimalApi": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56388;http://localhost:56390"
+    }
+  }
+}

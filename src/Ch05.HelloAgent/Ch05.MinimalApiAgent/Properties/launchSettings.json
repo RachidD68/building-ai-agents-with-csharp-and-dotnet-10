@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ch05.MinimalApiAgent": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56397;http://localhost:56401"
+    }
+  }
+}
