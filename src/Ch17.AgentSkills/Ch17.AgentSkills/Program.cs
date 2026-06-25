@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Agent Skills: file-based, inline, and class-based
+// Chapter 17 — Agent Skills: file-based, inline, and class-based
 // ----------------------------------------------------------------------------
 // One SkillsAgent surfaces three different skill styles through a single
 // AgentSkillsProvider:
@@ -83,7 +83,7 @@ UnitConverterSkill unitConverterSkill = new();
 // allow-list — useful when a shared skills folder contains experimental
 // skills you do not want to surface in this particular service.
 //
-// As of MAF 1.10 a file-based source MUST be paired with a script runner
+// As of MAF 1.11 a file-based source MUST be paired with a script runner
 // (the builder throws from Build() otherwise, even when no skill ships a
 // script). We hand it RunFileScriptAsync below, a minimal subprocess
 // runner. The on-disk expense-report skill is resource-only, so the runner
@@ -194,7 +194,7 @@ static string Truncate(string? value, int max = 96)
     return value.Length <= max ? value : value[..max] + "…";
 }
 
-// Minimal subprocess runner for file-based skill scripts (MAF 1.10 shape).
+// Minimal subprocess runner for file-based skill scripts (MAF 1.11 shape).
 // The runner delegate receives the owning skill, the AgentFileSkillScript
 // (with its absolute FullPath), and the raw JSON arguments — a string array
 // of command-line arguments, per AgentFileSkillScript.ParametersSchema. It

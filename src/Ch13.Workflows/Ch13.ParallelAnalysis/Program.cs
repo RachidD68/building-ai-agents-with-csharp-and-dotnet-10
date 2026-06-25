@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Parallel Analysis: idiomatic fan-out / fan-in
+// Chapter 13 — Parallel Analysis: idiomatic fan-out / fan-in
 // ----------------------------------------------------------------------------
 // A dispatcher fans a product review out to three analyzer agents that run
 // concurrently — sentiment, topic, and a one-line summary. A fan-in barrier

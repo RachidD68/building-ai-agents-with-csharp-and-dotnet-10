@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Agents as Workflow Executors
+// Chapter 13 — Agents as Workflow Executors
 // ----------------------------------------------------------------------------
 // Earlier samples wired plain string-transform executors into a graph. The
 // real payoff of workflows in an agent framework is orchestrating *agents*.

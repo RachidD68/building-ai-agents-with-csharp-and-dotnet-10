@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Introduction to Workflows (Sequential Workflow)
+// Chapter 13 — Introduction to Workflows (Sequential Workflow)
 // Demonstrates the Workflow engine from Microsoft.Agents.AI.Workflows.
 //
 // Key concepts:

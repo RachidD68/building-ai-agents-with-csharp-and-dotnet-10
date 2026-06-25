@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — A2A input-request: human-in-the-loop across process boundaries
+// Chapter 13 — A2A input-request: human-in-the-loop across process boundaries
 // ----------------------------------------------------------------------------
 // Earlier in this chapter the ApprovalWorkflow used a RequestPort to pause for
 // a human decision inside a single process. MAF generalises that pattern: an

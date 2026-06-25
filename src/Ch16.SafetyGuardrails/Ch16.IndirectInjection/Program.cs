@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Indirect / second-order prompt injection (OWASP LLM01, LLM08)
+// Chapter 16 — Indirect / second-order prompt injection (OWASP LLM01, LLM08)
 // ----------------------------------------------------------------------------
 // Direct injection is the user typing "ignore previous instructions". The more
 // dangerous case is INDIRECT: the malicious instruction arrives inside content

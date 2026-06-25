@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 17 — Evaluating a RAG agent: grounding the Contoso FAQ agent
+// Chapter 18 — Evaluating a RAG agent: grounding the Contoso FAQ agent
 // ----------------------------------------------------------------------------
 // This is the evaluation companion to Chapter 10's FAQ agent. It rebuilds the
 // exact same RAG pipeline (embed -> vector search -> inject context via the

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Sub-workflows and workflows-as-agents (composition)
+// Chapter 13 — Sub-workflows and workflows-as-agents (composition)
 // ----------------------------------------------------------------------------
 // Once a workflow exists you can compose it two ways:
 //

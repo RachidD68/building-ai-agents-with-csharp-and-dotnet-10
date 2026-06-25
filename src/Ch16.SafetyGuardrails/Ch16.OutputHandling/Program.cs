@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Improper Output Handling (OWASP LLM05)
+// Chapter 16 — Improper Output Handling (OWASP LLM05)
 // ----------------------------------------------------------------------------
 // The chapter already redacts PII *out* of a response. This demo covers the
 // other direction: an LLM's output is UNTRUSTED INPUT to whatever consumes it.

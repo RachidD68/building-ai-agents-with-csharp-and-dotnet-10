@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Azure AI Content Safety: graduating from regex (backs A5)
+// Chapter 16 — Azure AI Content Safety: graduating from regex (backs A5)
 // ----------------------------------------------------------------------------
 // The chapter's regex ContentFilterMiddleware and PromptInjectionDetector are
 // cheap, zero-dependency, and low-recall. Azure AI Content Safety (part of

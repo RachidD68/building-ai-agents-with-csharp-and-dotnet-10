@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 11 — Multi-Agent Systems (Content Pipeline — Capstone)
+// Chapter 12 — Multi-Agent Systems (Content Pipeline — Capstone)
 // Demonstrates a three-stage content creation pipeline:
 //   Researcher → Writer → Editor
 //

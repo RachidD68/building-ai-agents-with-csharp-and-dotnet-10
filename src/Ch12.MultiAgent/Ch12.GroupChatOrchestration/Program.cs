@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 11 — Group Chat orchestration (MAF 1.10)
+// Chapter 12 — Group Chat orchestration (MAF 1.11)
 // ----------------------------------------------------------------------------
 // The built-in Group Chat orchestration runs several agents in a SHARED
 // conversation, taking turns under a manager that decides who speaks next and

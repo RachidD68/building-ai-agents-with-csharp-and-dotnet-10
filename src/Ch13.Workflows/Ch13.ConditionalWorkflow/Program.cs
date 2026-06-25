@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Introduction to Workflows (Conditional Workflow)
+// Chapter 13 — Introduction to Workflows (Conditional Workflow)
 // Demonstrates conditional routing in the Workflow engine.
 //
 // Key concepts:

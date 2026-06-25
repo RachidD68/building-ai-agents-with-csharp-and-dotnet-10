@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Unbounded Consumption: denial-of-wallet & runaway loops (LLM10)
+// Chapter 16 — Unbounded Consumption: denial-of-wallet & runaway loops (LLM10)
 // ----------------------------------------------------------------------------
 // Cost and availability are SAFETY concerns. An attacker (or a buggy tool loop)
 // can drive unbounded token spend, or an effectively infinite function-call

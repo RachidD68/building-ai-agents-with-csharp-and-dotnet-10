@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 17 — Evaluation: LocalEvaluator + FunctionEvaluator + (optional)
+// Chapter 18 — Evaluation: LocalEvaluator + FunctionEvaluator + (optional)
 // FoundryEvals against a small weather agent
 // ----------------------------------------------------------------------------
 // This sample evaluates a single agent equipped with one tool (get_weather)

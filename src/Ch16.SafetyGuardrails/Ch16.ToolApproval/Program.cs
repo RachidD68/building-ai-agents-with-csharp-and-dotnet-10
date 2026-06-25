@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Tool-call approval: gating Excessive Agency (OWASP LLM06)
+// Chapter 16 — Tool-call approval: gating Excessive Agency (OWASP LLM06)
 // ----------------------------------------------------------------------------
 // The middleware in Ch16.MiddlewarePipeline intercepts *messages*. It never
 // gates *actions*. An agent holding a DeleteCustomerRecord / IssueRefund tool
@@ -22,7 +22,7 @@
 // least privilege.
 //
 // NOTE: ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental
-// ("MAAI001")] in MAF 1.10 — suppressed via <NoWarn> in the .csproj. The
+// ("MAAI001")] in MAF 1.11 — suppressed via <NoWarn> in the .csproj. The
 // ApprovalRequiredAIFunction / ToolApprovalRequestContent types in
 // Microsoft.Extensions.AI are stable.
 // ============================================================================

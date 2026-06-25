@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Introduction to Workflows (Approval Workflow — Capstone)
+// Chapter 13 — Introduction to Workflows (Approval Workflow — Capstone)
 // Demonstrates a human-in-the-loop approval workflow using RequestPort.
 //
 // Key concepts:

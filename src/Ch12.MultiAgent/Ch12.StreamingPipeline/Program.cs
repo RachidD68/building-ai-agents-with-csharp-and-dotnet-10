@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 11 — Streaming a pipeline (MAF 1.10)
+// Chapter 12 — Streaming a pipeline (MAF 1.11)
 // ----------------------------------------------------------------------------
 // Blocking RunAsync hides everything until the whole pipeline finishes. Real UX
 // needs two things from a multi-stage pipeline:

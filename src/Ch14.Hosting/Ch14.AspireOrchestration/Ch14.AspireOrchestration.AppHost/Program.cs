@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Aspire Orchestration (AppHost)
+// Chapter 14 — Aspire Orchestration (AppHost)
 // The Aspire AppHost orchestrates the multi-agent API and provides:
 //   - Service discovery between projects
 //   - Centralized configuration and environment management

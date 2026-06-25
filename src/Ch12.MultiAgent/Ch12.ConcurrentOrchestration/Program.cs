@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 11 — Concurrent orchestration (MAF 1.10)
+// Chapter 12 — Concurrent orchestration (MAF 1.11)
 // ----------------------------------------------------------------------------
 // The built-in Concurrent orchestration fans one input out to N specialists
 // that run in PARALLEL, then aggregates their results. The runtime does the

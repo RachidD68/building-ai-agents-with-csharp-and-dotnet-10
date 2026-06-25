@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 15 — Safety and Guardrails (Critic Agent)
+// Chapter 16 — Safety and Guardrails (Critic Agent)
 // Demonstrates using a second "critic" agent to validate the output of a
 // primary agent. The critic evaluates responses for:
 //   - Factual consistency

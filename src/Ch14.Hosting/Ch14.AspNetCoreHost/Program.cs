@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Hosting and Deployment (ASP.NET Core Host)
+// Chapter 14 — Hosting and Deployment (ASP.NET Core Host)
 // Demonstrates hosting multiple agents in a single ASP.NET Core application
 // using the Microsoft Agent Framework Hosting package (AddAIAgent pattern),
 // plus the production cross-cutting concerns the chapter teaches:

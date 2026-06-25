@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 11 — Multi-Agent Systems (Sequential Pipeline)
+// Chapter 12 — Multi-Agent Systems (Sequential Pipeline)
 // Demonstrates the simplest multi-agent pattern: two agents in sequence.
 // Agent 1 (Translator) translates French text to English.
 // Agent 2 (Summarizer) summarizes the English translation.

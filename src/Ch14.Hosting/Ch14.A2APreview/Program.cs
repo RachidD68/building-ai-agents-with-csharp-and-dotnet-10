@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 13 — A2A Protocol Integration
+// Chapter 14 — A2A Protocol Integration
 // Exposing an agent via the Agent-to-Agent (A2A) protocol using
 // Microsoft Agent Framework's official A2A hosting library.
 //

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 14 — Observability and Debugging
+// Chapter 15 — Observability and Debugging
 // Demonstrates all three observability pillars for AI agents:
 //   1. Logging    — Structured logging with ILogger
 //   2. Metrics    — Custom metrics via System.Diagnostics.Metrics

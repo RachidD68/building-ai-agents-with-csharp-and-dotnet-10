@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 15 — Safety and Guardrails (Middleware Pipeline)
+// Chapter 16 — Safety and Guardrails (Middleware Pipeline)
 // Demonstrates the IChatClient middleware pipeline from Microsoft.Extensions.AI.
 //
 // The ChatClientBuilder composes middleware in a Russian-doll wrapping pattern:

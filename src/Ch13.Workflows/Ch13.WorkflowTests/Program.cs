@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Workflow Tests (design principle #6: cover every branch)
+// Chapter 13 — Workflow Tests (design principle #6: cover every branch)
 // ----------------------------------------------------------------------------
 // Workflows are testable: build the graph, run it in-process with inputs that
 // exercise each branch, and assert on the streamed events and the final output.

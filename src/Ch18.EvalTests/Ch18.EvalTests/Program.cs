@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 17 — Eval as a test suite: a deterministic regression harness
+// Chapter 18 — Eval as a test suite: a deterministic regression harness
 // ----------------------------------------------------------------------------
 // This is the "treat your eval suite like your test suite" discipline made
 // concrete. It is a plain console assertion harness (no xUnit, matching the

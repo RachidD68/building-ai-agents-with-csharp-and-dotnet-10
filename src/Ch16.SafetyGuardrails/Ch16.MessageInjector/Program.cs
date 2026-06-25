@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Injecting safety context mid-run with AIContextProvider
+// Chapter 16 — Injecting safety context mid-run with AIContextProvider
 // ----------------------------------------------------------------------------
 // Middleware (DelegatingChatClient) wraps the raw IChatClient call. It is
 // position-agnostic: it sees one request and one response and does not know it

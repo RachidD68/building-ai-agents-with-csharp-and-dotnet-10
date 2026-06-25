@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 11 — Multi-Agent Systems (Orchestrator Pattern)
+// Chapter 12 — Multi-Agent Systems (Orchestrator Pattern)
 // Demonstrates the hub-and-spoke pattern: an orchestrator agent decides
 // which specialist to call using function calling (agents-as-tools).
 //

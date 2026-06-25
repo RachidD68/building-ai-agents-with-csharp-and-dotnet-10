@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Checkpointed Approval: durable human-in-the-loop
+// Chapter 13 — Checkpointed Approval: durable human-in-the-loop
 // ----------------------------------------------------------------------------
 // Ch13.ApprovalWorkflow paused on a RequestPort and waited for a human decision
 // in the same process. That is fine for a CLI, but a real approval can take

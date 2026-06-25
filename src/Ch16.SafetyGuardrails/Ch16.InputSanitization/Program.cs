@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 15 — Safety and Guardrails (Input Sanitization)
+// Chapter 16 — Safety and Guardrails (Input Sanitization)
 // Demonstrates input sanitization and PII detection for AI agents.
 //
 // Two layers of protection:
