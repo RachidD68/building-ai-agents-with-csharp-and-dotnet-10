@@ -17,9 +17,9 @@
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.10 GA release** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.11 release** and **.NET 10 / C# 14**.
 
-Across eighteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets MAF 1.10 — no preview ceremony.
+Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.11** — no preview ceremony.
 
 ## Table of Contents
 
@@ -35,14 +35,15 @@ Across eighteen chapters in five parts you go from your first call to an LLM, th
 | 8 | Tools and Function Calling | **III — Giving Agents Superpowers** |
 | 9 | The Model Context Protocol | III |
 | 10 | Introduction to RAG | III |
-| 11 | Multi-Agent Systems | **IV — Multi-Agent Collaboration** |
-| 12 | Introduction to Workflows | IV |
-| 13 | Hosting and Deployment | **V — Going to Production** |
-| 14 | Observability and Debugging | V |
-| 15 | Safety and Guardrails | V |
-| 16 | Agent Skills | V |
-| 17 | Evaluation | V |
-| 18 | Your Next Steps | V |
+| 11 | Multimodal Agents | III |
+| 12 | Multi-Agent Systems | **IV — Multi-Agent Collaboration** |
+| 13 | Introduction to Workflows | IV |
+| 14 | Hosting and Deployment | **V — Going to Production** |
+| 15 | Observability and Debugging | V |
+| 16 | Safety and Guardrails | V |
+| 17 | Agent Skills | V |
+| 18 | Evaluation | V |
+| 19 | Your Next Steps | V |
 
 ---
 
@@ -51,7 +52,7 @@ Across eighteen chapters in five parts you go from your first call to an LLM, th
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.10**
+- **Microsoft Agent Framework 1.11**
 - **Microsoft.Extensions.AI 10.7.0**
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
@@ -61,6 +62,7 @@ Every package version is pinned centrally in `Directory.Packages.props` (Central
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - A model provider. The samples default to **Ollama** running locally — zero cost, no API key — using **llama3.2**. They also support Azure OpenAI, OpenAI, GitHub Models, Anthropic, and Microsoft Foundry. Chapter 4 walks through each one.
+- For the **multimodal** samples (Chapter 11), a vision-capable model — `ollama pull llava` locally, or a cloud `gpt-4o`-class model.
 
 For the zero-config local default:
 
@@ -107,18 +109,19 @@ GitHub Models uses the endpoint `https://models.github.ai/inference` with publis
 | `src/Ch05.HelloAgent/` | 5 | Hello, Agent! |
 | `src/Ch06.ConversationsMemory/` | 6 | Conversations and Memory |
 | `src/Ch07.StructuredOutput/` | 7 | Structured Output and Typed Responses |
-| `src/Ch08.ToolsFunctionCalling/` | 8 | Tools and Function Calling |
+| `src/Ch08.ToolsFunctionCalling/` | 8 | Tools and Function Calling (incl. `FileAccessProvider`) |
 | `src/Ch09.MCP/` | 9 | The Model Context Protocol |
 | `src/Ch10.IntroRAG/` | 10 | Introduction to RAG |
-| `src/Ch11.MultiAgent/` | 11 | Multi-Agent Systems |
-| `src/Ch12.Workflows/` | 12 | Introduction to Workflows |
-| `src/Ch13.Hosting/` | 13 | Hosting and Deployment |
-| `src/Ch14.Observability/` | 14 | Observability and Debugging |
-| `src/Ch15.SafetyGuardrails/` | 15 | Safety and Guardrails |
-| `src/Ch16.AgentSkills/` | 16 | Agent Skills |
-| `src/Ch17.EvalSuite/`, `Ch17.EvalTests/`, `Ch17.FaqEval/` | 17 | Evaluation |
-| `src/Ch18.NextSteps/` | 18 | Your Next Steps |
-| `exercises/` | 2–15 | Worked exercise solutions (also indexed in Appendix E) |
+| `src/Ch11.Multimodal/` | 11 | Multimodal Agents — vision, image-to-typed-data |
+| `src/Ch12.MultiAgent/` | 12 | Multi-Agent Systems |
+| `src/Ch13.Workflows/` | 13 | Introduction to Workflows |
+| `src/Ch14.Hosting/` | 14 | Hosting and Deployment |
+| `src/Ch15.Observability/` | 15 | Observability and Debugging |
+| `src/Ch16.SafetyGuardrails/` | 16 | Safety and Guardrails |
+| `src/Ch17.AgentSkills/` | 17 | Agent Skills |
+| `src/Ch18.EvalSuite/`, `Ch18.FaqEval/`, `Ch18.EvalTests/` | 18 | Evaluation |
+| `src/Ch19.NextSteps/` | 19 | Your Next Steps |
+| `exercises/` | 2–16 | Worked exercise solutions (also indexed in Appendix E) |
 
 ## Errata & feedback
 

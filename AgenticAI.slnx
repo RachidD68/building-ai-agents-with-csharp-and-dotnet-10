@@ -41,6 +41,7 @@
     <Project Path="src/Ch08.ToolsFunctionCalling/Ch08.ToolApproval/Ch08.ToolApproval.csproj" />
     <Project Path="src/Ch08.ToolsFunctionCalling/Ch08.ToolChoice/Ch08.ToolChoice.csproj" />
     <Project Path="src/Ch08.ToolsFunctionCalling/Ch08.LoopControl/Ch08.LoopControl.csproj" />
+    <Project Path="src/Ch08.ToolsFunctionCalling/Ch08.FileAccess/Ch08.FileAccess.csproj" />
   </Folder>
   <Folder Name="/src/Ch09.MCP/">
     <Project Path="src/Ch09.MCP/Ch09.McpServer/Ch09.McpServer.csproj" />
@@ -54,55 +55,60 @@
     <Project Path="src/Ch10.IntroRAG/Ch10.HostedFilesRag/Ch10.HostedFilesRag.csproj" />
     <Project Path="src/Ch10.IntroRAG/Ch10.FaqAgent.CustomProvider/Ch10.FaqAgent.CustomProvider.csproj" />
   </Folder>
-  <Folder Name="/src/Ch11.MultiAgent/">
-    <Project Path="src/Ch11.MultiAgent/Ch11.SequentialPipeline/Ch11.SequentialPipeline.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.OrchestratorPattern/Ch11.OrchestratorPattern.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.MagenticOrchestrator/Ch11.MagenticOrchestrator.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.ContentPipeline/Ch11.ContentPipeline.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.ConcurrentOrchestration/Ch11.ConcurrentOrchestration.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.HandoffOrchestration/Ch11.HandoffOrchestration.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.GroupChatOrchestration/Ch11.GroupChatOrchestration.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.StreamingPipeline/Ch11.StreamingPipeline.csproj" />
-    <Project Path="src/Ch11.MultiAgent/Ch11.MultiAgent.Tests/Ch11.MultiAgent.Tests.csproj" />
+  <Folder Name="/src/Ch11.Multimodal/">
+    <Project Path="src/Ch11.Multimodal/Ch11.VisionBasics/Ch11.VisionBasics.csproj" />
+    <Project Path="src/Ch11.Multimodal/Ch11.ImageToTypedData/Ch11.ImageToTypedData.csproj" />
+    <Project Path="src/Ch11.Multimodal/Ch11.Multimodal.Tests/Ch11.Multimodal.Tests.csproj" />
   </Folder>
-  <Folder Name="/src/Ch12.Workflows/">
-    <Project Path="src/Ch12.Workflows/Ch12.SequentialWorkflow/Ch12.SequentialWorkflow.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.ConditionalWorkflow/Ch12.ConditionalWorkflow.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.ApprovalWorkflow/Ch12.ApprovalWorkflow.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.A2AInputRequest/Ch12.A2AInputRequest.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.AgentWorkflow/Ch12.AgentWorkflow.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.CheckpointedApproval/Ch12.CheckpointedApproval.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.ParallelAnalysis/Ch12.ParallelAnalysis.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.SubWorkflow/Ch12.SubWorkflow.csproj" />
-    <Project Path="src/Ch12.Workflows/Ch12.WorkflowTests/Ch12.WorkflowTests.csproj" />
+  <Folder Name="/src/Ch12.MultiAgent/">
+    <Project Path="src/Ch12.MultiAgent/Ch12.SequentialPipeline/Ch12.SequentialPipeline.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.OrchestratorPattern/Ch12.OrchestratorPattern.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.MagenticOrchestrator/Ch12.MagenticOrchestrator.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.ContentPipeline/Ch12.ContentPipeline.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.ConcurrentOrchestration/Ch12.ConcurrentOrchestration.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.HandoffOrchestration/Ch12.HandoffOrchestration.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.GroupChatOrchestration/Ch12.GroupChatOrchestration.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.StreamingPipeline/Ch12.StreamingPipeline.csproj" />
+    <Project Path="src/Ch12.MultiAgent/Ch12.MultiAgent.Tests/Ch12.MultiAgent.Tests.csproj" />
   </Folder>
-  <Folder Name="/src/Ch13.Hosting/">
-    <Project Path="src/Ch13.Hosting/Ch13.AspNetCoreHost/Ch13.AspNetCoreHost.csproj" />
-    <Project Path="src/Ch13.Hosting/Ch13.AspireOrchestration/Ch13.AspireOrchestration.AppHost/Ch13.AspireOrchestration.AppHost.csproj" />
-    <Project Path="src/Ch13.Hosting/Ch13.AspireOrchestration/Ch13.AspireOrchestration.ServiceDefaults/Ch13.AspireOrchestration.ServiceDefaults.csproj" />
-    <Project Path="src/Ch13.Hosting/Ch13.A2APreview/Ch13.A2APreview.csproj" />
+  <Folder Name="/src/Ch13.Workflows/">
+    <Project Path="src/Ch13.Workflows/Ch13.SequentialWorkflow/Ch13.SequentialWorkflow.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.ConditionalWorkflow/Ch13.ConditionalWorkflow.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.ApprovalWorkflow/Ch13.ApprovalWorkflow.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.A2AInputRequest/Ch13.A2AInputRequest.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.AgentWorkflow/Ch13.AgentWorkflow.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.CheckpointedApproval/Ch13.CheckpointedApproval.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.ParallelAnalysis/Ch13.ParallelAnalysis.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.SubWorkflow/Ch13.SubWorkflow.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.WorkflowTests/Ch13.WorkflowTests.csproj" />
   </Folder>
-  <Folder Name="/src/Ch14.Observability/">
-    <Project Path="src/Ch14.Observability/Ch14.OpenTelemetryAgent/Ch14.OpenTelemetryAgent.csproj" />
+  <Folder Name="/src/Ch14.Hosting/">
+    <Project Path="src/Ch14.Hosting/Ch14.AspNetCoreHost/Ch14.AspNetCoreHost.csproj" />
+    <Project Path="src/Ch14.Hosting/Ch14.AspireOrchestration/Ch14.AspireOrchestration.AppHost/Ch14.AspireOrchestration.AppHost.csproj" />
+    <Project Path="src/Ch14.Hosting/Ch14.AspireOrchestration/Ch14.AspireOrchestration.ServiceDefaults/Ch14.AspireOrchestration.ServiceDefaults.csproj" />
+    <Project Path="src/Ch14.Hosting/Ch14.A2APreview/Ch14.A2APreview.csproj" />
   </Folder>
-  <Folder Name="/src/Ch15.SafetyGuardrails/">
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.MiddlewarePipeline/Ch15.MiddlewarePipeline.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.InputSanitization/Ch15.InputSanitization.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.CriticAgent/Ch15.CriticAgent.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.MessageInjector/Ch15.MessageInjector.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.ToolApproval/Ch15.ToolApproval.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.IndirectInjection/Ch15.IndirectInjection.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.OutputHandling/Ch15.OutputHandling.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.ConsumptionLimits/Ch15.ConsumptionLimits.csproj" />
-    <Project Path="src/Ch15.SafetyGuardrails/Ch15.ContentSafety/Ch15.ContentSafety.csproj" />
+  <Folder Name="/src/Ch15.Observability/">
+    <Project Path="src/Ch15.Observability/Ch15.OpenTelemetryAgent/Ch15.OpenTelemetryAgent.csproj" />
   </Folder>
-  <Folder Name="/src/Ch16.AgentSkills/">
-    <Project Path="src/Ch16.AgentSkills/Ch16.AgentSkills/Ch16.AgentSkills.csproj" />
+  <Folder Name="/src/Ch16.SafetyGuardrails/">
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.MiddlewarePipeline/Ch16.MiddlewarePipeline.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.InputSanitization/Ch16.InputSanitization.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.CriticAgent/Ch16.CriticAgent.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.MessageInjector/Ch16.MessageInjector.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.ToolApproval/Ch16.ToolApproval.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.IndirectInjection/Ch16.IndirectInjection.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.OutputHandling/Ch16.OutputHandling.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.ConsumptionLimits/Ch16.ConsumptionLimits.csproj" />
+    <Project Path="src/Ch16.SafetyGuardrails/Ch16.ContentSafety/Ch16.ContentSafety.csproj" />
   </Folder>
-  <Folder Name="/src/Ch17.EvalSuite/">
-    <Project Path="src/Ch17.EvalSuite/Ch17.EvalSuite/Ch17.EvalSuite.csproj" />
-    <Project Path="src/Ch17.FaqEval/Ch17.FaqEval/Ch17.FaqEval.csproj" />
-    <Project Path="src/Ch17.EvalTests/Ch17.EvalTests/Ch17.EvalTests.csproj" />
+  <Folder Name="/src/Ch17.AgentSkills/">
+    <Project Path="src/Ch17.AgentSkills/Ch17.AgentSkills/Ch17.AgentSkills.csproj" />
+  </Folder>
+  <Folder Name="/src/Ch18.EvalSuite/">
+    <Project Path="src/Ch18.EvalSuite/Ch18.EvalSuite/Ch18.EvalSuite.csproj" />
+    <Project Path="src/Ch18.FaqEval/Ch18.FaqEval/Ch18.FaqEval.csproj" />
+    <Project Path="src/Ch18.EvalTests/Ch18.EvalTests/Ch18.EvalTests.csproj" />
   </Folder>
   <Folder Name="/src/Common/">
     <Project Path="src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
@@ -154,28 +160,33 @@
     <Project Path="exercises/Ch10.Exercises/Ex02.DocumentQA/Ex02.DocumentQA.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch11.Exercises/">
-    <Project Path="exercises/Ch11.Exercises/Ex01.TranslationChain/Ex01.TranslationChain.csproj" />
-    <Project Path="exercises/Ch11.Exercises/Ex02.DebateSystem/Ex02.DebateSystem.csproj" />
+    <Project Path="exercises/Ch11.Exercises/Ex01.DescribeImage/Ex01.DescribeImage.csproj" />
+    <Project Path="exercises/Ch11.Exercises/Ex02.ReceiptToRecord/Ex02.ReceiptToRecord.csproj" />
+    <Project Path="exercises/Ch11.Exercises/Ex03.SupportAgent/Ex03.SupportAgent.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch12.Exercises/">
-    <Project Path="exercises/Ch12.Exercises/Ex01.TextProcessingWorkflow/Ex01.TextProcessingWorkflow.csproj" />
-    <Project Path="exercises/Ch12.Exercises/Ex02.ReviewPipeline/Ex02.ReviewPipeline.csproj" />
-    <Project Path="exercises/Ch12.Exercises/Ex04.ResumableReview/Ex04.ResumableReview.csproj" />
+    <Project Path="exercises/Ch12.Exercises/Ex01.TranslationChain/Ex01.TranslationChain.csproj" />
+    <Project Path="exercises/Ch12.Exercises/Ex02.DebateSystem/Ex02.DebateSystem.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch13.Exercises/">
-    <Project Path="exercises/Ch13.Exercises/Ex01.HealthCheckApi/Ex01.HealthCheckApi.csproj" />
-    <Project Path="exercises/Ch13.Exercises/Ex02.MultiAgentApi/Ex02.MultiAgentApi.csproj" />
-    <Project Path="exercises/Ch13.Exercises/Ex04.ContainerizedDeploy/Ex04.ContainerizedDeploy.csproj" />
+    <Project Path="exercises/Ch13.Exercises/Ex01.TextProcessingWorkflow/Ex01.TextProcessingWorkflow.csproj" />
+    <Project Path="exercises/Ch13.Exercises/Ex02.ReviewPipeline/Ex02.ReviewPipeline.csproj" />
+    <Project Path="exercises/Ch13.Exercises/Ex04.ResumableReview/Ex04.ResumableReview.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch14.Exercises/">
-    <Project Path="exercises/Ch14.Exercises/Ex01.MetricsCollector/Ex01.MetricsCollector.csproj" />
-    <Project Path="exercises/Ch14.Exercises/Ex02.TracedPipeline/Ex02.TracedPipeline.csproj" />
+    <Project Path="exercises/Ch14.Exercises/Ex01.HealthCheckApi/Ex01.HealthCheckApi.csproj" />
+    <Project Path="exercises/Ch14.Exercises/Ex02.MultiAgentApi/Ex02.MultiAgentApi.csproj" />
+    <Project Path="exercises/Ch14.Exercises/Ex04.ContainerizedDeploy/Ex04.ContainerizedDeploy.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch15.Exercises/">
-    <Project Path="exercises/Ch15.Exercises/Ex01.KeywordFilter/Ex01.KeywordFilter.csproj" />
-    <Project Path="exercises/Ch15.Exercises/Ex02.ResponseValidator/Ex02.ResponseValidator.csproj" />
-    <Project Path="exercises/Ch15.Exercises/Ex03.FullSafetyPipeline/Ex03.FullSafetyPipeline.csproj" />
-    <Project Path="exercises/Ch15.Exercises/Ex04.ToolApproval/Ex04.ToolApproval.csproj" />
-    <Project Path="exercises/Ch15.Exercises/Ex05.ConsumptionLimits/Ex05.ConsumptionLimits.csproj" />
+    <Project Path="exercises/Ch15.Exercises/Ex01.MetricsCollector/Ex01.MetricsCollector.csproj" />
+    <Project Path="exercises/Ch15.Exercises/Ex02.TracedPipeline/Ex02.TracedPipeline.csproj" />
+  </Folder>
+  <Folder Name="/exercises/Ch16.Exercises/">
+    <Project Path="exercises/Ch16.Exercises/Ex01.KeywordFilter/Ex01.KeywordFilter.csproj" />
+    <Project Path="exercises/Ch16.Exercises/Ex02.ResponseValidator/Ex02.ResponseValidator.csproj" />
+    <Project Path="exercises/Ch16.Exercises/Ex03.FullSafetyPipeline/Ex03.FullSafetyPipeline.csproj" />
+    <Project Path="exercises/Ch16.Exercises/Ex04.ToolApproval/Ex04.ToolApproval.csproj" />
+    <Project Path="exercises/Ch16.Exercises/Ex05.ConsumptionLimits/Ex05.ConsumptionLimits.csproj" />
   </Folder>
 </Solution>

@@ -6,8 +6,8 @@
 // top-K matches at query time, stuff them into the prompt. That pattern is
 // portable — every provider supports it — and it gives you full control.
 //
-// This program is the OTHER path: Foundry's hosted file-search tool, new in
-// MAF 1.6. The mental model is NOT "upload files to a session". It is:
+// This program is the OTHER path: Foundry's hosted file-search tool. The
+// mental model is NOT "upload files to a session". It is:
 //
 //   1. Provision a vector store in your Foundry project (portal or the
 //      Azure.AI.Projects SDK) and upload your documents into it. Foundry

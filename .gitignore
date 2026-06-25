@@ -368,3 +368,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Generated single-file code dump — not part of the companion sources
+AgenticAI_Code.txt

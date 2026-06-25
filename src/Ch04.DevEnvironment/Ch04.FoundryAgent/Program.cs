@@ -1,8 +1,8 @@
 // ============================================================================
 // Chapter 4 — Microsoft Foundry: the 5th provider
 // ----------------------------------------------------------------------------
-// Microsoft Foundry is Microsoft's recommended path for new MAF projects as of
-// MAF 1.6. The canonical pattern is to build an AIProjectClient against your
+// Microsoft Foundry is Microsoft's recommended path for new MAF projects. The
+// canonical pattern is to build an AIProjectClient against your
 // Azure AI Projects endpoint, then call .AsAIAgent(...) to get an AIAgent back.
 // This bypasses the IChatClient layer entirely — useful when you want hosted
 // agent features (Hosted-Files RAG, server-side tool execution, etc.).
@@ -42,7 +42,7 @@ Console.WriteLine($"Project endpoint: {settings.Foundry.ProjectEndpoint}");
 Console.WriteLine($"Model:            {settings.Foundry.Model}");
 Console.WriteLine();
 
-// ── The 1.6 canonical pattern: AIProjectClient → AsAIAgent → AIAgent ────────
+// ── The canonical Foundry pattern: AIProjectClient → AsAIAgent → AIAgent ────────
 AIAgent agent = new AIProjectClient(
         new Uri(settings.Foundry.ProjectEndpoint),
         new DefaultAzureCredential())
