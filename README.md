@@ -8,8 +8,7 @@
 
 <p align="center"><em>From your first call to an LLM to a production-hosted, observable, safety-filtered multi-agent system — in C# 14 and .NET 10.</em></p>
 
-<p align="center"><strong>📖 The book is distributed through Leanpub — buy link coming soon.</strong></p>
-<!-- TODO: replace the line above with → 📖 **[Read on Leanpub (pay what you want)](LEANPUB_URL)** -->
+<p align="center"><strong>📖 <a href="https://leanpub.com/buildingAIAgentsWithCSandNet10">Read it on Leanpub</a> — pay what you want.</strong></p>
 
 <p align="center"><sub>The book itself ships through Leanpub. This repository hosts the companion code, errata, and reader feedback.</sub></p>
 
@@ -129,4 +128,4 @@ Spotted a typo, a code sample that won't compile, or an outdated API? Please ope
 
 ## License
 
-Companion code released under the [MIT License](LICENSE). The book text is © 2026 Rachid Dahir and distributed via Leanpub.
+Companion code released under the [MIT License](LICENSE). The book text is © 2026 Rachid Dahir and distributed via [Leanpub](https://leanpub.com/buildingAIAgentsWithCSandNet10).
