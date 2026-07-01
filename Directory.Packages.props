@@ -3,11 +3,11 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Microsoft Agent Framework — 1.10.0 (dotnet-1.10.0, June 2026) -->
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.11.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.11.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.11.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.11.0" />
+    <!-- Microsoft Agent Framework — 1.11.1 (dotnet-1.11.1, June 2026) -->
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.11.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.11.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.11.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.11.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.11.0-preview.260623.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.11.0-preview.260623.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.OpenAI" Version="1.11.0-alpha.260623.1" />

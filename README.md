@@ -16,9 +16,9 @@
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.11 release** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.11.1 release** and **.NET 10 / C# 14**.
 
-Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.11** — no preview ceremony.
+Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.11.1** — no preview ceremony.
 
 ## Table of Contents
 
@@ -51,7 +51,7 @@ Across nineteen chapters in five parts you go from your first call to an LLM, th
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.11**
+- **Microsoft Agent Framework 1.11.1**
 - **Microsoft.Extensions.AI 10.7.0**
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
