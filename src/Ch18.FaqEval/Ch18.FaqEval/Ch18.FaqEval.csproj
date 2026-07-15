@@ -2,17 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!--
-      The MAF Evaluation surface (LocalEvaluator, EvalChecks, FunctionEvaluator,
-      EvaluateAsync, AgentEvaluationResults) is marked [Experimental] under the
-      MAAI001 diagnostic in 1.10. The API exists and works; the diagnostic just
-      flags that it may change before it stabilises. This whole project is an
-      Evaluation demo, so the suppression is scoped here.
-
-      The MEAI Groundedness judge (Microsoft.Extensions.AI.Evaluation.Quality)
-      carries its own experimental diagnostic; suppress it too.
-    -->
-    <NoWarn>$(NoWarn);MAAI001;MEAI001;AIEVAL001</NoWarn>
+    <!-- The MAF Evaluation surface is stable (GA) as of MAF 1.13 — no diagnostic suppression needed. -->
   </PropertyGroup>
 
   <ItemGroup>

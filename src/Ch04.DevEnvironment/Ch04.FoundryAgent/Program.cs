@@ -52,9 +52,10 @@ AIAgent agent = new AIProjectClient(
         name: "HelloFoundry");
 
 Console.WriteLine("--- Non-streaming response ---");
-Console.WriteLine(await agent.RunAsync(
+AgentResponse response = await agent.RunAsync(
     "What is the largest city in France?",
-    cancellationToken: cts.Token));
+    cancellationToken: cts.Token);
+Console.WriteLine(response.Text);
 Console.WriteLine();
 
 Console.WriteLine("--- Streaming response ---");

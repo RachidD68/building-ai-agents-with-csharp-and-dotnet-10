@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.11)
+// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.13)
 // ----------------------------------------------------------------------------
 // Magentic is a multi-agent orchestrator from Microsoft Research that uses a
 // stateful "ledger" — a structured record of facts, plans, and observations —

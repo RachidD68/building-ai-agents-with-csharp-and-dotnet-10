@@ -1,10 +1,10 @@
 // ============================================================================
 // Chapter 8 — FileAccessProvider: a sandboxed scratchpad for your agent
 // ----------------------------------------------------------------------------
-// MAF 1.11 ships a built-in context provider that gives an agent a SAFE, scoped
-// filesystem: FileAccessProvider. Register it and the model gains six tools —
-// read_file, save_file, delete_file, list_files, list_subdirectories, and
-// search_files — all confined to a store you choose. No System.IO, no path the
+// MAF 1.13 ships a built-in context provider that gives an agent a SAFE, scoped
+// filesystem: FileAccessProvider. Register it and the model gains seven tools —
+// read, write, delete, ls, grep, replace, and replace_lines — all confined to a
+// store you choose. No System.IO, no path the
 // model can wander out of.
 //
 // Two pieces:
@@ -12,12 +12,12 @@
 //      dictionary, used here) for demos/tests; FileSystemAgentFileStore(rootPath)
 //      for a real disk folder (symlink-guarded, so the agent can't escape it).
 //   2. FileAccessProvider(store) — registered on ChatClientAgentOptions
-//      .AIContextProviders, it exposes the six tools over that store.
+//      .AIContextProviders, it exposes the seven tools over that store.
 //
-// SAFETY (the 1.11 headline): file tools are gated. We wrap the agent in a
+// SAFETY (the 1.13 headline): file tools are gated. We wrap the agent in a
 // ToolApprovalAgent and pass FileAccessProvider.ReadOnlyToolsAutoApprovalRule,
-// which waves through the read-only tools (read/list/search) but still pauses
-// on save and delete. That boundary — reads are cheap, writes need a human — is
+// which waves through the read-only tools (read/ls/grep) but still pauses
+// on write, delete, and replace. That boundary — reads are cheap, writes need a human — is
 // the whole point. Cross-reference: Chapter 16 (Safety and Guardrails).
 // ============================================================================
 
@@ -41,12 +41,12 @@ Console.WriteLine("=== Chapter 8: FileAccessProvider — a sandboxed scratchpad 
 // ── Step 1: a store, seeded directly via its API ─────────────────────────────
 // InMemoryAgentFileStore keeps files in a dictionary — perfect for a demo and
 // for token-free tests. Swap in FileSystemAgentFileStore(rootPath) for a real
-// folder. The store API (WriteFileAsync/ReadFileAsync/ListFilesAsync/...) is the
-// same surface the six tools call underneath.
+// folder. The store API (WriteAsync/ReadAsync/ListChildrenAsync/...) is the
+// same surface those file tools call underneath.
 InMemoryAgentFileStore store = new();
-await store.WriteFileAsync("notes.txt",
+await store.WriteAsync("notes.txt",
     "Customer asked about the refund policy. Promised a follow-up by Friday.", cts.Token);
-await store.WriteFileAsync("policy.md",
+await store.WriteAsync("policy.md",
     "# Refund Policy\nRefunds within 30 days with a receipt. No restocking fee under $50.", cts.Token);
 
 Console.WriteLine("Seeded the store with: notes.txt, policy.md\n");
@@ -81,7 +81,7 @@ AIAgent agent = baseAgent.AsBuilder()
     })
     .Build();
 
-// ── A read-only request: the model calls list_files / read_file, the rule waves
+// ── A read-only request: the model calls ls / read, the rule waves
 //    them through with no prompt, and the agent answers from the store. ────────
 try
 {

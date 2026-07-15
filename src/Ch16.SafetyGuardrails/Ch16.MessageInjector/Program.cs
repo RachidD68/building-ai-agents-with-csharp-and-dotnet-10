@@ -63,9 +63,9 @@ AuditReminderProvider reminder = new(
 // AIContextProviders registers the provider; ChatOptions.Tools carries the
 // tool (ChatClientAgentOptions has no Tools/Instructions of its own — the
 // provider supplies the instructions, the same way Chapter 6 does).
-// EnableMessageInjection ships in MAF 1.6.1 but is flagged [Experimental
-// ("MAAI001")] — the API exists and works; the diagnostic just signals it may
-// change before it stabilises. Suppress it deliberately and knowingly.
+// EnableMessageInjection opts this agent into mid-run message injection, and it
+// is still flagged [Experimental("MAAI001")] as of MAF 1.13 — the API exists and
+// works; the diagnostic just signals it may change. Suppress it deliberately.
 #pragma warning disable MAAI001
 ChatClientAgentOptions options = new()
 {

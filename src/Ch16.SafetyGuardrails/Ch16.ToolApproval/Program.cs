@@ -22,7 +22,7 @@
 // least privilege.
 //
 // NOTE: ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental
-// ("MAAI001")] in MAF 1.11 — suppressed via <NoWarn> in the .csproj. The
+// ("MAAI001")] in MAF 1.13— suppressed via <NoWarn> in the .csproj. The
 // ApprovalRequiredAIFunction / ToolApprovalRequestContent types in
 // Microsoft.Extensions.AI are stable.
 // ============================================================================

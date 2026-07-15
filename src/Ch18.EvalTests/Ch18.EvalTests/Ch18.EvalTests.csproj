@@ -8,11 +8,8 @@
       solution with no extra test packages. The pattern (golden dataset ->
       EvaluateAsync -> AssertAllPassed) moves to xUnit unchanged: turn each
       Case into a [Fact] and let AssertAllPassed throw the assertion.
-
-      The Evaluation surface is [Experimental] under MAAI001 in 1.10; suppress
-      it at project scope (the whole project is an Evaluation demo).
+      The Evaluation surface is stable (GA) as of MAF 1.13 — no suppression needed.
     -->
-    <NoWarn>$(NoWarn);MAAI001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

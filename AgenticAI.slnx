@@ -81,6 +81,7 @@
     <Project Path="src/Ch13.Workflows/Ch13.ParallelAnalysis/Ch13.ParallelAnalysis.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.SubWorkflow/Ch13.SubWorkflow.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.WorkflowTests/Ch13.WorkflowTests.csproj" />
+    <Project Path="src/Ch13.Workflows/Ch13.LoopEngineering/Ch13.LoopEngineering.csproj" />
   </Folder>
   <Folder Name="/src/Ch14.Hosting/">
     <Project Path="src/Ch14.Hosting/Ch14.AspNetCoreHost/Ch14.AspNetCoreHost.csproj" />

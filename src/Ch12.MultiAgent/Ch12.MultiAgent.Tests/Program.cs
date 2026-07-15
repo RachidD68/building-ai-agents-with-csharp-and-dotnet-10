@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Testing multi-agent compositions (MAF 1.11)
+// Chapter 12 — Testing multi-agent compositions (MAF 1.13)
 // ----------------------------------------------------------------------------
 // You can test a pipeline's WIRING without spending a single token. The trick
 // is a fake IChatClient that returns canned responses, so the agents behave

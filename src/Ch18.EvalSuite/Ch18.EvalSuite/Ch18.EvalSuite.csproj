@@ -2,15 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!--
-      The Evaluation API ships in MAF 1.10 but is marked [Experimental]
-      across LocalEvaluator, EvalChecks, FunctionEvaluator, EvaluateAsync,
-      and AgentEvaluationResults (MAAI001). FoundryEvals and the Foundry
-      preview surface add MAAIW001. The APIs exist and work; the diagnostics
-      just signal they may change before they stabilise. Suppress at project
-      scope (the whole project is an Evaluation demo).
-    -->
-    <NoWarn>$(NoWarn);MAAI001;MAAIW001</NoWarn>
+    <!-- The MAF Evaluation surface (incl. the Foundry judge path) is stable (GA) as of MAF 1.13 — no suppression needed. -->
   </PropertyGroup>
 
   <ItemGroup>
