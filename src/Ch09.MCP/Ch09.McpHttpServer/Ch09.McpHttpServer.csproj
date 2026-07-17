@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+  <!-- Reuse the exact tool classes from the stdio server (Ch09.McpServer);
+       only the transport changes. Linking the file avoids an Exe reference. -->
+  <ItemGroup>
+    <Compile Include="../Ch09.McpServer/ProductCatalogTools.cs" />
+  </ItemGroup>
+
+</Project>

@@ -25,6 +25,6 @@ dotnet run --project src/Ch03.HowLLMsWork/Ch03.TokenExplorer
 1. Tokens are not words -- they are subword units. Punctuation and casing create boundaries.
 2. The length/4 estimate is fine for prose but drifts badly on code, JSON, and emoji -- use the real `Microsoft.ML.Tokenizers` count when precision matters.
 3. A conversation is a re-sent message array; input tokens grow every turn, which is how a chatbot's bill quietly balloons.
-4. Temperature 0 is deterministic; temperature > 1 increases creativity (and randomness).
+4. Temperature 0 is near-deterministic; temperature > 1 increases creativity (and randomness).
 5. Cosine similarity measures semantic closeness between embeddings.
 6. There are four cost dimensions, not two -- input, output, cached input, and batch -- and a stable prefix is the part that caches.

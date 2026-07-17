@@ -186,7 +186,7 @@ Console.WriteLine("  Now imagine 50 turns of pasted stack traces. That is the $2
 #region Temperature Simulation
 // ----------------------------------------------------------------------------
 // Temperature controls randomness in token selection.
-// Low temperature (0.0) = deterministic; High temperature (1.5) = creative.
+// Low temperature (0.0) = near-deterministic; High temperature (1.5) = creative.
 
 WriteSection("Temperature Simulation");
 
@@ -445,7 +445,8 @@ static string GetContextPercentage(int tokens)
 
 /// <summary>
 /// Applies temperature scaling to a probability distribution.
-/// Temperature 0 makes it deterministic (all mass on the top token).
+/// Temperature 0 makes it near-deterministic (all mass on the top token, but
+/// provider tie-breaking and GPU non-determinism can still vary the output).
 /// Higher temperatures flatten the distribution.
 /// </summary>
 static Dictionary<string, double> ApplyTemperature(
@@ -454,7 +455,7 @@ static Dictionary<string, double> ApplyTemperature(
 {
     if (temperature < 0.01)
     {
-        // Temperature ~0: deterministic — put all probability on the top token
+        // Temperature ~0: near-deterministic — nearly all probability on the top token
         string topToken = baseProbs.OrderByDescending(kv => kv.Value).First().Key;
         return baseProbs.ToDictionary(
             kv => kv.Key,
