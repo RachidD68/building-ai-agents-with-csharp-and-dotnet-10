@@ -46,6 +46,7 @@
   <Folder Name="/src/Ch09.MCP/">
     <Project Path="src/Ch09.MCP/Ch09.McpServer/Ch09.McpServer.csproj" />
     <Project Path="src/Ch09.MCP/Ch09.McpConsumer/Ch09.McpConsumer.csproj" />
+    <Project Path="src/Ch09.MCP/Ch09.McpHttpServer/Ch09.McpHttpServer.csproj" />
     <Project Path="src/Ch09.MCP/Ch09.KnowledgeBaseMcp/Ch09.KnowledgeBaseMcp.csproj" />
   </Folder>
   <Folder Name="/src/Ch10.IntroRAG/">

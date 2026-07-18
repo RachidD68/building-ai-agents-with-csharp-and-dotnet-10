@@ -24,6 +24,9 @@ builder.Services
 
 var app = builder.Build();
 
-app.MapMcp();   // routes the /mcp endpoint — without this line, nothing is listening
+// Routes the endpoint — without this line nothing is listening. Pass the
+// pattern explicitly: the no-argument MapMcp() serves at the site root ("/"),
+// not "/mcp".
+app.MapMcp("/mcp");
 
 app.Run("http://localhost:5000");
