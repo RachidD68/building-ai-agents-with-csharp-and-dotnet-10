@@ -100,12 +100,13 @@ Console.WriteLine("\n--- Demo 3: auto-approval rule (read-only tool) ---");
 AIAgent autoAgent = agent.AsBuilder()
     .UseToolApproval(new ToolApprovalAgentOptions
     {
-        // AutoApprovalRules is an IEnumerable<Func<FunctionCallContent, ValueTask<bool>>>.
-        // Each rule sees the pending call and returns true to wave it through.
+        // AutoApprovalRules is an IEnumerable<Func<ToolAutoApprovalRuleContext, ValueTask<bool>>>.
+        // Each rule sees the run's context — the pending call is context.FunctionCallContent —
+        // and returns true to wave it through.
         AutoApprovalRules =
         [
-            (FunctionCallContent call) =>
-                ValueTask.FromResult(call.Name == "get_order_status"),
+            (ToolAutoApprovalRuleContext context) =>
+                ValueTask.FromResult(context.FunctionCallContent.Name == "get_order_status"),
         ],
     })
     .Build();

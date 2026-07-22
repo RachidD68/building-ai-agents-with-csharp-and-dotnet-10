@@ -3,19 +3,19 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Microsoft Agent Framework — 1.13.0 (dotnet-1.13.0) -->
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.13.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.13.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.13.0-preview.260703.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.13.0-preview.260703.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.OpenAI" Version="1.13.0-alpha.260703.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.13.0-preview.260703.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.13.0-preview.260703.1" />
+    <!-- Microsoft Agent Framework — 1.14.0 (dotnet-1.14.0) -->
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.14.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.14.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.14.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.14.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.14.0-preview.260721.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.14.0-preview.260721.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.OpenAI" Version="1.14.0-alpha.260721.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.14.0-preview.260721.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.14.0-preview.260721.1" />
     <!-- New provider packages (1.10) — referenced from Phase 2 chapters (Ch04/Ch18) -->
-    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.13.0-preview.260703.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.GitHub.Copilot" Version="1.13.0-rc1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.14.0-preview.260721.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.GitHub.Copilot" Version="1.14.0-rc1" />
     <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...) -->
     <PackageVersion Include="Azure.AI.Projects" Version="2.1.0-beta.4" />
     <!-- AI Abstractions & Providers -->

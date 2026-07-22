@@ -63,8 +63,9 @@ AIFunction refundTool = new ApprovalRequiredAIFunction(
     AIFunctionFactory.Create((Delegate)IssueRefund, name: "issue_refund"));
 
 // ── Argument validation as an auto-approval rule ──────────────────────
-// AutoApprovalRules receive the FunctionCallContent (tool name + arguments)
-// BEFORE execution and return true to auto-approve, false to require a human.
+// AutoApprovalRules receive a ToolAutoApprovalRuleContext BEFORE execution —
+// the pending call is context.FunctionCallContent (tool name + arguments) —
+// and return true to auto-approve, false to require a human.
 // Here: small refunds (<= $50) are auto-approved; anything larger escalates.
 // This is least-privilege + argument validation in one hook.
 const decimal AutoApproveRefundLimit = 50m;
@@ -73,10 +74,10 @@ var approvalOptions = new ToolApprovalAgentOptions
 {
     AutoApprovalRules =
     [
-        fcc =>
+        (ToolAutoApprovalRuleContext context) =>
         {
-            if (fcc.Name == "issue_refund"
-                && fcc.Arguments is { } args
+            if (context.FunctionCallContent.Name == "issue_refund"
+                && context.FunctionCallContent.Arguments is { } args
                 && args.TryGetValue("amount", out object? raw)
                 && decimal.TryParse(raw?.ToString(), out decimal amount))
             {
