@@ -5,7 +5,7 @@
     <!-- ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental("MAAI001")] in MAF 1.10.
          The ApprovalRequiredAIFunction / ToolApprovalRequestContent / ToolApprovalResponseContent
          types in Microsoft.Extensions.AI are stable and need no suppression. -->
-    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,10 +2,11 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
     <!-- FileAccessProvider's ToolApprovalAgent gate is experimental in MAF 1.11
          (diagnostics MAAI001/MAAIW001). The provider and stores are stable; only
          the agent-level auto-approval middleware is gated. -->
-    <NoWarn>$(NoWarn);MAAI001;MAAIW001</NoWarn>
+
   </PropertyGroup>
 
   <ItemGroup>

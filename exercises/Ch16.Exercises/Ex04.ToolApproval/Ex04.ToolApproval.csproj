@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental("MAAI001")] in MAF 1.10. -->
-    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+
   </PropertyGroup>
 
   <ItemGroup>
