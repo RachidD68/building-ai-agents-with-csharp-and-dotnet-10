@@ -64,6 +64,13 @@ foreach (string providerName in providerNames)
 
         Console.WriteLine($"done ({sw.ElapsedMilliseconds}ms)");
     }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
+    {
+        // Ctrl+C is the user aborting the benchmark, not a provider failure —
+        // recording it as FAILED would poison the comparison table.
+        Console.WriteLine("cancelled — stopping the benchmark.");
+        break;
+    }
     catch (Exception ex)
     {
         Console.WriteLine($"FAILED: {ex.Message}");

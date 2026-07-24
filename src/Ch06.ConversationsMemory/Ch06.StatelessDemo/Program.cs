@@ -37,9 +37,11 @@ try
     // ---------------------------------------------------------------
     // Turn 1: Tell the agent our name
     // ---------------------------------------------------------------
-    // IMPORTANT: We create a NEW session for each call to simulate
-    // the stateless scenario. Without a ChatHistoryProvider, even
-    // reusing the same session would not preserve history.
+    // IMPORTANT: the amnesia here comes from creating a NEW session for
+    // each call. A session carries conversation history by default — reuse
+    // one session and the agent remembers (that is Ch06.AgentSessionDemo's
+    // subject). Throw the session away between turns and every call starts
+    // from a blank slate.
     AgentSession session1 = await agent.CreateSessionAsync(cts.Token);
 
     string message1 = "My name is Rachid. I live in Seattle and I love C# programming.";

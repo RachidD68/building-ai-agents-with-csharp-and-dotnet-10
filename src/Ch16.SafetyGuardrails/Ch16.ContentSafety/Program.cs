@@ -18,13 +18,17 @@
 // they are reached via the REST API only. We do not fabricate a typed call that
 // does not exist; for those, call the REST endpoint (see the chapter's Warning).
 //
-// The client needs an Azure Content Safety endpoint + key. Without them the demo
-// prints a clear "skipped — not configured" note and exits 0, so the project
-// builds and runs offline (the same gating pattern as the Foundry samples).
+// The client needs an Azure Content Safety endpoint. Auth follows the book's
+// standing practice: DefaultAzureCredential (Entra ID) by default, with an API
+// key honored only when one is explicitly configured — the key is the local-dev
+// shortcut, not the default. Without an endpoint the demo prints a clear
+// "skipped — not configured" note and exits 0, so the project builds and runs
+// offline (the same gating pattern as the Foundry samples).
 // ============================================================================
 
 using Azure;
 using Azure.AI.ContentSafety;
+using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 
 IConfiguration config = new ConfigurationBuilder()
@@ -38,13 +42,14 @@ Console.WriteLine();
 string? endpoint = config["ContentSafety:Endpoint"];
 string? apiKey = config["ContentSafety:ApiKey"];
 
-if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
+if (string.IsNullOrWhiteSpace(endpoint))
 {
     Console.WriteLine("[skipped] Azure AI Content Safety is not configured.");
     Console.WriteLine("To run this sample against a real resource, set:");
     Console.WriteLine("  ContentSafety:Endpoint  (e.g. https://<resource>.cognitiveservices.azure.com/)");
-    Console.WriteLine("  ContentSafety:ApiKey    (a key from the resource)");
-    Console.WriteLine("via appsettings.json, user-secrets, or environment variables.");
+    Console.WriteLine("and sign in (az login / VS) so DefaultAzureCredential can authenticate;");
+    Console.WriteLine("or set ContentSafety:ApiKey to use key auth instead.");
+    Console.WriteLine("Use appsettings.json, user-secrets, or environment variables.");
     Console.WriteLine();
     Console.WriteLine("What it WOULD do, per input:");
     Console.WriteLine("  - AnalyzeText -> severity (0-6) for Hate / Violence / Sexual / SelfHarm");
@@ -57,7 +62,11 @@ if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
     return;
 }
 
-var client = new ContentSafetyClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
+// Entra ID (DefaultAzureCredential) is the default, matching every other Azure
+// client in the book; a key only if one was explicitly configured.
+ContentSafetyClient client = string.IsNullOrWhiteSpace(apiKey)
+    ? new ContentSafetyClient(new Uri(endpoint), new DefaultAzureCredential())
+    : new ContentSafetyClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
 
 // The same adversarial-flavoured inputs the regex demo uses, so you can compare
 // recall: regex matches fixed patterns; Content Safety scores semantic harm.

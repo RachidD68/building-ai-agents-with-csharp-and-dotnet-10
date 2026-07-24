@@ -43,16 +43,21 @@ public interface IProductRepository
 public sealed record Product(int Id, string Name, string Category, decimal Price, int InStock);
 
 /// <summary>
-/// Represents the result of placing an order.
+/// Represents the result of placing an order. On failure, <paramref name="Error"/>
+/// carries a model-readable explanation and the other fields are empty — the
+/// serialized JSON is what the model sees, so the reason must live in a real
+/// field, not in a sentinel value smuggled through an unrelated one.
 /// </summary>
-/// <param name="OrderId">The unique order identifier.</param>
+/// <param name="OrderId">The unique order identifier; empty when the order failed.</param>
 /// <param name="ProductName">The name of the ordered product.</param>
 /// <param name="Quantity">The quantity ordered.</param>
 /// <param name="TotalPrice">The total price for the order.</param>
-/// <param name="EstimatedDelivery">The estimated delivery date.</param>
+/// <param name="EstimatedDelivery">The estimated delivery date; empty when the order failed.</param>
+/// <param name="Error">Why the order failed, or null on success.</param>
 public sealed record OrderConfirmation(
     string OrderId,
     string ProductName,
     int Quantity,
     decimal TotalPrice,
-    string EstimatedDelivery);
+    string EstimatedDelivery,
+    string? Error = null);

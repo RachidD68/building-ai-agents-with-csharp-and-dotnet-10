@@ -67,7 +67,9 @@ await RunCappedAsync(
     maxIterations: 3,
     maxErrors: 3,
     includeDetail: false);
-Console.WriteLine($"poll_job was invoked {pollCount} time(s) before the cap stopped the loop.");
+Console.WriteLine(pollCount >= 3
+    ? $"poll_job was invoked {pollCount} time(s) before the cap stopped the loop."
+    : $"poll_job was invoked {pollCount} time(s); the model stopped polling on its own before the cap.");
 
 // ── Demo 2: terminate on first error with MaximumConsecutiveErrorsPerRequest = 0
 Console.WriteLine("\n--- Demo 2: MaximumConsecutiveErrorsPerRequest = 0 (failing tool) ---");

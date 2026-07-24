@@ -21,6 +21,7 @@ public sealed class InMemoryProductRepository : IProductRepository
     ];
 
     private int _orderCounter;
+    private readonly Lock _stockLock = new();
 
     /// <inheritdoc />
     public Task<IReadOnlyList<Product>> SearchProductsAsync(
@@ -50,32 +51,43 @@ public sealed class InMemoryProductRepository : IProductRepository
         int quantity,
         CancellationToken cancellationToken)
     {
-        Product? product = Products.FirstOrDefault(p => p.Id == productId);
-
-        if (product is null)
+        // Check-then-decrement must be atomic: an agent can fire concurrent
+        // tool calls (see the AllowConcurrentInvocation discussion in Ch08),
+        // and two orders racing on the last units must not both succeed.
+        lock (_stockLock)
         {
-            return Task.FromResult(new OrderConfirmation(
-                "ERROR", "Unknown", 0, 0,
-                $"Product with ID {productId} not found."));
+            int index = Products.FindIndex(p => p.Id == productId);
+
+            if (index < 0)
+            {
+                return Task.FromResult(new OrderConfirmation(
+                    "", "Unknown", quantity, 0, "",
+                    Error: $"Product with ID {productId} not found."));
+            }
+
+            Product product = Products[index];
+
+            if (quantity > product.InStock)
+            {
+                return Task.FromResult(new OrderConfirmation(
+                    "", product.Name, quantity, 0, "",
+                    Error: $"Insufficient stock for {product.Name}. Only {product.InStock} units available."));
+            }
+
+            // An order consumes inventory — the next InventoryCheck reflects it.
+            Products[index] = product with { InStock = product.InStock - quantity };
+
+            int orderId = Interlocked.Increment(ref _orderCounter);
+            decimal total = product.Price * quantity;
+
+            OrderConfirmation confirmation = new(
+                OrderId: $"ORD-{orderId:D6}",
+                ProductName: product.Name,
+                Quantity: quantity,
+                TotalPrice: total,
+                EstimatedDelivery: DateTime.UtcNow.AddDays(3).ToString("yyyy-MM-dd"));
+
+            return Task.FromResult(confirmation);
         }
-
-        if (quantity > product.InStock)
-        {
-            return Task.FromResult(new OrderConfirmation(
-                "ERROR", product.Name, quantity, 0,
-                $"Insufficient stock. Only {product.InStock} units available."));
-        }
-
-        int orderId = Interlocked.Increment(ref _orderCounter);
-        decimal total = product.Price * quantity;
-
-        OrderConfirmation confirmation = new(
-            OrderId: $"ORD-{orderId:D6}",
-            ProductName: product.Name,
-            Quantity: quantity,
-            TotalPrice: total,
-            EstimatedDelivery: DateTime.UtcNow.AddDays(3).ToString("yyyy-MM-dd"));
-
-        return Task.FromResult(confirmation);
     }
 }

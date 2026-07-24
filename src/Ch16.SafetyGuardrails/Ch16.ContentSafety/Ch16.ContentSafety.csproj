@@ -6,8 +6,9 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.AI.ContentSafety" />
+    <PackageReference Include="Azure.Identity" />
     <!-- Microsoft.Extensions.Hosting brings IConfiguration + JSON/env-var providers,
-         matching the configuration pattern used by the other Ch15 projects. -->
+         matching the configuration pattern used by the other Ch16 projects. -->
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 

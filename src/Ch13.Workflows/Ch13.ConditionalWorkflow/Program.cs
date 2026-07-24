@@ -33,11 +33,14 @@ string[] testMessages =
 // ---------------------------------------------------------------
 Console.WriteLine("--- Approach A: Conditional Edges (AddEdge<T>) ---\n");
 
-foreach (string message in testMessages)
+foreach ((int i, string message) in testMessages.Index())
 {
     Console.WriteLine($"Input: \"{message}\"");
 
-    Workflow conditionalWf = BuildConditionalEdgeWorkflow(message.GetHashCode().ToString("X"));
+    // Executor ids need only be unique per workflow instance; the loop index
+    // is deterministic run to run, unlike string.GetHashCode, which is
+    // randomized per process and made every run's ids different.
+    Workflow conditionalWf = BuildConditionalEdgeWorkflow($"A{i}");
     Run run = await InProcessExecution.RunAsync(
         conditionalWf, message, sessionId: Guid.NewGuid().ToString(), cts.Token);
 
@@ -56,11 +59,11 @@ foreach (string message in testMessages)
 // ---------------------------------------------------------------
 Console.WriteLine("--- Approach B: Switch Routing (AddSwitch) ---\n");
 
-foreach (string message in testMessages)
+foreach ((int i, string message) in testMessages.Index())
 {
     Console.WriteLine($"Input: \"{message}\"");
 
-    Workflow switchWf = BuildSwitchWorkflow(message.GetHashCode().ToString("X"));
+    Workflow switchWf = BuildSwitchWorkflow($"B{i}");
     Run run = await InProcessExecution.RunAsync(
         switchWf, message, sessionId: Guid.NewGuid().ToString(), cts.Token);
 

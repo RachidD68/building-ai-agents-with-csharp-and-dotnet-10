@@ -49,11 +49,14 @@ IChatClient chatClient = CreateChatClient(config);
 InMemoryCollection<string, DocumentChunk> collection = new("documents");
 await collection.EnsureCollectionExistsAsync(cts.Token);
 
-foreach ((string id, string content) in documents)
-{
-    Embedding<float> embedding =
-        await embeddingGenerator.GenerateAsync(content, cancellationToken: cts.Token);
+// One batched call, not one call per document — the chapter's own rule.
+// Batching amortizes the request overhead and is dramatically faster than
+// N round-trips as the corpus grows.
+GeneratedEmbeddings<Embedding<float>> embeddings = await embeddingGenerator.GenerateAsync(
+    documents.Select(d => d.Value).ToList(), cancellationToken: cts.Token);
 
+foreach (((string id, string content), Embedding<float> embedding) in documents.Zip(embeddings))
+{
     await collection.UpsertAsync(new DocumentChunk
     {
         Id = id,
@@ -169,6 +172,12 @@ static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(IC
             .GetEmbeddingClient(configuration["LlmProvider:GitHub:EmbeddingModel"] ?? "text-embedding-3-small").AsIEmbeddingGenerator(),
         "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
             .GetEmbeddingClient(configuration["LlmProvider:OpenAI:EmbeddingModel"] ?? "text-embedding-3-small").AsIEmbeddingGenerator(),
+        // The offline default: OllamaApiClient implements IEmbeddingGenerator
+        // directly, and nomic-embed-text is the local embedding model the
+        // chapter's RAG pipeline uses.
+        "ollama" => new OllamaSharp.OllamaApiClient(
+            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
+            configuration["LlmProvider:Ollama:EmbeddingModel"] ?? "nomic-embed-text"),
         _ => throw new InvalidOperationException($"Embedding not supported for provider: '{provider}'")
     };
 }

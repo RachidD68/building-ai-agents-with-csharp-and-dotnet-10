@@ -151,6 +151,13 @@ while (true)
     {
         await agent.RunAsync(prompt, cancellationToken: cts.Token);
     }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
+    {
+        // Ctrl+C means STOP the loop, not "log and try again" — swallowing
+        // it here would defeat the CancelKeyPress wiring above.
+        outcome = $"CANCELLED — stopped by the user on iteration {iteration}.";
+        break;
+    }
     catch (Exception ex)
     {
         Console.WriteLine($"   (agent turn failed: {ex.Message})");

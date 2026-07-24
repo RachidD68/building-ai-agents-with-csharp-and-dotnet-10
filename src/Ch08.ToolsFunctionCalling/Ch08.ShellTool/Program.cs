@@ -26,7 +26,7 @@
 // a shell, so shell metacharacters in an argument are just literal bytes.)
 //
 // In production, a shell tool should NEVER be exposed on a public endpoint
-// without the safety pipeline from Chapter 15 (input sanitisation + critic
+// without the safety pipeline from Chapter 16 (input sanitisation + critic
 // agent + middleware). The example below is the "training-wheels" version; the
 // productionized path is the preview Microsoft.Agents.AI.Tools.Shell package's
 // LocalShellExecutor (or DockerShellExecutor for container isolation).
@@ -56,10 +56,15 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 // never expose anything that can mutate state, escalate privileges, or
 // reach the network. This allow-list is the primary gate: a name that is
 // not on it never reaches a process, no matter what arguments accompany it.
+//
+// Deliberately ABSENT: pwsh, powershell, bash, sh, cmd. A shell or script
+// host on the allow-list defeats every other guard in this file — the model
+// could pass `-Command "Remove-Item ..."` and the "no shell is involved"
+// guarantee below would be a lie. If you ever think you need one, what you
+// actually need is a purpose-built tool for that one operation.
 HashSet<string> allowedCommands = new(StringComparer.OrdinalIgnoreCase)
 {
     "dotnet", "ls", "dir", "cat", "type", "wc", "find", "where",
-    "pwsh", "powershell"   // restricted to read-only cmdlets below
 };
 
 string sandboxDir = Path.Combine(
@@ -84,9 +89,9 @@ Console.WriteLine();
 [Description("""
     Executes a single safe program in the sandbox directory and returns its
     stdout. The program must be on the allow-list (dotnet, ls, dir, cat, type,
-    wc, find, where, pwsh, powershell). Arguments are passed verbatim to the
-    program — no shell is involved, so pipelines, redirects, and command
-    chaining are impossible. Output is truncated at 4 KB.
+    wc, find, where). Arguments are passed verbatim to the program — no shell
+    is involved, so pipelines, redirects, and command chaining are impossible.
+    Output is truncated at 4 KB.
 """)]
 async Task<string> RunShellAsync(
     [Description("The program to run, e.g. \"dotnet\", \"ls\", or \"cat\". Must be on the allow-list.")]

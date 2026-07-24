@@ -148,6 +148,10 @@ string[] questions =
     "What is the policy on cryptocurrency investments?", // Out of scope
 ];
 
+// One session for the whole conversation — a fresh session per question would
+// throw away the very conversation memory the provider pattern exists to feed.
+AgentSession session = await agent.CreateSessionAsync(cts.Token);
+
 foreach (string question in questions)
 {
     Console.WriteLine($"You: {question}");
@@ -156,7 +160,6 @@ foreach (string question in questions)
     // doesn't expose the user's message to a plain AIContextProvider.
     ragProvider.CurrentQuery = question;
 
-    AgentSession session = await agent.CreateSessionAsync(cts.Token);
     AgentResponse response = await agent.RunAsync(question, session, cancellationToken: cts.Token);
 
     Console.WriteLine($"Agent: {response.Text}");

@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using Anthropic;
 using Azure.AI.OpenAI;
 using Azure.AI.Projects;
@@ -7,6 +8,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using AgenticAI.Common.Configuration;
 
 namespace AgenticAI.Common.Extensions;
@@ -20,6 +22,10 @@ public static class ServiceCollectionExtensions
     /// Registers an <see cref="IChatClient"/> based on the configured provider
     /// in the "LlmProvider" configuration section.
     ///
+    /// Every provider's HTTP traffic flows through a named HttpClient wrapped in
+    /// <c>AddStandardResilienceHandler</c> — transient-fault retries, a circuit
+    /// breaker, and timeouts re-tuned for LLM latency (see Chapter 14).
+    ///
     /// Supports the four chat-completion providers: azure, openai, github, ollama.
     /// For the Microsoft Foundry path (provider="foundry"), use
     /// <see cref="AddFoundryAgent(IServiceCollection, IConfiguration, string, string)"/>
@@ -31,49 +37,97 @@ public static class ServiceCollectionExtensions
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
 
-        IChatClient chatClient = settings.Provider.ToLowerInvariant() switch
+        // Every provider call rides one named HttpClient wrapped in the
+        // standard resilience handler (retry on transient 408/429/5xx, circuit
+        // breaker, timeouts). The default envelope assumes sub-second APIs, so
+        // it is re-tuned for LLM latency: a local model can legitimately take
+        // minutes on a long prompt, and a 10-second attempt timeout would turn
+        // every slow completion into a retry storm. (Streaming responses return
+        // at the headers, so the attempt timeout does not cut off a stream
+        // mid-token.)
+        services.AddHttpClient("llm")
+            .AddStandardResilienceHandler(o =>
+            {
+                o.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
+                o.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+                // Validation requires SamplingDuration >= 2x the attempt timeout.
+                o.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(4);
+            });
+
+        // IHttpClientFactory logs every request/response at Information, which
+        // would drown each demo's console output. Keep the pipeline, quiet the
+        // narration; real problems still surface at Warning and above.
+        services.AddLogging(logging =>
         {
-            "azure" => new AzureOpenAIClient(
-                    new Uri(settings.AzureOpenAI.Endpoint),
-                    // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
-                    // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
-                    // great for local dev but adds cold-start latency in production. There,
-                    // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
-                    // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
-                    // — or use ManagedIdentityCredential directly.
-                    new DefaultAzureCredential())
-                .GetChatClient(settings.AzureOpenAI.Model)
-                .AsIChatClient(),
+            logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+            logging.AddFilter("Polly", LogLevel.Warning);
+        });
 
-            "openai" => new OpenAI.OpenAIClient(settings.OpenAI.ApiKey)
-                .GetChatClient(settings.OpenAI.Model)
-                .AsIChatClient(),
+        // Construction is deferred into the container so the client can be
+        // built over IHttpClientFactory's pipeline instead of a raw socket.
+        services.AddSingleton<IChatClient>(sp =>
+        {
+            HttpClient http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("llm");
 
-            "github" => new OpenAI.OpenAIClient(
-                    new ApiKeyCredential(settings.GitHub.Token),
-                    new OpenAI.OpenAIClientOptions
-                    {
-                        Endpoint = new Uri(settings.GitHub.Endpoint)
-                    })
-                .GetChatClient(settings.GitHub.Model)
-                .AsIChatClient(),
+            return settings.Provider.ToLowerInvariant() switch
+            {
+                "azure" => new AzureOpenAIClient(
+                        new Uri(settings.AzureOpenAI.Endpoint),
+                        // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
+                        // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
+                        // great for local dev but adds cold-start latency in production. There,
+                        // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                        // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
+                        // — or use ManagedIdentityCredential directly.
+                        new DefaultAzureCredential(),
+                        new AzureOpenAIClientOptions
+                        {
+                            Transport = new HttpClientPipelineTransport(http)
+                        })
+                    .GetChatClient(settings.AzureOpenAI.Model)
+                    .AsIChatClient(),
 
-            "ollama" => new OllamaSharp.OllamaApiClient(
-                    new Uri(settings.Ollama.Endpoint),
-                    settings.Ollama.Model),
+                "openai" => new OpenAI.OpenAIClient(
+                        new ApiKeyCredential(settings.OpenAI.ApiKey),
+                        new OpenAI.OpenAIClientOptions
+                        {
+                            Transport = new HttpClientPipelineTransport(http)
+                        })
+                    .GetChatClient(settings.OpenAI.Model)
+                    .AsIChatClient(),
 
-            "foundry" => throw new InvalidOperationException(
-                "Provider 'foundry' returns an AIAgent, not an IChatClient. " +
-                "Call AddFoundryAgent(...) instead of AddLlmChatClient(...). " +
-                "See Chapter 4 for the Foundry quick-start."),
+                "github" => new OpenAI.OpenAIClient(
+                        new ApiKeyCredential(settings.GitHub.Token),
+                        new OpenAI.OpenAIClientOptions
+                        {
+                            Endpoint = new Uri(settings.GitHub.Endpoint),
+                            Transport = new HttpClientPipelineTransport(http)
+                        })
+                    .GetChatClient(settings.GitHub.Model)
+                    .AsIChatClient(),
 
-            _ => throw new InvalidOperationException(
-                $"Unknown LLM provider: '{settings.Provider}'. " +
-                "Valid values: azure, openai, github, ollama, foundry.")
-        };
+                "ollama" => CreateOllamaClient(http, settings),
 
-        services.AddSingleton(chatClient);
+                "foundry" => throw new InvalidOperationException(
+                    "Provider 'foundry' returns an AIAgent, not an IChatClient. " +
+                    "Call AddFoundryAgent(...) instead of AddLlmChatClient(...). " +
+                    "See Chapter 4 for the Foundry quick-start."),
+
+                _ => throw new InvalidOperationException(
+                    $"Unknown LLM provider: '{settings.Provider}'. " +
+                    "Valid values: azure, openai, github, ollama, foundry.")
+            };
+        });
+
         return services;
+    }
+
+    private static IChatClient CreateOllamaClient(HttpClient http, LlmSettings settings)
+    {
+        // OllamaSharp takes the endpoint from the HttpClient's BaseAddress;
+        // CreateClient returns a fresh instance, so setting it here is safe.
+        http.BaseAddress = new Uri(settings.Ollama.Endpoint);
+        return new OllamaSharp.OllamaApiClient(http, settings.Ollama.Model);
     }
 
     /// <summary>

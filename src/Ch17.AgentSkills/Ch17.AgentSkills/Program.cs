@@ -235,8 +235,34 @@ static async Task<object?> RunFileScriptAsync(
 
     using Process process = Process.Start(psi)
         ?? throw new InvalidOperationException($"Could not start '{interpreter}'.");
-    string output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-    await process.WaitForExitAsync(cancellationToken);
+
+    // A hung script must not hang the agent run: give the subprocess a
+    // wall-clock budget on top of the caller's token, and kill it on expiry.
+    using CancellationTokenSource timeout =
+        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    timeout.CancelAfter(TimeSpan.FromSeconds(30));
+
+    string output;
+    try
+    {
+        output = await process.StandardOutput.ReadToEndAsync(timeout.Token);
+        await process.WaitForExitAsync(timeout.Token);
+    }
+    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+    {
+        try { process.Kill(entireProcessTree: true); } catch { /* already gone */ }
+        return "Error: script timed out after 30 seconds and was terminated.";
+    }
+
+    // Silent failure must not read as success — a crashing script returns a
+    // model-readable error instead of whatever partial stdout it produced.
+    if (process.ExitCode != 0)
+    {
+        string detail = output.Trim();
+        return $"Error: script exited with code {process.ExitCode}."
+             + (detail.Length > 0 ? $" Output: {detail}" : "");
+    }
+
     return output.Trim();
 }
 
@@ -256,7 +282,10 @@ static IReadOnlyList<string> ParseCliArguments(JsonElement? arguments)
         string raw = element.GetString() ?? "";
         try
         {
-            element = JsonDocument.Parse(raw).RootElement.Clone();
+            // Clone() detaches the element from the document, so the document
+            // itself can (and must) be disposed here.
+            using JsonDocument doc = JsonDocument.Parse(raw);
+            element = doc.RootElement.Clone();
         }
         catch (JsonException)
         {

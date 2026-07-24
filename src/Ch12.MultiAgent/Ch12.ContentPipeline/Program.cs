@@ -134,8 +134,12 @@ Console.WriteLine("=".PadRight(60, '='));
 Console.WriteLine();
 
 AgentSession editorSession = await editor.CreateSessionAsync(cts.Token);
+// The editor gets the research brief alongside the draft — its instructions
+// ask it to check factual accuracy, and it can only do that against the
+// source material, not against the draft alone.
 AgentResponse editorResult = await editor.RunAsync(
-    $"Review and improve this article:\n\n{draftArticle}",
+    $"Review and improve this article. Check its claims against the research brief.\n\n" +
+    $"Research brief:\n{researchBrief}\n\nDraft article:\n{draftArticle}",
     editorSession,
     cancellationToken: cts.Token);
 

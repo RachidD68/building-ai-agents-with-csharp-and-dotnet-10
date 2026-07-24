@@ -64,7 +64,7 @@ Console.WriteLine();
 Console.WriteLine("  Context window reference:");
 Console.WriteLine("    GPT-4o:      128K tokens");
 Console.WriteLine("    GPT-4o-mini: 128K tokens");
-Console.WriteLine("    Llama 3.2:     8K tokens");
+Console.WriteLine("    Llama 3.2:   128K tokens");
 
 #endregion
 

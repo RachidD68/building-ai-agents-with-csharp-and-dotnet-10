@@ -119,14 +119,17 @@ public sealed class AuditReminderProvider(int everyN, string reminder)
         InvokingContext context,
         CancellationToken cancellationToken)
     {
-        _invocations++;
+        // A provider instance can be shared across concurrent sessions, and a
+        // torn ++ would skip or repeat reminder injections. Interlocked keeps
+        // the count exact either way.
+        int count = Interlocked.Increment(ref _invocations);
 
         AIContext aiContext = new()
         {
             Instructions = "You are a customer-support agent. Use tools to answer."
         };
 
-        if (_invocations % everyN == 0)
+        if (count % everyN == 0)
         {
             Console.WriteLine($"   [context-provider] injecting: {reminder}");
             aiContext.Messages = [new ChatMessage(ChatRole.System, reminder)];
