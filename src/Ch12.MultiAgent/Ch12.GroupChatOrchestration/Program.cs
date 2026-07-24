@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Group Chat orchestration (MAF 1.13)
+// Chapter 12 — Group Chat orchestration (MAF 1.14)
 // ----------------------------------------------------------------------------
 // The built-in Group Chat orchestration runs several agents in a SHARED
 // conversation, taking turns under a manager that decides who speaks next and
@@ -33,7 +33,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 11: Group Chat orchestration ===");
+Console.WriteLine("=== Chapter 12: Group Chat orchestration ===");
 Console.WriteLine();
 
 // ── Two collaborators in one shared conversation ────────────────────

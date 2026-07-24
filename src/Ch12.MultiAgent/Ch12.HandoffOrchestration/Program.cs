@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Handoff orchestration (MAF 1.13)
+// Chapter 12 — Handoff orchestration (MAF 1.14)
 // ----------------------------------------------------------------------------
 // The built-in Handoff orchestration transfers control between agents based on
 // context. A triage agent fields the first message, then hands off to the
@@ -36,7 +36,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 11: Handoff orchestration ===");
+Console.WriteLine("=== Chapter 12: Handoff orchestration ===");
 Console.WriteLine();
 
 // ── The triage agent and three specialists ─────────────────────────

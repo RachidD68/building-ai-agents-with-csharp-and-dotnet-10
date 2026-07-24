@@ -48,7 +48,7 @@ IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 17: Grounding the Contoso FAQ agent ===");
+Console.WriteLine("=== Chapter 18: Grounding the Contoso FAQ agent ===");
 Console.WriteLine();
 
 // ── Step 1: rebuild the Chapter 10 RAG pipeline ───────────────────

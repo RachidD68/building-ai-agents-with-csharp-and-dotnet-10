@@ -4,7 +4,7 @@
 // you, ResponseFormat sets the schema on the run options (or the agent) and
 // hands back JSON text you parse yourself. Use it when the type is dynamic,
 // the schema is raw JSON, the format must be fixed at agent-creation time, you
-// only want the raw text, or you are wiring agents together (Chapters 11-12).
+// only want the raw text, or you are wiring agents together (Chapters 12-13).
 //
 // Paths demonstrated:
 //   1. ChatResponseFormat.Text / ChatResponseFormat.Json — plain text vs. schemaless JSON

@@ -8,7 +8,7 @@
 # context is the CodeSample repo root (it relies on Directory.Packages.props /
 # Directory.Build.props), so build from there:
 #   docker build -f exercises/Ch13.Exercises/Ex04.ContainerizedDeploy/Dockerfile \
-#       -t ch13-ex04-agent-api .
+#       -t ch14-ex04-agent-api .
 # ============================================================================
 
 # ---- Build stage: full SDK ----

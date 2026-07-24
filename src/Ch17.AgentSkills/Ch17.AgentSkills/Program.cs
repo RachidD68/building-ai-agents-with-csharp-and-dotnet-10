@@ -38,7 +38,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 16: Agent Skills demo ===");
+Console.WriteLine("=== Chapter 17: Agent Skills demo ===");
 Console.WriteLine();
 
 // ── 1. File-based skill ────────────────────────────────────────────
@@ -83,13 +83,13 @@ UnitConverterSkill unitConverterSkill = new();
 // allow-list — useful when a shared skills folder contains experimental
 // skills you do not want to surface in this particular service.
 //
-// As of MAF 1.13 a file-based source MUST be paired with a script runner
+// Since MAF 1.13 a file-based source MUST be paired with a script runner
 // (the builder throws from Build() otherwise, even when no skill ships a
 // script). We hand it RunFileScriptAsync below, a minimal subprocess
-// runner. The on-disk expense-report skill is resource-only, so the runner
-// is never actually invoked here — but the wiring is what the builder
-// requires, and it is what you would supply for a file skill that does
-// bundle a script.
+// runner. The on-disk expense-report skill bundles scripts/validate.py, and
+// the demo's last question drives it end to end — advertise, load_skill,
+// read_skill_resource (the policy FAQ), then run_skill_script through this
+// exact runner.
 HashSet<string> approvedSkillNames = new() { "expense-report", "code-style", "unit-converter" };
 
 AgentSkillsProvider skillsProvider = new AgentSkillsProviderBuilder()
@@ -194,7 +194,7 @@ static string Truncate(string? value, int max = 96)
     return value.Length <= max ? value : value[..max] + "…";
 }
 
-// Minimal subprocess runner for file-based skill scripts (MAF 1.13 shape).
+// Minimal subprocess runner for file-based skill scripts (MAF 1.14 shape).
 // The runner delegate receives the owning skill, the AgentFileSkillScript
 // (with its absolute FullPath), and the raw JSON arguments — a string array
 // of command-line arguments, per AgentFileSkillScript.ParametersSchema. It

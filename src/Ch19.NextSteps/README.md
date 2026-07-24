@@ -9,7 +9,7 @@ to explore as you continue your journey.
 ### Agent-to-Agent (A2A) Protocol
 Standardizes how AI agents discover and communicate with each other over HTTP.
 - Specification: https://a2a-protocol.org/latest/
-- See Chapter 13 (Ch13.A2APreview) for integration using the official SDK
+- See Chapter 14 (Ch14.A2APreview) for integration using the official SDK
 
 ### Model Context Protocol (MCP)
 Enables AI agents to access external tools, data sources, and services.

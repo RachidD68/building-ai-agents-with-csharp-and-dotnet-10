@@ -87,7 +87,7 @@ catch (OperationCanceledException)
 }
 // A failed first call is the single most common thing a new reader hits. These
 // are the real errors the provider surfaces through IChatClient — not just
-// cancellation. We log something useful and stop; Chapter 13 adds real
+// cancellation. We log something useful and stop; Chapter 14 adds real
 // resilience (retries, backoff, circuit breakers) around this exact call.
 catch (ClientResultException ex)
 {

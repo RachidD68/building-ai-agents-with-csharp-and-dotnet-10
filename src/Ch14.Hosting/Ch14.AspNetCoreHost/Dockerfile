@@ -1,5 +1,5 @@
 # ============================================================================
-# Chapter 13 — multi-stage Dockerfile for Ch13.AspNetCoreHost
+# Chapter 14 — multi-stage Dockerfile for Ch14.AspNetCoreHost
 #
 # The DEFAULT path in the chapter is SDK container publishing (no Dockerfile):
 #   dotnet publish -c Release --os linux --arch x64 /t:PublishContainer
@@ -7,7 +7,7 @@
 # This Dockerfile is the CUSTOM path, for teams that require one in source
 # control. Build context is the CodeSample repo root (it references the
 # Common project), so build from there:
-#   docker build -f src/Ch13.Hosting/Ch13.AspNetCoreHost/Dockerfile -t ch13-agent-api .
+#   docker build -f src/Ch14.Hosting/Ch14.AspNetCoreHost/Dockerfile -t ch14-agent-api .
 # ============================================================================
 
 # ---- Build stage: full SDK ----
@@ -17,12 +17,12 @@ WORKDIR /src
 # Central package management files first, for layer-cached restores.
 COPY Directory.Packages.props Directory.Build.props ./
 COPY src/Common/AgenticAI.Common/AgenticAI.Common.csproj src/Common/AgenticAI.Common/
-COPY src/Ch13.Hosting/Ch13.AspNetCoreHost/Ch13.AspNetCoreHost.csproj src/Ch13.Hosting/Ch13.AspNetCoreHost/
-RUN dotnet restore src/Ch13.Hosting/Ch13.AspNetCoreHost/Ch13.AspNetCoreHost.csproj
+COPY src/Ch14.Hosting/Ch14.AspNetCoreHost/Ch14.AspNetCoreHost.csproj src/Ch14.Hosting/Ch14.AspNetCoreHost/
+RUN dotnet restore src/Ch14.Hosting/Ch14.AspNetCoreHost/Ch14.AspNetCoreHost.csproj
 
 # Copy the rest and publish.
 COPY src/ src/
-RUN dotnet publish src/Ch13.Hosting/Ch13.AspNetCoreHost/Ch13.AspNetCoreHost.csproj \
+RUN dotnet publish src/Ch14.Hosting/Ch14.AspNetCoreHost/Ch14.AspNetCoreHost.csproj \
     -c Release -o /app --no-restore
 
 # ---- Runtime stage: chiseled (no shell, no package manager, non-root) ----
@@ -32,4 +32,4 @@ COPY --from=build /app .
 
 # Chiseled images already run as the non-root 'app' user (UID 1654).
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "Ch13.AspNetCoreHost.dll"]
+ENTRYPOINT ["dotnet", "Ch14.AspNetCoreHost.dll"]

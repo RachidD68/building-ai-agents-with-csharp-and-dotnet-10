@@ -139,7 +139,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Chapter 13 — Ex04: Containerized, secured, deployable agent API",
+    service = "Chapter 14 — Ex04: Containerized, secured, deployable agent API",
     endpoints = new
     {
         chat = "POST /chat { \"message\": \"...\" }  (auth)",

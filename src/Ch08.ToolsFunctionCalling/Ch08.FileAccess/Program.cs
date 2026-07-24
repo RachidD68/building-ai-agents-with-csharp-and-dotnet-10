@@ -1,7 +1,7 @@
 // ============================================================================
 // Chapter 8 — FileAccessProvider: a sandboxed scratchpad for your agent
 // ----------------------------------------------------------------------------
-// MAF 1.13 ships a built-in context provider that gives an agent a SAFE, scoped
+// MAF ships (since 1.13) a built-in context provider that gives an agent a SAFE, scoped
 // filesystem: FileAccessProvider. Register it and the model gains seven tools —
 // read, write, delete, ls, grep, replace, and replace_lines — all confined to a
 // store you choose. No System.IO, no path the

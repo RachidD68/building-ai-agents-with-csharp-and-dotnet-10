@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Chapter 12 — Multi-Agent Systems (Content Pipeline — Capstone)
 // Demonstrates a three-stage content creation pipeline:
 //   Researcher → Writer → Editor
@@ -10,7 +10,7 @@
 //   - Editor agent with a critical persona
 //   - Full output at each stage shows how personas shape behavior
 //
-// This is the capstone for Chapter 11, combining multi-agent chaining
+// This is the capstone for Chapter 12, combining multi-agent chaining
 // with tool usage and persona-driven instructions.
 // ============================================================================
 
@@ -28,7 +28,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 11: Content Pipeline — Researcher → Writer → Editor ===\n");
+Console.WriteLine("=== Chapter 12: Content Pipeline — Researcher → Writer → Editor ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

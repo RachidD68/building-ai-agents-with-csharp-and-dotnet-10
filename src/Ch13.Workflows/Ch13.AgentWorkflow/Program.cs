@@ -34,7 +34,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 12: Agents as Workflow Executors ===\n");
+Console.WriteLine("=== Chapter 13: Agents as Workflow Executors ===\n");
 
 // ---------------------------------------------------------------
 // Two agents. Each is an ordinary ChatClientAgent — nothing about

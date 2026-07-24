@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 // Some tools are too dangerous to fire on the model's say-so alone. Refunding
 // an order, deleting a record, sending money — you want a human (or a policy)
-// to approve the call before it runs. MAF 1.13 gives you two layers for this:
+// to approve the call before it runs. MAF 1.14 gives you two layers for this:
 //
 //   1. ApprovalRequiredAIFunction (Microsoft.Extensions.AI) — wrap any
 //      AIFunction so that, instead of executing, the run PAUSES and returns a

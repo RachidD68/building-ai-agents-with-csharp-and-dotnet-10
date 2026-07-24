@@ -151,7 +151,7 @@ public sealed class AgentMetrics : IDisposable
     /// the call ran; the pass rate tells you the answers were actually good — and it
     /// rides the same export pipeline as latency and cost, so quality lands on the
     /// same dashboards. The evaluation framework that produces the rate is Chapter
-    /// 17's subject; here we only record the number.
+    /// 18's subject; here we only record the number.
     /// </summary>
     /// <param name="passRate">Fraction of evaluated items that passed, 0.0–1.0.</param>
     /// <param name="agentName">The name of the agent for tagging.</param>

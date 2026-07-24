@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Chapter 12 — Multi-Agent Systems (Sequential Pipeline)
 // Demonstrates the simplest multi-agent pattern: two agents in sequence.
 // Agent 1 (Translator) translates French text to English.
@@ -26,7 +26,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 11: Sequential Pipeline — Translator → Summarizer ===\n");
+Console.WriteLine("=== Chapter 12: Sequential Pipeline — Translator → Summarizer ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -17,7 +17,7 @@
 // Honest caveat (printed by the program): a safety-tuned model sometimes resists
 // the payload on its own and sometimes complies — model resistance is
 // probabilistic. The DETERMINISTIC defence is the scanner; spotlighting raises
-// the odds. Never rely on the model alone. Pair with the Ch15 output filters and
+// the odds. Never rely on the model alone. Pair with the Ch16 output filters and
 // the critic.
 // ============================================================================
 
@@ -34,7 +34,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 15: Indirect Prompt Injection (LLM01 / LLM08) ===");
+Console.WriteLine("=== Chapter 16: Indirect Prompt Injection (LLM01 / LLM08) ===");
 Console.WriteLine();
 
 using CancellationTokenSource cts = new();

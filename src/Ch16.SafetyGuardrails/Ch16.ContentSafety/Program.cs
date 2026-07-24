@@ -32,7 +32,7 @@ IConfiguration config = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .Build();
 
-Console.WriteLine("=== Chapter 15: Azure AI Content Safety ===");
+Console.WriteLine("=== Chapter 16: Azure AI Content Safety ===");
 Console.WriteLine();
 
 string? endpoint = config["ContentSafety:Endpoint"];

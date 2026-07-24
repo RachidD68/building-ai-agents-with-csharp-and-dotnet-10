@@ -24,7 +24,7 @@
 using System.ComponentModel;
 using Microsoft.Extensions.AI;
 
-Console.WriteLine("=== Chapter 15: Unbounded Consumption (LLM10) ===");
+Console.WriteLine("=== Chapter 16: Unbounded Consumption (LLM10) ===");
 Console.WriteLine();
 
 // ── A tool the runaway model keeps calling forever ────────────────────

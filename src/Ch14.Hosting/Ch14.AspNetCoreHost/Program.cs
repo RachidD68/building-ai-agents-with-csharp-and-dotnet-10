@@ -213,7 +213,7 @@ app.MapGet("/agents", () => Results.Ok(new
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Chapter 13 — Multi-Agent ASP.NET Core Host",
+    service = "Chapter 14 — Multi-Agent ASP.NET Core Host",
     endpoints = new
     {
         chat = "POST /chat { \"message\": \"...\" }  (auth)",

@@ -17,14 +17,14 @@
 //      request.CreateResponse(approved: true/false, reason). Resume on the
 //      SAME session. Approve -> the tool runs. Reject -> it never executes.
 //
-// Ch08 covers the per-function mechanics of tool approval. Ch15's angle is the
+// Ch08 covers the per-function mechanics of tool approval. Ch16's angle is the
 // SAFETY pattern: sensitive action => approval gate + argument validation +
 // least privilege.
 //
-// NOTE: ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental
-// ("MAAI001")] in MAF 1.13— suppressed via <NoWarn> in the .csproj. The
-// ApprovalRequiredAIFunction / ToolApprovalRequestContent types in
-// Microsoft.Extensions.AI are stable.
+// NOTE: ToolApprovalAgent / ToolApprovalAgentOptions carried [Experimental
+// ("MAAI001")] through MAF 1.13; they are GA in 1.14, so the old <NoWarn>
+// suppression is gone from the .csproj. The ApprovalRequiredAIFunction /
+// ToolApprovalRequestContent types in Microsoft.Extensions.AI are stable.
 // ============================================================================
 
 using System.ComponentModel;
@@ -40,7 +40,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 15: Tool-call Approval (Excessive Agency / LLM06) ===");
+Console.WriteLine("=== Chapter 16: Tool-call Approval (Excessive Agency / LLM06) ===");
 Console.WriteLine();
 
 using CancellationTokenSource cts = new();

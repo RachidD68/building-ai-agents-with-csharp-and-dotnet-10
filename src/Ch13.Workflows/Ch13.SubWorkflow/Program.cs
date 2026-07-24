@@ -34,7 +34,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 12: Sub-workflows & workflows-as-agents ===\n");
+Console.WriteLine("=== Chapter 13: Sub-workflows & workflows-as-agents ===\n");
 
 // ---------------------------------------------------------------
 // Part 1: embed an inner workflow as a node in a parent workflow.

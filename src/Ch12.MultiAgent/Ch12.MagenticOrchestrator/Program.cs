@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.13)
+// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.14)
 // ----------------------------------------------------------------------------
 // Magentic is a multi-agent orchestrator from Microsoft Research that uses a
 // stateful "ledger" — a structured record of facts, plans, and observations —
@@ -38,7 +38,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 11: Magentic orchestrator ===");
+Console.WriteLine("=== Chapter 12: Magentic orchestrator ===");
 Console.WriteLine();
 
 // ── The three specialists ──────────────────────────────────────────

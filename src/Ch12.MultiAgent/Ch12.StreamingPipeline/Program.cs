@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Streaming a pipeline (MAF 1.13)
+// Chapter 12 — Streaming a pipeline (MAF 1.14)
 // ----------------------------------------------------------------------------
 // Blocking RunAsync hides everything until the whole pipeline finishes. Real UX
 // needs two things from a multi-stage pipeline:
@@ -34,7 +34,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 11: Streaming a pipeline ===");
+Console.WriteLine("=== Chapter 12: Streaming a pipeline ===");
 Console.WriteLine();
 
 ChatClientAgent outliner = new(

@@ -42,7 +42,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 12: Checkpointed Approval (durable HITL) ===\n");
+Console.WriteLine("=== Chapter 13: Checkpointed Approval (durable HITL) ===\n");
 
 AIAgent drafter = new ChatClientAgent(
     chatClient,

@@ -29,7 +29,7 @@ using Microsoft.Extensions.AI;
 
 int failures = 0;
 
-Console.WriteLine("=== Chapter 17: Eval test harness (deterministic, offline) ===");
+Console.WriteLine("=== Chapter 18: Eval test harness (deterministic, offline) ===");
 Console.WriteLine();
 
 // A stub agent: the pre-response EvaluateAsync overload needs an AIAgent for

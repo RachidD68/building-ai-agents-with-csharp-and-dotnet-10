@@ -36,7 +36,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 12: A2A input-request human-in-the-loop ===");
+Console.WriteLine("=== Chapter 13: A2A input-request human-in-the-loop ===");
 Console.WriteLine();
 
 // ── A simple agent that drafts a customer-support response ─────────

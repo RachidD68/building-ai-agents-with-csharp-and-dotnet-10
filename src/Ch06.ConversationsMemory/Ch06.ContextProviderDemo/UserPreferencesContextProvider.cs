@@ -17,7 +17,7 @@ namespace Ch06.ContextProviderDemo;
 ///   <item><see cref="StoreAIContextAsync"/> — runs AFTER each call (log usage, track tokens)</item>
 /// </list>
 /// <para>
-/// FORWARD REFERENCE: The middleware pipeline (Chapter 15) can also intercept
+/// FORWARD REFERENCE: The middleware pipeline (Chapter 16) can also intercept
 /// and modify conversation history.
 /// </para>
 /// </remarks>

@@ -1,4 +1,4 @@
-# Ch13.A2APreview — Agent-to-Agent (A2A) Protocol Integration
+# Ch14.A2APreview — Agent-to-Agent (A2A) Protocol Integration
 
 This project demonstrates how to expose an AI agent via the A2A protocol
 using the official `Microsoft.Agents.AI.Hosting.A2A.AspNetCore` library.

@@ -9,8 +9,8 @@
 // approves the read-only call but escalates the write call. We then REJECT the
 // cancel and prove its side effect (a counter) never fires.
 //
-// NOTE: ToolApprovalAgent / ToolApprovalAgentOptions are [Experimental("MAAI001")]
-// in MAF 1.10 — suppressed via <NoWarn> in the .csproj.
+// NOTE: ToolApprovalAgent / ToolApprovalAgentOptions carried [Experimental("MAAI001")]
+// through MAF 1.13; they are GA in 1.14, so no <NoWarn> suppression is needed.
 // ============================================================================
 
 using System.ClientModel;

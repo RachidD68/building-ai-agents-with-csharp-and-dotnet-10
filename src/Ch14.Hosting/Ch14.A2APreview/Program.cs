@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Chapter 14 — A2A Protocol Integration
 // Exposing an agent via the Agent-to-Agent (A2A) protocol using
 // Microsoft Agent Framework's official A2A hosting library.
@@ -49,7 +49,7 @@ app.MapA2AJsonRpc(codingAssistant, "/a2a/coding-assistant");
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Chapter 13 — A2A Protocol Integration",
+    service = "Chapter 14 — A2A Protocol Integration",
     endpoints = new
     {
         agentCard = "GET /a2a/coding-assistant/v1/card",

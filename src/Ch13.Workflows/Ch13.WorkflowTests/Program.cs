@@ -18,7 +18,7 @@ using Microsoft.Agents.AI.Workflows;
 
 int failures = 0;
 
-Console.WriteLine("=== Chapter 12: Workflow Tests ===\n");
+Console.WriteLine("=== Chapter 13: Workflow Tests ===\n");
 
 // --- Branch 1: positive sentiment routes to the thank-you handler ---
 await Case("positive routes to thank-you",

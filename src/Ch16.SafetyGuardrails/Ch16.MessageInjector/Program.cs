@@ -21,7 +21,7 @@
 //
 // This demo registers an AuditReminderProvider that (a) supplies the agent's
 // standing instructions and (b) injects an [audit] system message on every
-// second model invocation. Compose it with the Ch15 middleware
+// second model invocation. Compose it with the Ch16 middleware
 // (LoggingMiddleware, TimingMiddleware, ContentFilterMiddleware): the provider
 // handles per-invocation concerns, the middleware handles whole-request ones.
 // ============================================================================
@@ -38,7 +38,7 @@ hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
 using IHost host = hostBuilder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 15: AIContextProvider mid-run injection demo ===");
+Console.WriteLine("=== Chapter 16: AIContextProvider mid-run injection demo ===");
 Console.WriteLine();
 
 // ── A toy tool to make the function-call loop interesting ─────────────

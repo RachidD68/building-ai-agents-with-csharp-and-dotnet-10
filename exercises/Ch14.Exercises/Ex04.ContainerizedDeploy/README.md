@@ -49,7 +49,7 @@ The default path needs **no Dockerfile** — the .NET 10 SDK builds the image:
 
 ```bash
 dotnet publish -c Release --os linux --arch x64 /t:PublishContainer
-docker run -p 8080:8080 -e LlmProvider__Provider=ollama ch13-ex04-agent-api:1.0.0
+docker run -p 8080:8080 -e LlmProvider__Provider=ollama ch14-ex04-agent-api:1.0.0
 ```
 
 The image shape is set by the `<Container*>` properties in the `.csproj`
@@ -61,7 +61,7 @@ control (build from the CodeSample repo root — see the file header).
 
 ## 2. Deploy to Azure Container Apps
 
-From the Aspire AppHost (`src/Ch13.Hosting/Ch13.AspireOrchestration.AppHost`):
+From the Aspire AppHost (`src/Ch14.Hosting/Ch14.AspireOrchestration/Ch14.AspireOrchestration.AppHost`):
 
 ```bash
 azd auth login          # authenticate once

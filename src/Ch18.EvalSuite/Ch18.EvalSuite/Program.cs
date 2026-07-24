@@ -41,7 +41,7 @@ IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 17: Evaluation suite ===");
+Console.WriteLine("=== Chapter 18: Evaluation suite ===");
 Console.WriteLine();
 
 // ── The agent under test ──────────────────────────────────────────

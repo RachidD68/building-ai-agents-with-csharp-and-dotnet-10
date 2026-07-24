@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Concurrent orchestration (MAF 1.13)
+// Chapter 12 — Concurrent orchestration (MAF 1.14)
 // ----------------------------------------------------------------------------
 // The built-in Concurrent orchestration fans one input out to N specialists
 // that run in PARALLEL, then aggregates their results. The runtime does the
@@ -32,7 +32,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 11: Concurrent orchestration ===");
+Console.WriteLine("=== Chapter 12: Concurrent orchestration ===");
 Console.WriteLine();
 
 // ── Three reviewers, each with a narrow lens ────────────────────────

@@ -16,7 +16,7 @@
 
 using System.Text.Encodings.Web;
 
-Console.WriteLine("=== Chapter 15: Improper Output Handling (LLM05) ===");
+Console.WriteLine("=== Chapter 16: Improper Output Handling (LLM05) ===");
 Console.WriteLine();
 
 // A model answer that LOOKS like a normal helpful response but carries an

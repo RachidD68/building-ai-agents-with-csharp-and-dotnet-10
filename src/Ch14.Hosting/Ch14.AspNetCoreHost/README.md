@@ -1,4 +1,4 @@
-# Ch13.AspNetCoreHost — Hosting Multiple Agents in ASP.NET Core
+# Ch14.AspNetCoreHost — Hosting Multiple Agents in ASP.NET Core
 
 This project demonstrates how to host multiple AI agents in a single ASP.NET Core
 application using the Microsoft Agent Framework (MAF) Hosting package.

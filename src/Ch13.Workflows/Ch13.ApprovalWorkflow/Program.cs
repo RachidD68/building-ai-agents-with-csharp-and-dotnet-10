@@ -29,7 +29,7 @@ hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
 using IHost host = hostBuilder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 12: Approval Workflow — Human-in-the-Loop ===\n");
+Console.WriteLine("=== Chapter 13: Approval Workflow — Human-in-the-Loop ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

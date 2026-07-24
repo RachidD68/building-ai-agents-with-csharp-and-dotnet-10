@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Testing multi-agent compositions (MAF 1.13)
+// Chapter 12 — Testing multi-agent compositions (MAF 1.14)
 // ----------------------------------------------------------------------------
 // You can test a pipeline's WIRING without spending a single token. The trick
 // is a fake IChatClient that returns canned responses, so the agents behave
@@ -33,7 +33,7 @@ void Check(string name, bool condition)
     }
 }
 
-Console.WriteLine("=== Chapter 11: Testing multi-agent compositions ===");
+Console.WriteLine("=== Chapter 12: Testing multi-agent compositions ===");
 Console.WriteLine();
 
 // ── Test 1: a canned-response agent returns exactly what we scripted ─

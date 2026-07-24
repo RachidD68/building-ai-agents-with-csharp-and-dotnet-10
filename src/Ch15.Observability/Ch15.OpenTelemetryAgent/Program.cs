@@ -104,7 +104,7 @@ AgentMetrics metrics = host.Services.GetRequiredService<AgentMetrics>();
 ILogger logger = host.Services.GetRequiredService<ILoggerFactory>()
     .CreateLogger("Ch15.OpenTelemetryAgent");
 
-Console.WriteLine("=== Chapter 14: Observability — OpenTelemetry Agent ===");
+Console.WriteLine("=== Chapter 15: Observability — OpenTelemetry Agent ===");
 Console.WriteLine($"Exporter: {exporter} | Trace sample ratio: {sampleRatio:0.##}");
 Console.WriteLine();
 
@@ -232,7 +232,7 @@ totalStopwatch.Stop();
 try
 {
     // The built-in KeywordCheck verifies the response mentions the topic — the
-    // simplest "did it stay on subject" gate. Chapter 17 has the full catalog:
+    // simplest "did it stay on subject" gate. Chapter 18 has the full catalog:
     // tool-call checks, custom predicates, and LLM-as-judge scoring.
     LocalEvaluator evaluator = new(EvalChecks.KeywordCheck("telemetry"));
 
@@ -284,7 +284,7 @@ static void ApplyTraceExporter(
     switch (exporter.ToLowerInvariant())
     {
         case "otlp":
-            // Chapter 13's Aspire dashboard ingests OTLP on this endpoint.
+            // Chapter 14's Aspire dashboard ingests OTLP on this endpoint.
             tracing.AddOtlpExporter(o => o.Endpoint = new Uri("http://localhost:4317"));
             break;
 

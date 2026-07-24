@@ -16,7 +16,7 @@
 
 using Microsoft.Agents.AI.Workflows;
 
-Console.WriteLine("=== Chapter 12: Sequential Workflow — Uppercase → Reverse ===\n");
+Console.WriteLine("=== Chapter 13: Sequential Workflow — Uppercase → Reverse ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
