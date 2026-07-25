@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Ch09.McpHttpServer": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:59649;http://localhost:59650"
+    }
+  }
+}
