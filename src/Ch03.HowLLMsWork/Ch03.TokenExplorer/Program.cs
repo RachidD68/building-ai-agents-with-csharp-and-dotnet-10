@@ -340,13 +340,17 @@ const decimal outRate = 8.00m;    // output
 Console.WriteLine();
 Console.WriteLine("  Same volume, four pricing dimensions (GPT-4.1 illustrative rates):\n");
 
-// A realistic split: most of the 500 input tokens are a stable system+context
-// prefix that caches; only a small tail (the user's new message) is fresh.
-int cacheablePrefix = 420;                       // re-sent unchanged every call
-int freshTail = avgInputTokens - cacheablePrefix; // the volatile user message
+// A realistic agent-style split: the prompt is dominated by a stable
+// system+tool-schema prefix that is big enough to actually cache — the
+// automatic cache needs >= 1,024 tokens — plus a small volatile tail (the
+// user's new message). Note the deliberate size: a 420-token prefix would
+// never hit the threshold and would bill fresh on every call.
+int agentInputTokens = 1_500;                     // per-call input, this scenario
+int cacheablePrefix = 1_280;                      // stable prefix, >= 1,024 so it caches
+int freshTail = agentInputTokens - cacheablePrefix; // the volatile user message
 long callsPerMonth = (long)requestsPerDay * daysPerMonth;
 
-decimal uncached = (avgInputTokens * inRate + avgOutputTokens * outRate)
+decimal uncached = (agentInputTokens * inRate + avgOutputTokens * outRate)
     * callsPerMonth / 1_000_000m;
 
 decimal withCache = (cacheablePrefix * cachedRate + freshTail * inRate + avgOutputTokens * outRate)

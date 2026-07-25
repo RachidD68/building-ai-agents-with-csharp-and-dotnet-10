@@ -1,6 +1,7 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using Anthropic;
+using Polly;
 using Azure.AI.OpenAI;
 using Azure.AI.Projects;
 using Azure.Identity;
@@ -45,14 +46,7 @@ public static class ServiceCollectionExtensions
         // every slow completion into a retry storm. (Streaming responses return
         // at the headers, so the attempt timeout does not cut off a stream
         // mid-token.)
-        services.AddHttpClient("llm")
-            .AddStandardResilienceHandler(o =>
-            {
-                o.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
-                o.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
-                // Validation requires SamplingDuration >= 2x the attempt timeout.
-                o.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(4);
-            });
+        services.AddHttpClient("llm").AddLlmResilienceHandler();
 
         // IHttpClientFactory logs every request/response at Information, which
         // would drown each demo's console output. Keep the pipeline, quiet the
@@ -128,6 +122,30 @@ public static class ServiceCollectionExtensions
         // CreateClient returns a fresh instance, so setting it here is safe.
         http.BaseAddress = new Uri(settings.Ollama.Endpoint);
         return new OllamaSharp.OllamaApiClient(http, settings.Ollama.Model);
+    }
+
+    /// <summary>
+    /// Attaches the standard resilience pipeline (transient-fault retries with
+    /// exponential backoff + jitter, circuit breaker, timeouts) to the HttpClient
+    /// that backs the LLM provider client — with the timeout envelope re-tuned
+    /// for LLM latency. The defaults assume sub-second APIs; a local model can
+    /// legitimately generate for minutes, and a non-streamed completion does not
+    /// return headers until generation finishes.
+    /// </summary>
+    public static IHttpClientBuilder AddLlmResilienceHandler(this IHttpClientBuilder builder)
+    {
+        builder.AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 3;                      // the standard defaults,
+            options.Retry.BackoffType = DelayBackoffType.Exponential; // spelled out so the
+            options.Retry.UseJitter = true;                           // knobs are visible
+            options.Retry.Delay = TimeSpan.FromSeconds(2);
+            options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);       // LLM calls are slow
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            // Options validation requires SamplingDuration >= 2x the attempt timeout.
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(4);
+        });
+        return builder;
     }
 
     /// <summary>
