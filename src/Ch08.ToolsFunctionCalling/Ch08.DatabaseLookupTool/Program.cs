@@ -66,7 +66,7 @@ string[] scenarios =
 [
     "Show me all your electronics products.",
     "I need a good office setup. What furniture do you have and what would you recommend?",
-    "I'd like to order 2 of the ergonomic keyboards. Can you look up the product and place the order?",
+    "I'd like to order 2 of the Ergo Keyboard V2. Can you look up the product and place the order?",
     "What accessories do you have under $50?"
 ];
 

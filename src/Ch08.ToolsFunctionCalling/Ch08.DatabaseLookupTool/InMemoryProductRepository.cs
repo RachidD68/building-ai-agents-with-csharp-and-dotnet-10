@@ -11,7 +11,7 @@ public sealed class InMemoryProductRepository : IProductRepository
         new(1, "Contoso Ergonomic Keyboard", "Electronics", 79.99m, 150),
         new(2, "Contoso Wireless Mouse", "Electronics", 34.99m, 200),
         new(3, "Contoso 27\" 4K Monitor", "Electronics", 449.99m, 45),
-        new(4, "Contoso Standing Desk", "Furniture", 599.99m, 30),
+        new(4, "Contoso Ergo Keyboard V2", "Electronics", 89.99m, 42),
         new(5, "Contoso Mesh Office Chair", "Furniture", 349.99m, 60),
         new(6, "Contoso USB-C Hub", "Accessories", 49.99m, 300),
         new(7, "Contoso Webcam Pro", "Electronics", 89.99m, 120),
@@ -81,7 +81,7 @@ public sealed class InMemoryProductRepository : IProductRepository
             decimal total = product.Price * quantity;
 
             OrderConfirmation confirmation = new(
-                OrderId: $"ORD-{orderId:D6}",
+                OrderId: $"ORD-{DateTime.UtcNow.Year}-{orderId:D5}",
                 ProductName: product.Name,
                 Quantity: quantity,
                 TotalPrice: total,

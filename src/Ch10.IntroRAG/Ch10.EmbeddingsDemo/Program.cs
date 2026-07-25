@@ -64,33 +64,22 @@ Console.WriteLine($"Embedding provider: {provider}\n");
 // ---------------------------------------------------------------
 // Step 2: Define sample sentences with known semantic relationships
 // ---------------------------------------------------------------
+// Two sentences about cats, two about .NET, and one outlier about pasta.
+// The topic labels drive the header row of the similarity matrix below.
 string[] sentences =
 [
-    "The cat sat on the mat.",                           // 0: Animals
-    "A kitten was resting on the rug.",                  // 1: Animals (similar to 0)
-    "The stock market crashed yesterday.",               // 2: Finance
-    "Financial markets experienced a sharp decline.",    // 3: Finance (similar to 2)
-    "I love programming in C#.",                         // 4: Programming
-    "C# is my favorite programming language.",           // 5: Programming (similar to 4)
-    "The weather is sunny and warm today.",              // 6: Weather
-    "It's a beautiful day outside with clear skies.",    // 7: Weather (similar to 6)
-    "Machine learning models need large datasets.",      // 8: AI/ML
-    "Neural networks require significant training data." // 9: AI/ML (similar to 8)
+    "Cats are small, carnivorous mammals that are often kept as pets.",
+    "Felines make affectionate companions and are popular household animals.",
+    "The C# programming language was developed by Microsoft in the early 2000s.",
+    "Dotnet is a cross-platform software framework for building applications.",
+    "Pasta is a staple food of traditional Italian cuisine."
 ];
 
-Console.WriteLine("Sentences:");
-for (int i = 0; i < sentences.Length; i++)
-{
-    Console.WriteLine($"  [{i}] {sentences[i]}");
-}
-
-Console.WriteLine();
+string[] topics = ["Cats", "Felines", "C#", "Dotnet", "Pasta"];
 
 // ---------------------------------------------------------------
-// Step 3: Generate embeddings for all sentences
+// Step 3: Generate embeddings for all sentences in one batched call
 // ---------------------------------------------------------------
-Console.WriteLine("Generating embeddings...");
-
 GeneratedEmbeddings<Embedding<float>> embeddings = await embeddingGenerator.GenerateAsync(
     sentences,
     cancellationToken: cts.Token);
@@ -99,43 +88,27 @@ Console.WriteLine($"Generated {embeddings.Count} embeddings " +
                   $"({embeddings[0].Vector.Length} dimensions each)\n");
 
 // ---------------------------------------------------------------
-// Step 4: Calculate and display cosine similarity matrix
+// Step 4: Calculate and display the 5x5 cosine similarity matrix
 // ---------------------------------------------------------------
-Console.WriteLine("Cosine Similarity Matrix:");
-Console.WriteLine(new string('=', 70));
-
-// Header row
-Console.Write("     ");
-for (int i = 0; i < sentences.Length; i++)
-{
-    Console.Write($"  [{i,2}]");
-}
-Console.WriteLine();
+// Header row: one topic label per sentence, aligned to the value columns.
+string header = new string(' ', 25) + string.Concat(topics.Select(t => $"{t,-11}"));
+Console.WriteLine(header.TrimEnd());
 
 for (int i = 0; i < sentences.Length; i++)
 {
-    Console.Write($"[{i,2}] ");
+    // Row label: the start of the sentence, e.g. "Cats are small...".
+    string row = $"{RowLabel(sentences[i]),-25}";
+
     for (int j = 0; j < sentences.Length; j++)
     {
         float similarity = TensorPrimitives.CosineSimilarity(
             embeddings[i].Vector.Span,
             embeddings[j].Vector.Span);
 
-        // Color-code: green for high similarity, yellow for medium, default for low
-        if (i != j && similarity > 0.85f)
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-        }
-        else if (i != j && similarity > 0.75f)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-        }
-
-        Console.Write($" {similarity,5:F2} ");
-        Console.ResetColor();
+        row += $"{similarity,-11:F4}";
     }
 
-    Console.WriteLine();
+    Console.WriteLine(row.TrimEnd());
 }
 
 // ---------------------------------------------------------------
@@ -168,6 +141,26 @@ Console.WriteLine("Notice: Semantically similar sentences (same topic) have high
 Console.WriteLine("even though they use different words. This is the power of embeddings.");
 
 Console.WriteLine("\n=== Embeddings Demo complete! ===");
+
+// Truncates a sentence at a word boundary (max 15 chars) to make a compact
+// matrix row label, e.g. "Cats are small, carnivorous..." -> "Cats are small...".
+static string RowLabel(string sentence)
+{
+    string label = string.Empty;
+
+    foreach (string word in sentence.Split(' '))
+    {
+        string candidate = label.Length == 0 ? word : $"{label} {word}";
+        if (candidate.Length > 15)
+        {
+            break;
+        }
+
+        label = candidate;
+    }
+
+    return $"{label.TrimEnd(',', '.')}...";
+}
 
 /// <summary>
 /// Extension helper for reading required configuration values.

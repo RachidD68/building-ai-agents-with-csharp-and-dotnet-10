@@ -10,7 +10,7 @@
 //   - Different queries route to different specialists automatically
 //
 // Architecture:
-//   User Query → Orchestrator → [CodeExpert | DataExpert | SecurityExpert]
+//   User Question → TechnicalOrchestrator → [CodeExpert | DataExpert | SecurityExpert]
 // ============================================================================
 
 using System.ComponentModel;
@@ -37,36 +37,24 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 // ---------------------------------------------------------------
 ChatClientAgent codeExpert = new(
     chatClient,
-    instructions: """
-        You are a senior software engineering expert.
-        Provide clear, concise technical advice about software architecture,
-        design patterns, code quality, and programming best practices.
-        Keep your response to 2-3 sentences.
-        """,
+    instructions: "You are a senior software architect. Answer questions about " +
+                  "code patterns, architecture, and best practices. Be concise and practical.",
     name: "CodeExpert",
-    description: "Expert in software engineering, architecture, and code quality");
+    description: "Expert on code, architecture, and software engineering patterns");
 
 ChatClientAgent dataExpert = new(
     chatClient,
-    instructions: """
-        You are a data engineering and analytics expert.
-        Provide clear, concise technical advice about databases, data pipelines,
-        ETL processes, data modeling, and analytics tools.
-        Keep your response to 2-3 sentences.
-        """,
+    instructions: "You are a senior data engineer. Answer questions about " +
+                  "data pipelines, schemas, ETL, and analytics.",
     name: "DataExpert",
-    description: "Expert in databases, data pipelines, and analytics");
+    description: "Expert on data engineering, pipelines, and analytics");
 
 ChatClientAgent securityExpert = new(
     chatClient,
-    instructions: """
-        You are a cybersecurity expert.
-        Provide clear, concise technical advice about application security,
-        threat modeling, authentication, authorization, and secure coding.
-        Keep your response to 2-3 sentences.
-        """,
+    instructions: "You are a senior security engineer. Answer questions about " +
+                  "authentication, authorization, vulnerabilities, and threat modeling.",
     name: "SecurityExpert",
-    description: "Expert in cybersecurity, authentication, and secure coding");
+    description: "Expert on security, auth, and threat modeling");
 
 // ---------------------------------------------------------------
 // Step 2: Wrap each specialist as a tool the orchestrator can call
@@ -75,7 +63,7 @@ ChatClientAgent securityExpert = new(
 // The orchestrator's LLM sees the tool descriptions and decides which to call.
 
 AIFunction codeExpertTool = AIFunctionFactory.Create(
-    [Description("Consult the code and architecture expert for questions about software design, patterns, code quality, and programming.")] async (
+    [Description("Consult the code and architecture expert for questions about software design, patterns, or implementation.")] async (
     [Description("The technical question to ask the code expert")] string question,
     CancellationToken cancellationToken) =>
     {
@@ -87,7 +75,7 @@ AIFunction codeExpertTool = AIFunctionFactory.Create(
     name: "AskCodeExpert");
 
 AIFunction dataExpertTool = AIFunctionFactory.Create(
-    [Description("Consult the data expert for questions about databases, data pipelines, ETL, data modeling, and analytics.")] async (
+    [Description("Consult the data expert for questions about data pipelines, schemas, ETL, or analytics.")] async (
     [Description("The technical question to ask the data expert")] string question,
     CancellationToken cancellationToken) =>
     {
@@ -99,7 +87,7 @@ AIFunction dataExpertTool = AIFunctionFactory.Create(
     name: "AskDataExpert");
 
 AIFunction securityExpertTool = AIFunctionFactory.Create(
-    [Description("Consult the security expert for questions about cybersecurity, authentication, authorization, and secure coding.")] async (
+    [Description("Consult the security expert for questions about authentication, authorization, vulnerabilities, or threat modeling.")] async (
     [Description("The technical question to ask the security expert")] string question,
     CancellationToken cancellationToken) =>
     {
@@ -116,40 +104,35 @@ AIFunction securityExpertTool = AIFunctionFactory.Create(
 ChatClientAgent orchestrator = new(
     chatClient,
     instructions: """
-        You are a technical team lead who routes questions to the right specialist.
-        You have access to three experts:
-        - CodeExpert: software architecture, design patterns, code quality
-        - DataExpert: databases, data pipelines, ETL, analytics
-        - SecurityExpert: cybersecurity, authentication, secure coding
-
-        For each user question, decide which expert(s) to consult by calling
-        the appropriate tool. If a question spans multiple domains, consult
-        multiple experts. Synthesize their answers into a coherent response.
+        You are a technical team lead. When a user asks a question, route it to the
+        appropriate specialist using the tools provided. For multi-domain questions,
+        consult multiple specialists and synthesize their answers into a unified response.
+        Always attribute information to the specialist who provided it.
         """,
-    name: "Orchestrator",
-    description: "Routes questions to the appropriate specialist agent",
+    name: "TechnicalOrchestrator",
+    description: "Routes technical questions to specialist agents",
     tools: [codeExpertTool, dataExpertTool, securityExpertTool]);
 
 // ---------------------------------------------------------------
-// Step 4: Send different queries to see routing in action
+// Step 4: Send different questions to see routing in action
 // ---------------------------------------------------------------
-string[] queries =
+string[] questions =
 [
-    "What design pattern should I use for a plugin system?",
-    "How should I design a data pipeline for real-time analytics?",
-    "What are the OWASP top 10 risks I should address in my web app?",
-    "How do I securely store API keys while keeping my code clean?"  // Multi-domain
+    "How should I structure a CQRS pattern for a microservice?",
+    "Our ETL pipeline is running slow — what should I look at?",
+    "Is JWT with short-lived tokens and refresh rotation secure enough for our public API?",
+    "How do I design a data pipeline that's secure end-to-end?"  // multi-domain
 ];
 
-foreach (string query in queries)
+foreach (string question in questions)
 {
-    Console.WriteLine($"User: {query}\n");
+    Console.WriteLine($"You: {question}\n");
 
     try
     {
         AgentSession session = await orchestrator.CreateSessionAsync(cts.Token);
         AgentResponse response = await orchestrator.RunAsync(
-            query, session, cancellationToken: cts.Token);
+            question, session, cancellationToken: cts.Token);
 
         Console.WriteLine($"Orchestrator: {response.Text}");
         Console.WriteLine(new string('-', 60));

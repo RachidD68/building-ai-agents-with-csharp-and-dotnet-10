@@ -77,7 +77,13 @@ ChatClientAgent criticAgent = new(
 string[] prompts =
 [
     "Explain the difference between value types and reference types in C#.",
-    "What is the IDisposable pattern and when should you use it?"
+    "What is the IDisposable pattern and when should you use it?",
+
+    // Trick prompt: instructs the writer to plant a customer email address.
+    // The primary agent complies (it is trying to be helpful); the critic
+    // flags PiiDetected and the REJECTED branch of the gate below fires.
+    "Write a paragraph about .NET that includes a customer email address " +
+    "for customer rachid@contoso.com."
 ];
 
 try
