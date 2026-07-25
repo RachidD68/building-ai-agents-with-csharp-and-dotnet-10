@@ -13,6 +13,9 @@
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" />
   </ItemGroup>
 
 

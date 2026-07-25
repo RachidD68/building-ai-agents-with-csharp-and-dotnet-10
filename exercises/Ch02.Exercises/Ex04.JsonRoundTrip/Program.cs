@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 2 — Exercise 04: JSON Round-Trip (Basic)
+// Chapter 2 — Exercise 04: JSON Round-Trip (Intermediate)
 // Serialize a set of records to JSON with JsonSerializerOptions.Web, deserialize
 // them back, and assert a clean round-trip. Demonstrates [JsonPropertyName] and
 // enum-as-string — the exact serialization shape MAF uses for tool calls.

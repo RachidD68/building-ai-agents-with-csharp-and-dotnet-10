@@ -1,11 +1,19 @@
-﻿// ============================================================================
-// Exercise 01 — Recipe Extractor (Beginner)
-// Given free text describing a recipe, extract structured data using
-// RunAsync<T>() for typed responses. FULLY STANDALONE.
+// ============================================================================
+// Exercise 01 — Recipe Extractor (Basic)
+// A typed agent that extracts a Recipe record from pasted-in recipe text:
+// title, ingredients as a NESTED list of Ingredient records (name/quantity/
+// unit), steps as a list of strings, and total time in MINUTES as an int.
+// The nested list shape is exactly Ch07.TypedResponses' TaskList/TaskItem.
+// Every property carries a [Description] schema hint — they survive into the
+// schema whether or not the project generates a documentation file. Failures
+// use the chapter's recovery pattern: catch JsonException, retry ONCE with a
+// stricter prompt on a fresh session, never loop. FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
+using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Microsoft.Agents.AI;
@@ -25,12 +33,22 @@ Console.WriteLine("=== Exercise: Recipe Extractor ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
+JsonSerializerOptions jsonOptions = new()
+{
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+};
+
 ChatClientAgent agent = new(
     chatClient,
     instructions: """
         You are a recipe parser. Extract structured recipe data from the provided text.
         Return ONLY valid JSON matching the requested schema. Do not include any extra text.
-        If a field cannot be determined, use null for optional fields or an empty array for lists.
+        totalTimeMinutes is the TOTAL time (prep + cook) in minutes, as an integer.
+        Each ingredient is an object with name, quantity, and unit. Write the quantity
+        as it appears in the text ("500", "3", "half"); use an empty string for a
+        unit when the ingredient has none (e.g., "3 avocados").
         """,
     name: "RecipeParser");
 
@@ -62,35 +80,30 @@ foreach (string recipeText in sampleRecipes)
 
     try
     {
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse<Recipe> response = await agent.RunAsync<Recipe>(
-            $"Extract the recipe from this text:\n\n{recipeText}",
-            session,
-            cancellationToken: cts.Token);
+        Recipe? recipe = await ExtractRecipeAsync(recipeText);
 
-        if (response.Result is { } recipe)
+        if (recipe is not null)
         {
             Console.WriteLine("--- Extracted Recipe ---");
-            Console.WriteLine($"  Name: {recipe.RecipeName ?? "Unknown"}");
-            Console.WriteLine($"  Prep Time: {recipe.PrepTime ?? "N/A"}");
-            Console.WriteLine($"  Cook Time: {recipe.CookTime ?? "N/A"}");
-            Console.WriteLine($"  Ingredients ({recipe.Ingredients?.Count ?? 0}):");
-            foreach (string ingredient in recipe.Ingredients ?? [])
+            Console.WriteLine($"  Title      : {recipe.Title}");
+            Console.WriteLine($"  Total time : {recipe.TotalTimeMinutes} minutes");
+
+            Console.WriteLine($"  Ingredients ({recipe.Ingredients.Count}):");
+            foreach (Ingredient ingredient in recipe.Ingredients)
             {
-                Console.WriteLine($"    - {ingredient}");
+                string amount = string.IsNullOrWhiteSpace(ingredient.Unit)
+                    ? ingredient.Quantity
+                    : $"{ingredient.Quantity} {ingredient.Unit}";
+                Console.WriteLine($"    - {ingredient.Name,-20} {amount}");
             }
-            Console.WriteLine($"  Steps ({recipe.Steps?.Count ?? 0}):");
+
+            Console.WriteLine($"  Steps ({recipe.Steps.Count}):");
             int step = 0;
-            foreach (string s in recipe.Steps ?? [])
+            foreach (string s in recipe.Steps)
             {
                 step++;
                 Console.WriteLine($"    {step}. {s}");
             }
-        }
-        else
-        {
-            Console.WriteLine("  (No structured result returned)");
-            Console.WriteLine($"  Raw: {response.Text}");
         }
     }
     catch (OperationCanceledException)
@@ -103,6 +116,51 @@ foreach (string recipeText in sampleRecipes)
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+
+// ---------------------------------------------------------------
+// Typed call with the chapter's recovery pattern:
+// one attempt, one stricter retry on JsonException, never a loop.
+// ---------------------------------------------------------------
+async Task<Recipe?> ExtractRecipeAsync(string recipeText)
+{
+    string prompt = $"Extract the recipe from this text:\n\n{recipeText}";
+
+    // Attempt 1: the ordinary typed call.
+    try
+    {
+        AgentSession session = await agent.CreateSessionAsync(cts.Token);
+        AgentResponse<Recipe> response = await agent.RunAsync<Recipe>(
+            prompt, session, jsonOptions, cancellationToken: cts.Token);
+        return response.Result;
+    }
+    catch (JsonException ex)
+    {
+        Console.WriteLine($"  [retry] Typed run failed to deserialize ({ex.Message}); retrying once with a stricter prompt.");
+    }
+
+    // Attempt 2: one stricter retry, on a fresh session — a fresh session
+    // avoids carrying the malformed exchange forward as context.
+    string stricterPrompt =
+        prompt +
+        "\n\nIMPORTANT: Respond with valid JSON ONLY. No prose, no markdown, no code fences. " +
+        "Every field is required. Use the exact field names from the schema.";
+
+    try
+    {
+        AgentSession retrySession = await agent.CreateSessionAsync(cts.Token);
+        AgentResponse<Recipe> retry = await agent.RunAsync<Recipe>(
+            stricterPrompt, retrySession, jsonOptions, cancellationToken: cts.Token);
+        return retry.Result;
+    }
+    catch (JsonException ex)
+    {
+        Console.WriteLine($"\nJSON deserialization error after one retry: {ex.Message}");
+        Console.WriteLine("The LLM response did not match the expected schema.");
+        Console.WriteLine("This can happen with less capable models. Try a different model or");
+        Console.WriteLine("add more explicit schema instructions to the system prompt.");
+        return null;
+    }
+}
 
 // ---------------------------------------------------------------
 // Provider factory
@@ -143,26 +201,46 @@ static IChatClient CreateChatClient(IConfiguration configuration)
 }
 
 // ---------------------------------------------------------------
-// Data model
+// Data model — nested records, [Description] on every property
+// (the shape mirrors Ch07.TypedResponses' TaskList/TaskItem)
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Represents structured recipe data extracted from free text.
+/// A recipe extracted from free text.
 /// </summary>
-sealed class Recipe
+sealed record Recipe
 {
-    /// <summary>Name of the recipe.</summary>
-    public string? RecipeName { get; set; }
+    [Description("The recipe's title or name.")]
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
 
-    /// <summary>List of ingredients.</summary>
-    public List<string>? Ingredients { get; set; }
+    [Description("The ingredients, one entry per ingredient.")]
+    [JsonPropertyName("ingredients")]
+    public IReadOnlyList<Ingredient> Ingredients { get; init; } = [];
 
-    /// <summary>Ordered list of preparation steps.</summary>
-    public List<string>? Steps { get; set; }
+    [Description("The preparation steps, in order.")]
+    [JsonPropertyName("steps")]
+    public IReadOnlyList<string> Steps { get; init; } = [];
 
-    /// <summary>Preparation time (e.g., "15 minutes").</summary>
-    public string? PrepTime { get; set; }
+    [Description("Total time (prep + cook) in minutes, as an integer.")]
+    [JsonPropertyName("totalTimeMinutes")]
+    public int TotalTimeMinutes { get; init; }
+}
 
-    /// <summary>Cooking time (e.g., "45 minutes").</summary>
-    public string? CookTime { get; set; }
+/// <summary>
+/// A single ingredient within a recipe.
+/// </summary>
+sealed record Ingredient
+{
+    [Description("The ingredient's name, e.g. 'ground beef'.")]
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+
+    [Description("The amount as written in the text, e.g. '500', '3', 'half'.")]
+    [JsonPropertyName("quantity")]
+    public string Quantity { get; init; } = string.Empty;
+
+    [Description("The unit of measure, e.g. 'g', 'cups', 'cloves'; empty string if none.")]
+    [JsonPropertyName("unit")]
+    public string Unit { get; init; } = string.Empty;
 }

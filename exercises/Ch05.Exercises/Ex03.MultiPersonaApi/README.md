@@ -2,29 +2,27 @@
 
 ## Prompt
 
-Build a **Minimal API** with three POST endpoints, each backed by a different persona agent:
-
-- `POST /chef` — Chef Gordon persona
-- `POST /detective` — Detective Holmes persona
-- `POST /poet` — Poet Luna persona
-- `GET /personas` — List available personas
+Extend `Ch05.MinimalApiAgent` so the `/chat` endpoint accepts a **persona field in the request body** ("pirate", "navigator", "helper"). Resolve a different `ChatClientAgent` per persona using keyed DI (`[FromKeyedServices]`). Add a `/personas` endpoint that returns the list of available personas **and their descriptions**.
 
 ## Hints
 
-- Use **keyed services** (`AddKeyedSingleton`) to register each agent.
-- Use `[FromKeyedServices("key")]` to resolve the correct agent per endpoint.
-- Each endpoint creates a fresh session for single-turn use.
+- `builder.Services.AddKeyedSingleton<ChatClientAgent>("pirate", (sp, _) => ...)` registers a keyed agent.
+- In the endpoint, inject `[FromKeyedServices("pirate")] ChatClientAgent pirate` — or for dynamic selection, inject `IServiceProvider` and call `sp.GetRequiredKeyedService<ChatClientAgent>(key)`.
+- The persona arrives per request, so this solution uses the dynamic route.
 
 ## Expected Outcome
 
 ```bash
-curl -X POST http://localhost:5000/chef -H "Content-Type: application/json" -d '{"message":"What is recursion?"}'
-# {"persona":"ChefGordon","reply":"Ah, recursion is like a soufflé..."}
+curl -X POST http://localhost:5000/chat -H "Content-Type: application/json" \
+  -d '{"persona":"pirate","message":"What is recursion?"}'
+# {"persona":"pirate","agent":"CaptainCodeBeard","message":"Arrr, recursion be a function callin' itself..."}
+
+curl http://localhost:5000/personas
+# [{"persona":"pirate","name":"CaptainCodeBeard","description":"A pirate-themed AI assistant..."}, ...]
 ```
 
 ## Key Concepts
 
-- Keyed DI services in .NET
-- Multiple agents in a single API
-- Minimal API with POST endpoints
-- Agent persona design
+- Keyed DI services (`AddKeyedSingleton`, `GetRequiredKeyedService`)
+- One endpoint, many agents — persona selected by the request body
+- Discoverability via a `/personas` endpoint with descriptions

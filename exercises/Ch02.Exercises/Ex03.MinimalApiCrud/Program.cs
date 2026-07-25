@@ -1,78 +1,103 @@
 // ============================================================================
 // Exercise 03 — Minimal API CRUD (Challenge)
-// Full CRUD for a BookStore using Minimal APIs with an in-memory list.
-// Endpoints: GET /books, GET /books/{id}, POST /books, PUT /books/{id},
-//            DELETE /books/{id}
+// Full CRUD for a TodoItem record using Minimal APIs: a singleton in-memory
+// store and a logging middleware that writes each request's method, path,
+// and duration to the console.
+// Endpoints: GET /todos, GET /todos/{id}, POST /todos, PUT /todos/{id},
+//            DELETE /todos/{id}
 // ============================================================================
+
+using System.Diagnostics;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Register the in-memory book store as a singleton
-builder.Services.AddSingleton<BookStore>();
+// Register the in-memory todo store as a Singleton — one instance serves
+// every request concurrently, which is why the store must be thread-safe.
+builder.Services.AddSingleton<TodoStore>();
 
 WebApplication app = builder.Build();
 
 // ---------------------------------------------------------------
-// Map CRUD endpoints
+// Logging middleware — method, path, status, and duration per request
+// ---------------------------------------------------------------
+// Same shape as the Ch02.MinimalApi companion: never interpolate values into
+// the message template — pass them as arguments so the logging pipeline can
+// capture them as structured fields (Chapter 14).
+app.Use(async (context, next) =>
+{
+    Stopwatch stopwatch = Stopwatch.StartNew();
+    await next(context);
+    stopwatch.Stop();
+
+    app.Logger.LogInformation(
+        "{Method} {Path} -> {StatusCode} in {ElapsedMs:F0} ms",
+        context.Request.Method, context.Request.Path,
+        context.Response.StatusCode, stopwatch.Elapsed.TotalMilliseconds);
+});
+
+// ---------------------------------------------------------------
+// CRUD endpoints — the IResult-returning shape from Ch02.MinimalApi
 // ---------------------------------------------------------------
 
-app.MapGet("/books", (BookStore store) =>
+app.MapGet("/todos", (TodoStore store) =>
 {
     return Results.Ok(store.GetAll());
 })
-.WithName("GetAllBooks")
-.WithDescription("Returns all books in the store.");
+.WithName("GetAllTodos")
+.WithDescription("Returns all todo items.");
 
-app.MapGet("/books/{id:int}", (int id, BookStore store) =>
+app.MapGet("/todos/{id:int}", (int id, TodoStore store) =>
 {
-    Book? book = store.GetById(id);
-    return book is not null ? Results.Ok(book) : Results.NotFound(new { error = $"Book {id} not found" });
+    TodoItem? todo = store.GetById(id);
+    return todo is not null ? Results.Ok(todo) : Results.NotFound(new { error = $"Todo {id} not found" });
 })
-.WithName("GetBookById")
-.WithDescription("Returns a single book by its ID.");
+.WithName("GetTodoById")
+.WithDescription("Returns a single todo item by its ID.");
 
-app.MapPost("/books", (CreateBookRequest request, BookStore store) =>
+app.MapPost("/todos", (CreateTodoRequest request, TodoStore store) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Author))
+    if (string.IsNullOrWhiteSpace(request.Title))
     {
-        return Results.BadRequest(new { error = "Title and Author are required." });
+        return Results.BadRequest(new { error = "Title is required." });
     }
 
-    Book created = store.Add(request.Title, request.Author, request.Isbn, request.Year);
-    return Results.Created($"/books/{created.Id}", created);
+    // A POST creates the resource, so there is nothing to NotFound yet —
+    // return 201 Created with a Location header pointing at the new todo.
+    TodoItem created = store.Add(request.Title);
+    return Results.Created($"/todos/{created.Id}", created);
 })
-.WithName("CreateBook")
-.WithDescription("Adds a new book to the store.");
+.WithName("CreateTodo")
+.WithDescription("Adds a new todo item.");
 
-app.MapPut("/books/{id:int}", (int id, UpdateBookRequest request, BookStore store) =>
+app.MapPut("/todos/{id:int}", (int id, UpdateTodoRequest request, TodoStore store) =>
 {
-    Book? updated = store.Update(id, request.Title, request.Author, request.Isbn, request.Year);
-    return updated is not null ? Results.Ok(updated) : Results.NotFound(new { error = $"Book {id} not found" });
+    TodoItem? updated = store.Update(id, request.Title, request.IsDone);
+    return updated is not null ? Results.Ok(updated) : Results.NotFound(new { error = $"Todo {id} not found" });
 })
-.WithName("UpdateBook")
-.WithDescription("Updates an existing book by its ID.");
+.WithName("UpdateTodo")
+.WithDescription("Updates an existing todo item by its ID.");
 
-app.MapDelete("/books/{id:int}", (int id, BookStore store) =>
+app.MapDelete("/todos/{id:int}", (int id, TodoStore store) =>
 {
     bool deleted = store.Delete(id);
-    return deleted ? Results.NoContent() : Results.NotFound(new { error = $"Book {id} not found" });
+    return deleted ? Results.NoContent() : Results.NotFound(new { error = $"Todo {id} not found" });
 })
-.WithName("DeleteBook")
-.WithDescription("Deletes a book by its ID.");
+.WithName("DeleteTodo")
+.WithDescription("Deletes a todo item by its ID.");
 
 // Seed some initial data
-BookStore seedStore = app.Services.GetRequiredService<BookStore>();
-seedStore.Add("Clean Code", "Robert C. Martin", "978-0132350884", 2008);
-seedStore.Add("The Pragmatic Programmer", "David Thomas & Andrew Hunt", "978-0135957059", 2019);
-seedStore.Add("Design Patterns", "Gang of Four", "978-0201633610", 1994);
+TodoStore seedStore = app.Services.GetRequiredService<TodoStore>();
+seedStore.Add("Read Chapter 2");
+seedStore.Add("Run the Minimal API companion project");
+seedStore.Add("Finish the practice exercises");
 
-Console.WriteLine("=== Exercise: Minimal API CRUD — BookStore ===");
+Console.WriteLine("=== Exercise: Minimal API CRUD — TodoItem ===");
 Console.WriteLine("Endpoints:");
-Console.WriteLine("  GET    /books");
-Console.WriteLine("  GET    /books/{id}");
-Console.WriteLine("  POST   /books");
-Console.WriteLine("  PUT    /books/{id}");
-Console.WriteLine("  DELETE /books/{id}");
+Console.WriteLine("  GET    /todos");
+Console.WriteLine("  GET    /todos/{id}");
+Console.WriteLine("  POST   /todos");
+Console.WriteLine("  PUT    /todos/{id}");
+Console.WriteLine("  DELETE /todos/{id}");
 Console.WriteLine();
 
 app.Run();
@@ -82,111 +107,97 @@ app.Run();
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Represents a book in the store.
+/// Represents a single todo item.
 /// </summary>
-/// <param name="Id">The unique book identifier.</param>
-/// <param name="Title">The book title.</param>
-/// <param name="Author">The book author(s).</param>
-/// <param name="Isbn">The ISBN number, if available.</param>
-/// <param name="Year">The publication year, if available.</param>
-record Book(int Id, string Title, string Author, string? Isbn, int? Year);
+/// <param name="Id">The unique todo identifier.</param>
+/// <param name="Title">What needs doing.</param>
+/// <param name="IsDone">Whether the item is completed.</param>
+record TodoItem(int Id, string Title, bool IsDone);
 
 /// <summary>
-/// Request payload for creating a new book.
+/// Request payload for creating a new todo item.
 /// </summary>
-/// <param name="Title">The book title (required).</param>
-/// <param name="Author">The book author (required).</param>
-/// <param name="Isbn">The ISBN number (optional).</param>
-/// <param name="Year">The publication year (optional).</param>
-record CreateBookRequest(string Title, string Author, string? Isbn, int? Year);
+/// <param name="Title">The todo title (required).</param>
+record CreateTodoRequest(string Title);
 
 /// <summary>
-/// Request payload for updating an existing book.
+/// Request payload for updating an existing todo item.
 /// </summary>
-/// <param name="Title">Updated title (optional).</param>
-/// <param name="Author">Updated author (optional).</param>
-/// <param name="Isbn">Updated ISBN (optional).</param>
-/// <param name="Year">Updated year (optional).</param>
-record UpdateBookRequest(string? Title, string? Author, string? Isbn, int? Year);
+/// <param name="Title">Updated title, or null to keep the existing one.</param>
+/// <param name="IsDone">Updated completion state, or null to keep the existing one.</param>
+record UpdateTodoRequest(string? Title, bool? IsDone);
 
 /// <summary>
-/// Thread-safe in-memory book store.
+/// Thread-safe in-memory todo store.
 /// </summary>
-sealed class BookStore
+sealed class TodoStore
 {
     private readonly Lock _lock = new();
-    private readonly List<Book> _books = [];
+    private readonly List<TodoItem> _todos = [];
     private int _nextId = 1;
 
-    /// <summary>Returns all books.</summary>
-    public List<Book> GetAll()
+    /// <summary>Returns all todo items.</summary>
+    public List<TodoItem> GetAll()
     {
         lock (_lock)
         {
-            return [.. _books];
+            return [.. _todos];
         }
     }
 
-    /// <summary>Returns a book by ID, or null if not found.</summary>
-    /// <param name="id">The book ID to look up.</param>
-    public Book? GetById(int id)
+    /// <summary>Returns a todo by ID, or null if not found.</summary>
+    /// <param name="id">The todo ID to look up.</param>
+    public TodoItem? GetById(int id)
     {
         lock (_lock)
         {
-            return _books.FirstOrDefault(b => b.Id == id);
+            return _todos.FirstOrDefault(t => t.Id == id);
         }
     }
 
-    /// <summary>Adds a new book and returns it with an assigned ID.</summary>
-    /// <param name="title">The book title.</param>
-    /// <param name="author">The book author.</param>
-    /// <param name="isbn">The ISBN, if available.</param>
-    /// <param name="year">The publication year, if available.</param>
-    public Book Add(string title, string author, string? isbn, int? year)
+    /// <summary>Adds a new todo and returns it with an assigned ID.</summary>
+    /// <param name="title">The todo title.</param>
+    public TodoItem Add(string title)
     {
         lock (_lock)
         {
-            Book book = new(_nextId++, title, author, isbn, year);
-            _books.Add(book);
-            return book;
+            TodoItem todo = new(_nextId++, title, IsDone: false);
+            _todos.Add(todo);
+            return todo;
         }
     }
 
-    /// <summary>Updates a book by ID. Returns the updated book or null.</summary>
-    /// <param name="id">The book ID to update.</param>
-    /// <param name="title">New title, or null to keep existing.</param>
-    /// <param name="author">New author, or null to keep existing.</param>
-    /// <param name="isbn">New ISBN, or null to keep existing.</param>
-    /// <param name="year">New year, or null to keep existing.</param>
-    public Book? Update(int id, string? title, string? author, string? isbn, int? year)
+    /// <summary>Updates a todo by ID. Returns the updated todo or null.</summary>
+    /// <param name="id">The todo ID to update.</param>
+    /// <param name="title">New title, or null to keep the existing one.</param>
+    /// <param name="isDone">New completion state, or null to keep the existing one.</param>
+    public TodoItem? Update(int id, string? title, bool? isDone)
     {
         lock (_lock)
         {
-            int index = _books.FindIndex(b => b.Id == id);
+            int index = _todos.FindIndex(t => t.Id == id);
             if (index < 0) return null;
 
-            Book existing = _books[index];
-            Book updated = existing with
+            TodoItem existing = _todos[index];
+            TodoItem updated = existing with
             {
                 Title = title ?? existing.Title,
-                Author = author ?? existing.Author,
-                Isbn = isbn ?? existing.Isbn,
-                Year = year ?? existing.Year
+                IsDone = isDone ?? existing.IsDone
             };
-            _books[index] = updated;
+            _todos[index] = updated;
             return updated;
         }
     }
 
-    /// <summary>Deletes a book by ID. Returns true if deleted.</summary>
-    /// <param name="id">The book ID to delete.</param>
+    /// <summary>Deletes a todo by ID. Returns true if deleted.</summary>
+    /// <param name="id">The todo ID to delete.</param>
     public bool Delete(int id)
     {
         lock (_lock)
         {
-            int index = _books.FindIndex(b => b.Id == id);
+            int index = _todos.FindIndex(t => t.Id == id);
             if (index < 0) return false;
-            _books.RemoveAt(index);
+            _todos.RemoveAt(index);
             return true;
         }
     }

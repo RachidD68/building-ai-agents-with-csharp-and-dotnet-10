@@ -1,50 +1,59 @@
 // ============================================================================
 // Exercise 02 — Review Pipeline (Intermediate)
-// Code review workflow with conditional routing:
-// CodeAnalyzer → SecurityScanner → (issues? → FixSuggestion : Approval)
-// Uses class-based executors (Executor<TInput, TOutput>). FULLY STANDALONE.
+// Length-based conditional workflow: a classifier measures each submission,
+// then AddSwitch routes short/medium/long input down different review paths:
+//   Input → LengthClassifier → [QuickReview | StandardReview | DeepReview]
+// Mirrors the AddSwitch usage in src/Ch13.Workflows/Ch13.ConditionalWorkflow.
+// FULLY STANDALONE.
 // ============================================================================
 
 using Microsoft.Agents.AI.Workflows;
 
-Console.WriteLine("=== Exercise: Review Pipeline Workflow ===\n");
+Console.WriteLine("=== Exercise: Review Pipeline — Length Router ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 // ---------------------------------------------------------------
-// Test with different code samples
+// Review submissions of different sizes
 // ---------------------------------------------------------------
-string[] samples =
+string[] submissions =
 [
+    // Short (< 20 words) → quick review branch
+    "Fix the null check in PaymentService.Validate and add a regression test.",
+
+    // Medium (20-59 words) → standard review branch
     """
-    // TODO: refactor this later
-    var service = new MyService();
-    var result = service.Process();
+    Refactor the invoice exporter to stream rows instead of buffering the
+    full result set in memory. The change introduces an IAsyncEnumerable
+    pipeline, adds a unit test for the empty-batch case, and updates the
+    exporter documentation to describe the new backpressure behavior.
     """,
+
+    // Long (>= 60 words) → deep review branch
     """
-    /// <summary>Processes the request.</summary>
-    public async Task<Result> ProcessAsync(CancellationToken ct)
-    {
-        return await _handler.HandleAsync(ct);
-    }
-    """,
-    """
-    var password = "admin123";
-    var sql = "SELECT * FROM users WHERE name='" + userName + "'";
+    Replace the legacy order-fulfillment saga with a checkpointed workflow.
+    The change moves state transitions out of the OrdersController into a
+    dedicated orchestrator, introduces compensation steps for payment capture
+    and inventory reservation, migrates the outbox table to the new schema,
+    rewrites the retry policy around exponential backoff with jitter, adds
+    integration tests for the crash-recovery path, and updates the runbook
+    with the new operational dashboards and alert thresholds for on-call.
     """
 ];
 
-for (int i = 0; i < samples.Length; i++)
+foreach ((int i, string submission) in submissions.Index())
 {
-    Console.WriteLine($"\n--- Code Sample {i + 1} ---");
-    Console.WriteLine(samples[i].Trim());
+    Console.WriteLine($"--- Submission {i + 1} ---");
+    Console.WriteLine(submission.Trim());
     Console.WriteLine();
 
-    Workflow workflow = BuildReviewWorkflow(i.ToString());
+    // Executor ids need only be unique per workflow instance; the loop index
+    // is deterministic run to run.
+    Workflow workflow = BuildLengthRoutedWorkflow($"R{i}");
 
     Run run = await InProcessExecution.RunAsync(
-        workflow, samples[i], sessionId: Guid.NewGuid().ToString(), cts.Token);
+        workflow, submission, sessionId: Guid.NewGuid().ToString(), cts.Token);
 
     foreach (WorkflowEvent evt in run.OutgoingEvents)
     {
@@ -53,27 +62,36 @@ for (int i = 0; i < samples.Length; i++)
             Console.WriteLine($"  Result: {output.Data}");
         }
     }
+    Console.WriteLine();
 }
 
-Console.WriteLine("\n=== Exercise complete! ===");
+Console.WriteLine("=== Exercise complete! ===");
 
 // ---------------------------------------------------------------
-// Build a fresh review workflow with conditional routing.
+// Workflow builder (fresh instance per run)
 // ---------------------------------------------------------------
-Workflow BuildReviewWorkflow(string suffix)
+
+/// <summary>
+/// Builds a workflow that routes a submission by length using AddSwitch:
+/// short → quick review, long → deep review, everything else → standard.
+/// </summary>
+Workflow BuildLengthRoutedWorkflow(string suffix)
 {
-    ExecutorBinding analyzer = new CodeAnalyzerExecutor($"analyzer-{suffix}").BindExecutor();
-    ExecutorBinding scanner = new SecurityScannerExecutor($"scanner-{suffix}").BindExecutor();
-    ExecutorBinding fix = new FixSuggestionExecutor($"fix-{suffix}").BindExecutor();
-    ExecutorBinding approve = new ApprovalExecutor($"approve-{suffix}").BindExecutor();
+    ExecutorBinding classifier = new LengthClassifier($"classifier-{suffix}").BindExecutor();
+    ExecutorBinding quick = new QuickReviewHandler($"quick-{suffix}").BindExecutor();
+    ExecutorBinding standard = new StandardReviewHandler($"standard-{suffix}").BindExecutor();
+    ExecutorBinding deep = new DeepReviewHandler($"deep-{suffix}").BindExecutor();
 
-    return new WorkflowBuilder(analyzer)
-        .AddEdge(analyzer, scanner)
-        .AddEdge<string>(scanner, fix,
-            r => r is not null && r.StartsWith("ISSUES_FOUND", StringComparison.Ordinal))
-        .AddEdge<string>(scanner, approve,
-            r => r is null || !r.StartsWith("ISSUES_FOUND", StringComparison.Ordinal))
-        .WithOutputFrom(fix, approve)
+    return new WorkflowBuilder(classifier)
+        .AddSwitch(classifier, sw => sw
+            .AddCase<LengthResult>(
+                r => r is not null && r.Category == LengthCategory.Short,
+                [quick])
+            .AddCase<LengthResult>(
+                r => r is not null && r.Category == LengthCategory.Long,
+                [deep])
+            .WithDefault([standard]))
+        .WithOutputFrom(quick, standard, deep)
         .WithName($"Review-{suffix}")
         .Build();
 }
@@ -82,89 +100,86 @@ Workflow BuildReviewWorkflow(string suffix)
 // Executors
 // ---------------------------------------------------------------
 
-/// <summary>Flags simple style issues in the code.</summary>
-internal sealed class CodeAnalyzerExecutor(string id) : Executor<string, string>(id)
+/// <summary>Counts words and buckets the submission as short, medium, or long.</summary>
+internal sealed class LengthClassifier(string id) : Executor<string, LengthResult>(id)
+{
+    public override ValueTask<LengthResult> HandleAsync(
+        string input, IWorkflowContext context, CancellationToken ct)
+    {
+        int words = input.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        LengthCategory category = words switch
+        {
+            < 20 => LengthCategory.Short,
+            < 60 => LengthCategory.Medium,
+            _ => LengthCategory.Long
+        };
+
+        Console.WriteLine($"  [Classifier] {words} words → {category}");
+        return ValueTask.FromResult(new LengthResult(input, words, category));
+    }
+}
+
+/// <summary>Fast-tracks short submissions through a lightweight review.</summary>
+internal sealed class QuickReviewHandler(string id) : Executor<LengthResult, string>(id)
 {
     public override ValueTask<string> HandleAsync(
-        string input, IWorkflowContext context, CancellationToken ct)
+        LengthResult result, IWorkflowContext context, CancellationToken ct)
     {
-        List<string> issues = [];
-        if (input.Contains("TODO", StringComparison.OrdinalIgnoreCase))
-            issues.Add("STYLE: Unresolved TODO comment found");
-        if (input.Contains("var ", StringComparison.Ordinal) && input.Contains("new ", StringComparison.Ordinal))
-            issues.Add("STYLE: Consider using target-typed new");
-        if (!input.Contains("///", StringComparison.Ordinal))
-            issues.Add("STYLE: Missing XML documentation comments");
-
-        string result = issues.Count > 0
-            ? $"ISSUES_FOUND|{string.Join(";", issues)}|CODE:{input}"
-            : $"NO_ISSUES|CODE:{input}";
-
-        Console.WriteLine($"  [CodeAnalyzer] Found {issues.Count} style issues");
-        return ValueTask.FromResult(result);
+        string response = $"QUICK REVIEW ({result.WordCount} words): " +
+                          "single reviewer, style checklist only — approved on green CI.";
+        Console.WriteLine("  [QuickReview] Fast-tracked");
+        return ValueTask.FromResult(response);
     }
 }
 
-/// <summary>Flags simple security issues and merges them with any style issues.</summary>
-internal sealed class SecurityScannerExecutor(string id) : Executor<string, string>(id)
+/// <summary>Runs the standard review path for medium submissions.</summary>
+internal sealed class StandardReviewHandler(string id) : Executor<LengthResult, string>(id)
 {
     public override ValueTask<string> HandleAsync(
-        string input, IWorkflowContext context, CancellationToken ct)
+        LengthResult result, IWorkflowContext context, CancellationToken ct)
     {
-        List<string> issues = [];
-        string code = input.Contains("CODE:")
-            ? input[(input.IndexOf("CODE:", StringComparison.Ordinal) + 5)..]
-            : input;
-
-        if (code.Contains("password", StringComparison.OrdinalIgnoreCase) && code.Contains("\"", StringComparison.Ordinal))
-            issues.Add("SECURITY: Hardcoded password detected");
-        if (code.Contains("sql", StringComparison.OrdinalIgnoreCase) && code.Contains("+", StringComparison.Ordinal))
-            issues.Add("SECURITY: Possible SQL injection via string concatenation");
-
-        string existing = input.StartsWith("ISSUES_FOUND|", StringComparison.Ordinal)
-            ? input
-            : (issues.Count > 0 ? "ISSUES_FOUND|" : "NO_ISSUES|");
-
-        if (issues.Count > 0 && !existing.StartsWith("ISSUES_FOUND|", StringComparison.Ordinal))
-        {
-            existing = $"ISSUES_FOUND|{string.Join(";", issues)}|CODE:{code}";
-        }
-        else if (issues.Count > 0)
-        {
-            int codeIdx = existing.IndexOf("|CODE:", StringComparison.Ordinal);
-            if (codeIdx > 0)
-            {
-                existing = existing[..codeIdx] + ";" + string.Join(";", issues) + existing[codeIdx..];
-            }
-        }
-
-        Console.WriteLine($"  [SecurityScanner] Found {issues.Count} security issues");
-        return ValueTask.FromResult(existing);
+        string response = $"STANDARD REVIEW ({result.WordCount} words): " +
+                          "one reviewer plus automated static analysis and test-coverage gate.";
+        Console.WriteLine("  [StandardReview] Routed to the regular queue");
+        return ValueTask.FromResult(response);
     }
 }
 
-/// <summary>Generates fix suggestions for failing reviews and yields the result.</summary>
-[YieldsOutput(typeof(string))]
-internal sealed class FixSuggestionExecutor(string id) : Executor<string>(id)
+/// <summary>Escalates long submissions to a deep, multi-reviewer pass.</summary>
+internal sealed class DeepReviewHandler(string id) : Executor<LengthResult, string>(id)
 {
-    public override async ValueTask HandleAsync(
-        string input, IWorkflowContext context, CancellationToken ct)
+    public override ValueTask<string> HandleAsync(
+        LengthResult result, IWorkflowContext context, CancellationToken ct)
     {
-        string result = $"REVIEW FAILED - Issues require attention:\n{input.Replace("|", "\n  - ").Replace(";", "\n  - ")}";
-        Console.WriteLine("  [FixSuggestion] Generated fix suggestions");
-        await context.YieldOutputAsync(result, ct);
+        string response = $"DEEP REVIEW ({result.WordCount} words): " +
+                          "two reviewers, architecture sign-off, and a design-doc link required.";
+        Console.WriteLine("  [DeepReview] Escalated for a thorough pass");
+        return ValueTask.FromResult(response);
     }
 }
 
-/// <summary>Approves clean code and yields the result.</summary>
-[YieldsOutput(typeof(string))]
-internal sealed class ApprovalExecutor(string id) : Executor<string>(id)
+// ---------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------
+
+/// <summary>Length bucket a submission falls into.</summary>
+internal enum LengthCategory
 {
-    public override async ValueTask HandleAsync(
-        string input, IWorkflowContext context, CancellationToken ct)
-    {
-        const string result = "REVIEW PASSED - Code meets quality and security standards. Approved for merge.";
-        Console.WriteLine("  [Approval] Code approved!");
-        await context.YieldOutputAsync(result, ct);
-    }
+    /// <summary>Fewer than 20 words.</summary>
+    Short,
+
+    /// <summary>20 to 59 words.</summary>
+    Medium,
+
+    /// <summary>60 words or more.</summary>
+    Long
 }
+
+/// <summary>
+/// Carries the original submission together with its measured length
+/// through the workflow.
+/// </summary>
+/// <param name="Submission">The original review submission.</param>
+/// <param name="WordCount">Number of whitespace-separated words.</param>
+/// <param name="Category">The length bucket used for routing.</param>
+internal sealed record LengthResult(string Submission, int WordCount, LengthCategory Category);

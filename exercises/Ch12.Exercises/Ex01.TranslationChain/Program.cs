@@ -1,9 +1,12 @@
-﻿// ============================================================================
+// ============================================================================
 // Exercise 01 — Translation Chain (Beginner)
-// Chain 3 agents: Translator → Summarizer → Formatter. FULLY STANDALONE.
+// Three agents in sequence: Translator (FR → EN) → Formalizer → Summarizer,
+// instrumented with Stopwatch and benchmarked against a single-agent
+// baseline that does all three jobs in one prompt. FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
+using System.Diagnostics;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Microsoft.Agents.AI;
@@ -23,56 +26,95 @@ Console.WriteLine("=== Exercise: Translation Chain ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// Define the three agents
+// ---------------------------------------------------------------
+// The three pipeline agents: Translator → Formalizer → Summarizer
+// ---------------------------------------------------------------
 ChatClientAgent translator = new(chatClient,
-    instructions: "You are a translator. Translate the given text to English. Return ONLY the translation, nothing else.",
+    instructions: "You are a professional French-to-English translator. Translate the given French text into fluent, natural English. Return ONLY the translation, nothing else.",
     name: "Translator");
 
+ChatClientAgent formalizer = new(chatClient,
+    instructions: "Rewrite this English text in formal business tone, preserving meaning. Return ONLY the rewritten text, nothing else.",
+    name: "Formalizer");
+
 ChatClientAgent summarizer = new(chatClient,
-    instructions: "You are a summarizer. Summarize the given text into 2-3 concise sentences. Return ONLY the summary.",
+    instructions: "You are a summarizer. Condense the given text into 2-3 concise sentences. Return ONLY the summary, nothing else.",
     name: "Summarizer");
 
-ChatClientAgent formatter = new(chatClient,
-    instructions: "You are a formatter. Take the given text and format it as a bulleted list of key points. Use '- ' for each bullet. Return ONLY the bulleted list.",
-    name: "Formatter");
+// Sample French memo to push through the pipeline
+string frenchMemo = """
+    Objet : migration vers .NET 10
 
-// Sample input in French
-string input = """
-    L'intelligence artificielle transforme profondement le developpement logiciel moderne.
-    Les grands modeles de langage permettent aux developpeurs de generer du code, d'analyser
-    des bugs et d'automatiser des taches repetitives. Les frameworks comme .NET integrent
-    desormais des capacites d'IA natives, rendant la creation d'agents intelligents accessible
-    a tous les developpeurs. Cette revolution impacte la productivite, la qualite du code et
-    les methodes de travail des equipes de developpement dans le monde entier.
+    Salut l'équipe, petit rappel : on bascule les services de paiement sur
+    .NET 10 à partir de lundi prochain. Pensez à mettre à jour vos pipelines
+    de build et à vérifier vos packages NuGet avant la bascule. En cas de
+    souci, postez sur le canal #migration — l'astreinte répondra en priorité.
+    Merci de bloquer une heure pour les tests de non-régression.
     """;
 
-Console.WriteLine("--- Input (French) ---");
-Console.WriteLine(input.Trim());
+Console.WriteLine("--- Input (French memo) ---");
+Console.WriteLine(frenchMemo.Trim());
 Console.WriteLine();
 
 try
 {
-    // Stage 1: Translate
-    Console.WriteLine("--- Stage 1: Translation ---\n");
-    AgentSession s1 = await translator.CreateSessionAsync(cts.Token);
-    AgentResponse r1 = await translator.RunAsync(input, s1, cancellationToken: cts.Token);
-    string translated = r1.Text ?? string.Empty;
-    Console.WriteLine(translated);
+    // ---------------------------------------------------------------
+    // Run A — the three-stage pipeline, one agent per job
+    // ---------------------------------------------------------------
+    Console.WriteLine("--- Run A: Three-agent pipeline ---\n");
+
+    Stopwatch pipelineWatch = Stopwatch.StartNew();
+
+    (string english, long translateMs) = await RunStageAsync(translator, frenchMemo);
+    Console.WriteLine($"[Stage 1 — Translator, {translateMs} ms]");
+    Console.WriteLine(english);
     Console.WriteLine();
 
-    // Stage 2: Summarize
-    Console.WriteLine("--- Stage 2: Summary ---\n");
-    AgentSession s2 = await summarizer.CreateSessionAsync(cts.Token);
-    AgentResponse r2 = await summarizer.RunAsync(translated, s2, cancellationToken: cts.Token);
-    string summarized = r2.Text ?? string.Empty;
-    Console.WriteLine(summarized);
+    (string formal, long formalizeMs) = await RunStageAsync(formalizer, english);
+    Console.WriteLine($"[Stage 2 — Formalizer, {formalizeMs} ms]");
+    Console.WriteLine(formal);
     Console.WriteLine();
 
-    // Stage 3: Format
-    Console.WriteLine("--- Stage 3: Formatted Output ---\n");
-    AgentSession s3 = await formatter.CreateSessionAsync(cts.Token);
-    AgentResponse r3 = await formatter.RunAsync(summarized, s3, cancellationToken: cts.Token);
-    Console.WriteLine(r3.Text);
+    (string pipelineSummary, long summarizeMs) = await RunStageAsync(summarizer, formal);
+    Console.WriteLine($"[Stage 3 — Summarizer, {summarizeMs} ms]");
+    Console.WriteLine(pipelineSummary);
+    Console.WriteLine();
+
+    pipelineWatch.Stop();
+
+    // ---------------------------------------------------------------
+    // Run B — single-agent baseline: all three jobs in one prompt
+    // ---------------------------------------------------------------
+    Console.WriteLine("--- Run B: Single-agent baseline ---\n");
+
+    ChatClientAgent allInOne = new(chatClient,
+        instructions: """
+            You are a translation assistant. Given a French text, do all of the
+            following in one pass: translate it to English, rewrite the
+            translation in formal business tone, then summarize the result in
+            2-3 concise sentences. Return ONLY the final summary, nothing else.
+            """,
+        name: "AllInOne");
+
+    (string baselineSummary, long baselineMs) = await RunStageAsync(allInOne, frenchMemo);
+    Console.WriteLine($"[AllInOne — {baselineMs} ms]");
+    Console.WriteLine(baselineSummary);
+    Console.WriteLine();
+
+    // ---------------------------------------------------------------
+    // Comparison — latency measured, quality eyeballed
+    // ---------------------------------------------------------------
+    Console.WriteLine("--- Comparison ---\n");
+    Console.WriteLine($"  Pipeline : {pipelineWatch.ElapsedMilliseconds,6} ms " +
+                      $"(translate {translateMs} + formalize {formalizeMs} + summarize {summarizeMs}), " +
+                      $"summary {WordCount(pipelineSummary)} words");
+    Console.WriteLine($"  Baseline : {baselineMs,6} ms (one prompt), " +
+                      $"summary {WordCount(baselineSummary)} words");
+    Console.WriteLine();
+    Console.WriteLine("  The pipeline pays one model round-trip per stage; the single agent");
+    Console.WriteLine("  pays one round-trip total. Compare the two summaries above for");
+    Console.WriteLine("  quality — tone, faithfulness, and detail are where splitting the");
+    Console.WriteLine("  job into single-purpose agents earns (or fails to earn) its cost.");
 }
 catch (OperationCanceledException)
 {
@@ -80,6 +122,24 @@ catch (OperationCanceledException)
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
+
+// ---------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------
+
+/// <summary>Runs one agent over the input and reports elapsed milliseconds.</summary>
+async Task<(string Text, long Ms)> RunStageAsync(ChatClientAgent agent, string input)
+{
+    Stopwatch sw = Stopwatch.StartNew();
+    AgentSession session = await agent.CreateSessionAsync(cts.Token);
+    AgentResponse response = await agent.RunAsync(input, session, cancellationToken: cts.Token);
+    sw.Stop();
+    return (response.Text ?? string.Empty, sw.ElapsedMilliseconds);
+}
+
+/// <summary>Counts whitespace-separated words in a text.</summary>
+static int WordCount(string text) =>
+    text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
 
 // ---------------------------------------------------------------
 // Provider factory

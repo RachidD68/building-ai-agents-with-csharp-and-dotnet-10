@@ -1,16 +1,49 @@
 using System.ComponentModel;
-using System.Text.Json;
 using ModelContextProtocol.Server;
 
 namespace Ex02.DictionaryMcpServer;
 
 /// <summary>
-/// MCP tools for dictionary lookups: definitions and synonyms.
+/// MCP tools for dictionary lookups: DefineWord and GetSynonyms, backed by a
+/// small in-memory dictionary. Two static methods, one dictionary — the same
+/// shape as ProductLookup and InventoryCheck in Ch09.McpServer.
 /// </summary>
 [McpServerToolType]
 public static class DictionaryTools
 {
-    private static readonly Lazy<Dictionary<string, DictionaryEntry>> Dictionary = new(LoadDictionary);
+    // A small in-memory dictionary — ten to twenty entries is plenty.
+    private static readonly Dictionary<string, DictionaryEntry> Dictionary =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["reticent"] = new("Reluctant to speak or reveal one's thoughts; reserved.",
+                ["reserved", "taciturn", "tight-lipped", "uncommunicative"]),
+            ["ephemeral"] = new("Lasting for a very short time.",
+                ["fleeting", "transient", "short-lived", "momentary"]),
+            ["ubiquitous"] = new("Present, appearing, or found everywhere.",
+                ["omnipresent", "pervasive", "universal"]),
+            ["pragmatic"] = new("Dealing with things sensibly and realistically rather than theoretically.",
+                ["practical", "realistic", "sensible", "down-to-earth"]),
+            ["verbose"] = new("Using or expressed in more words than are needed.",
+                ["wordy", "long-winded", "garrulous", "rambling"]),
+            ["meticulous"] = new("Showing great attention to detail; very careful and precise.",
+                ["careful", "precise", "thorough", "painstaking"]),
+            ["resilient"] = new("Able to withstand or recover quickly from difficult conditions.",
+                ["tough", "adaptable", "hardy", "buoyant"]),
+            ["candid"] = new("Truthful and straightforward; frank.",
+                ["frank", "honest", "direct", "forthright"]),
+            ["diligent"] = new("Having or showing care and conscientiousness in one's work or duties.",
+                ["industrious", "assiduous", "hardworking", "conscientious"]),
+            ["ambiguous"] = new("Open to more than one interpretation; not having one obvious meaning.",
+                ["unclear", "equivocal", "vague", "cryptic"]),
+            ["concise"] = new("Giving a lot of information clearly and in a few words.",
+                ["succinct", "terse", "compact", "pithy"]),
+            ["obsolete"] = new("No longer produced or used; out of date.",
+                ["outdated", "antiquated", "deprecated", "archaic"]),
+            ["robust"] = new("Strong and healthy; able to withstand adverse conditions.",
+                ["sturdy", "durable", "hardy", "vigorous"]),
+            ["novel"] = new("New or unusual in an interesting way.",
+                ["new", "original", "innovative", "fresh"]),
+        };
 
     /// <summary>
     /// Looks up the definition of a word.
@@ -18,70 +51,44 @@ public static class DictionaryTools
     /// <param name="word">The word to look up.</param>
     /// <returns>The definition or a not-found message.</returns>
     [McpServerTool]
-    [Description("Looks up the definition of a technical term in the software engineering dictionary.")]
+    [Description("Looks up the definition of a word in the dictionary.")]
     public static string DefineWord(
-        [Description("The word or term to look up")] string word)
+        [Description("The word to define")] string word)
     {
-        string normalized = word.Trim().ToLowerInvariant();
-
-        if (Dictionary.Value.TryGetValue(normalized, out DictionaryEntry? entry))
+        if (Dictionary.TryGetValue(word.Trim(), out DictionaryEntry? entry))
         {
             return $"{word}: {entry.Definition}";
         }
 
-        string available = string.Join(", ", Dictionary.Value.Keys.Order());
-        return $"'{word}' not found in dictionary. Available terms: {available}";
+        string available = string.Join(", ", Dictionary.Keys.Order());
+        return $"'{word}' not found in dictionary. Available words: {available}";
     }
 
     /// <summary>
-    /// Finds synonyms for a word.
+    /// Gets synonyms for a word.
     /// </summary>
     /// <param name="word">The word to find synonyms for.</param>
     /// <returns>A list of synonyms or a not-found message.</returns>
     [McpServerTool]
-    [Description("Finds synonyms for a technical term in the software engineering dictionary.")]
-    public static string FindSynonyms(
-        [Description("The word or term to find synonyms for")] string word)
+    [Description("Gets synonyms for a word from the dictionary.")]
+    public static string GetSynonyms(
+        [Description("The word to find synonyms for")] string word)
     {
-        string normalized = word.Trim().ToLowerInvariant();
-
-        if (Dictionary.Value.TryGetValue(normalized, out DictionaryEntry? entry))
+        if (Dictionary.TryGetValue(word.Trim(), out DictionaryEntry? entry))
         {
-            if (entry.Synonyms is { Count: > 0 })
-            {
-                return $"Synonyms for '{word}': {string.Join(", ", entry.Synonyms)}";
-            }
-            return $"No synonyms found for '{word}'.";
+            return entry.Synonyms.Length > 0
+                ? $"Synonyms for '{word}': {string.Join(", ", entry.Synonyms)}"
+                : $"No synonyms found for '{word}'.";
         }
 
-        string available = string.Join(", ", Dictionary.Value.Keys.Order());
-        return $"'{word}' not found in dictionary. Available terms: {available}";
-    }
-
-    private static Dictionary<string, DictionaryEntry> LoadDictionary()
-    {
-        string path = Path.Combine(AppContext.BaseDirectory, "dictionary.json");
-
-        if (!File.Exists(path))
-        {
-            return new Dictionary<string, DictionaryEntry>();
-        }
-
-        string json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<Dictionary<string, DictionaryEntry>>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new Dictionary<string, DictionaryEntry>();
+        string available = string.Join(", ", Dictionary.Keys.Order());
+        return $"'{word}' not found in dictionary. Available words: {available}";
     }
 }
 
 /// <summary>
-/// A dictionary entry with definition and synonyms.
+/// A dictionary entry with a definition and its synonyms.
 /// </summary>
-sealed class DictionaryEntry
-{
-    /// <summary>The definition of the term.</summary>
-    public string Definition { get; set; } = string.Empty;
-
-    /// <summary>Synonyms for the term.</summary>
-    public List<string>? Synonyms { get; set; }
-}
+/// <param name="Definition">The definition of the word.</param>
+/// <param name="Synonyms">Synonyms for the word.</param>
+sealed record DictionaryEntry(string Definition, string[] Synonyms);

@@ -9,10 +9,4 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="dictionary.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

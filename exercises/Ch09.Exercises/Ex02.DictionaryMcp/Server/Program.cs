@@ -1,7 +1,7 @@
 // ============================================================================
 // Exercise 02 — Dictionary MCP Server
-// MCP server that reads a JSON dictionary file and exposes DefineWord and
-// FindSynonyms tools.
+// MCP server exposing two tools — DefineWord and GetSynonyms — backed by a
+// small in-memory dictionary.
 // ============================================================================
 
 using Microsoft.Extensions.DependencyInjection;

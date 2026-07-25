@@ -1,36 +1,26 @@
-# Exercise 01 — Persona Switcher (Beginner)
+# Exercise 01 — Persona Switcher (Basic)
 
 ## Prompt
 
-Create **three agents** with different personas (Chef, Detective, Poet). Let the user:
-
-1. Pick a persona at startup.
-2. Chat with the selected agent using multi-turn conversation.
-3. See the persona's unique personality in every response.
+Build a console app that lets the user type a persona description (e.g., "sarcastic support engineer") followed by a question, and spins up a **fresh `ChatClientAgent`** with those instructions for each question. Reuse the `IChatClient` across calls; only the agent changes.
 
 ## Hints
 
-- Use `ChatClientAgent` with different `instructions` for each persona.
-- Use `AgentSession` for multi-turn conversation memory.
-- Store personas in a dictionary for easy selection.
+- The instructions constructor accepts any string — the typed persona description goes into the system prompt verbatim.
+- Users providing their own prompts introduces an injection vector — for this exercise don't worry about it, but Chapter 16 shows how to sanitize.
+- A single question needs no session: omit it and MAF creates a throwaway session for the call.
 
 ## Expected Outcome
 
 ```
-Choose your persona:
-  1. Chef Gordon — dramatic culinary artist
-  2. Detective Holmes — deductive reasoning master
-  3. Poet Luna — philosophical dreamer
+Persona: sarcastic support engineer
+Question: Why is my build failing?
 
-Your choice (1-3): 2
-
-You: What is recursion?
-Detective Holmes: Ah, elementary! Recursion is a case most intriguing...
+[sarcastic support engineer]: Oh, the build is failing? Groundbreaking. Have you tried reading the error message...
 ```
 
 ## Key Concepts
 
-- Agent personas via system instructions
-- `ChatClientAgent` constructor
-- `AgentSession` for conversation state
-- Interactive console loop
+- One `IChatClient`, many agents — agents are cheap; connections are not
+- Persona via the instructions constructor
+- Session-less single-turn `RunAsync`

@@ -2,31 +2,33 @@
 
 ## Prompt
 
-Build an agent with CRUD tools for a todo list: AddTodo, ListTodos, CompleteTodo, DeleteTodo. The agent manages the list through natural language.
+Build a stateful todo-list agent with three tools: `AddTodo(string title, string priority)`, `ListTodos()`, and `CompleteTodo(int id)`. Back the tools with a simple in-memory `TodoRepository` registered in DI. Run a multi-turn conversation that adds several items, lists them, and marks some complete.
 
 ## Hints
 
-- Use closures over a shared `List<TodoItem>` to maintain state.
-- `AIFunctionFactory.Create()` can wrap lambdas.
-- Use `AgentSession` for multi-turn conversation memory.
+- The DI pattern from `Ch08.DatabaseLookupTool` is the template.
+- Keep the repository a singleton for this exercise.
+- Register the tool class in DI and resolve it before wrapping its methods with `AIFunctionFactory.Create()`.
+- Use one `AgentSession` for the whole conversation so the agent remembers earlier turns.
 
 ## Expected Outcome
 
 ```
-You: Add three items: buy groceries, write code, and read a book
-  [Tool] AddTodo: #1 "buy groceries"
-  [Tool] AddTodo: #2 "write code"
-  [Tool] AddTodo: #3 "read a book"
+You: Add three todos: buy groceries with high priority, ...
+  [Tool] AddTodo: #1 "buy groceries" (high)
+  [Tool] AddTodo: #2 "write the chapter review" (medium)
+  [Tool] AddTodo: #3 "book a dentist appointment" (low)
 Agent: I've added three items to your todo list...
 
-You: I finished writing code, mark it done
-  [Tool] CompleteTodo: #2 "write code"
-Agent: Done! I've marked "write code" as completed.
+You: I bought the groceries and booked the dentist — mark both of those done.
+  [Tool] CompleteTodo: #1 "buy groceries"
+  [Tool] CompleteTodo: #3 "book a dentist appointment"
+Agent: Done! Both items are marked complete.
 ```
 
 ## Key Concepts
 
-- Tool registration with stateful closures
-- CRUD operations via natural language
-- Multi-turn tool interaction
-- Agent as a natural language interface to data
+- `TodoRepository` registered as a DI singleton
+- Tool class (`TodoTools`) with constructor-injected dependencies
+- `AIFunctionFactory.Create()` over DI-resolved instance methods
+- Multi-turn tool interaction on a single `AgentSession`

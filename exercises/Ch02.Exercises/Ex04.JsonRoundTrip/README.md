@@ -1,4 +1,4 @@
-# Ex04.JsonRoundTrip (Basic)
+# Ex04.JsonRoundTrip (Intermediate)
 
 Serialize a set of records to JSON with `JsonSerializerOptions.Web`, deserialize them
 back, and assert a clean round-trip. Demonstrates the serialization features Chapter 2

@@ -1,6 +1,7 @@
 // ============================================================================
 // Exercise 01 — Time MCP Server
-// MCP server exposing GetCurrentTime and ConvertTime tools.
+// Tiny MCP server exposing ONE tool: GetCurrentTime(timezone) for an IANA
+// timezone, over stdio transport.
 // ============================================================================
 
 using Microsoft.Extensions.DependencyInjection;

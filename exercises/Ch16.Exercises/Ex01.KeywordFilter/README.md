@@ -2,11 +2,17 @@
 
 ## Prompt
 
-Middleware that blocks messages containing a configurable list of banned words. Show blocked vs. allowed messages.
+Extend `Ch16.MiddlewarePipeline` with a middleware class that blocks requests based
+on a configurable keyword list loaded from appsettings.json. Verify that when you
+add "banana" to the list, a request mentioning "banana" is blocked, but other
+requests pass.
 
 ## Key Concepts
 
-- `DelegatingChatClient` for custom middleware
-- Short-circuiting the pipeline (blocking without calling LLM)
+- The blocklist lives in configuration (`"BlockedKeywords"` array in
+  appsettings.json), not in code — `IConfiguration` in the middleware constructor,
+  `GetSection("BlockedKeywords").Get<string[]>()` to read it
+- `DelegatingChatClient` for custom middleware (`ContentFilterMiddleware` is the template)
+- Short-circuiting the pipeline (blocking without calling the LLM) on both the
+  blocking and streaming paths
 - `ChatClientBuilder` / `AsBuilder().Use(...)` pipeline composition
-- Content safety through keyword matching

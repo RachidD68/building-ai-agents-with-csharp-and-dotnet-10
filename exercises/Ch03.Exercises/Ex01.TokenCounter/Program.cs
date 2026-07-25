@@ -1,85 +1,104 @@
 // ============================================================================
-// Exercise 01 — Token Counter (Beginner)
-// Estimates token counts using the 4-chars-per-token heuristic and calculates
-// estimated cost for GPT-4o.
+// Exercise 01 — Token Counter (Basic)
+// Extends the companion EstimateTokenCount method with a content-type hint
+// ("prose", "code", "json") and per-type divisors, then processes a folder of
+// .txt/.cs/.json files and prints a table of file -> estimated tokens ->
+// estimated GPT-4o input cost.
 // ============================================================================
 
-Console.WriteLine("=== Exercise: Token Counter — Estimate LLM Usage ===\n");
+// GPT-4o input rate, per 1M tokens (verify current rates before relying on them).
+const decimal InputRatePer1M = 2.50m;
 
-// GPT-4o pricing (approximate, per 1M tokens)
-const decimal InputCostPerMillionTokens = 2.50m;
-const decimal OutputCostPerMillionTokens = 10.00m;
-// Heuristic: ~4 characters per token (used in EstimateTokens below)
+Console.WriteLine("=== Exercise: Token Counter — Content-Type-Aware Estimator ===\n");
 
-Console.WriteLine("Enter text to estimate token usage (type 'quit' to exit):\n");
+using CancellationTokenSource cts = new();
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-while (true)
+// Default to the bundled samples folder (copied next to the binary at build
+// time). Pass a different folder as the first argument to scan your own files:
+//   dotnet run -- C:\path\to\folder
+string folder = args.Length > 0 ? args[0] : Path.Combine(AppContext.BaseDirectory, "samples");
+
+if (!Directory.Exists(folder))
 {
-    Console.Write("You: ");
-    string? input = Console.ReadLine();
-
-    if (string.IsNullOrWhiteSpace(input) || input.Equals("quit", StringComparison.OrdinalIgnoreCase))
-    {
-        break;
-    }
-
-    // ---------------------------------------------------------------
-    // Estimate token counts
-    // ---------------------------------------------------------------
-    int inputTokens = EstimateTokens(input);
-
-    // Simulate a typical assistant response (roughly 2x input for estimation)
-    int estimatedOutputTokens = inputTokens * 2;
-    int totalTokens = inputTokens + estimatedOutputTokens;
-
-    // ---------------------------------------------------------------
-    // Calculate estimated cost
-    // ---------------------------------------------------------------
-    decimal inputCost = inputTokens * InputCostPerMillionTokens / 1_000_000m;
-    decimal outputCost = estimatedOutputTokens * OutputCostPerMillionTokens / 1_000_000m;
-    decimal totalCost = inputCost + outputCost;
-
-    // ---------------------------------------------------------------
-    // Display results
-    // ---------------------------------------------------------------
-    Console.WriteLine();
-    Console.WriteLine($"  Input text length : {input.Length} characters");
-    Console.WriteLine($"  Input tokens (est): {inputTokens}");
-    Console.WriteLine($"  Output tokens (est): {estimatedOutputTokens} (assuming 2x input)");
-    Console.WriteLine($"  Total tokens (est) : {totalTokens}");
-    Console.WriteLine();
-    Console.WriteLine($"  Estimated cost (GPT-4o):");
-    Console.WriteLine($"    Input  : ${inputCost:F6}");
-    Console.WriteLine($"    Output : ${outputCost:F6}");
-    Console.WriteLine($"    Total  : ${totalCost:F6}");
-    Console.WriteLine();
-
-    // ---------------------------------------------------------------
-    // Context window visualization
-    // ---------------------------------------------------------------
-    const int Gpt4oContextWindow = 128_000;
-    double usagePercent = (double)totalTokens / Gpt4oContextWindow * 100;
-    int barLength = Math.Min((int)(usagePercent / 2), 50);
-    string bar = new string('=', barLength) + new string('-', 50 - barLength);
-
-    Console.WriteLine($"  Context window usage (GPT-4o 128K):");
-    Console.WriteLine($"    [{bar}] {usagePercent:F4}%");
-    Console.WriteLine();
+    Console.WriteLine($"Folder not found: {folder}");
+    return 1;
 }
 
-Console.WriteLine("=== Exercise complete! ===");
+string[] files = [.. Directory.EnumerateFiles(folder)
+    .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".txt" or ".cs" or ".json")
+    .Order(StringComparer.OrdinalIgnoreCase)];
+
+if (files.Length == 0)
+{
+    Console.WriteLine($"No .txt, .cs, or .json files found in: {folder}");
+    return 1;
+}
+
+Console.WriteLine($"Scanning: {folder}\n");
+
+Console.WriteLine($"  {"File",-16} {"Type",-6} {"Chars",8} {"Est. tokens",12} {"Input cost ($)",15}");
+Console.WriteLine($"  {new string('-', 16)} {new string('-', 6)} {new string('-', 8)} {new string('-', 12)} {new string('-', 15)}");
+
+int totalTokens = 0;
+decimal totalCost = 0m;
+
+foreach (string file in files)
+{
+    string text = await File.ReadAllTextAsync(file, cts.Token);
+
+    string contentType = GetContentTypeHint(file);
+    int tokens = EstimateTokenCount(text, contentType);
+    decimal cost = tokens * InputRatePer1M / 1_000_000m;
+
+    totalTokens += tokens;
+    totalCost += cost;
+
+    Console.WriteLine($"  {Path.GetFileName(file),-16} {contentType,-6} {text.Length,8:N0} {tokens,12:N0} {cost,15:F6}");
+}
+
+Console.WriteLine($"  {new string('-', 16)} {new string('-', 6)} {new string('-', 8)} {new string('-', 12)} {new string('-', 15)}");
+Console.WriteLine($"  {"TOTAL",-16} {"",-6} {"",8} {totalTokens,12:N0} {totalCost,15:F6}");
+
+Console.WriteLine("\n=== Exercise complete! ===");
+
+return 0;
 
 // ---------------------------------------------------------------
-// Helper
+// Helpers — a 20-line method beats a framework
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Estimates the token count for a given text using the 4-chars-per-token heuristic.
+/// Maps a file extension to a content-type hint for the estimator.
+/// </summary>
+/// <param name="filePath">The file whose extension supplies the hint.</param>
+/// <returns>"prose", "code", or "json".</returns>
+static string GetContentTypeHint(string filePath) =>
+    Path.GetExtension(filePath).ToLowerInvariant() switch
+    {
+        ".cs" => "code",
+        ".json" => "json",
+        _ => "prose"   // .txt (and anything unrecognized) reads like prose
+    };
+
+/// <summary>
+/// Estimates the token count for a text, adjusting the chars-per-token divisor
+/// by content type: prose tokenizes at ~4 chars/token, code at ~3 (symbols and
+/// identifiers split more), and JSON at ~2.5 (punctuation-heavy).
 /// </summary>
 /// <param name="text">The text to estimate tokens for.</param>
+/// <param name="contentTypeHint">"prose", "code", or "json".</param>
 /// <returns>The estimated number of tokens.</returns>
-static int EstimateTokens(string text)
+static int EstimateTokenCount(string text, string contentTypeHint)
 {
     if (string.IsNullOrEmpty(text)) return 0;
-    return (int)Math.Ceiling(text.Length / 4.0);
+
+    double divisor = contentTypeHint switch
+    {
+        "code" => 3.0,
+        "json" => 2.5,
+        _ => 4.0   // "prose" — the classic rule of thumb
+    };
+
+    return Math.Max(1, (int)Math.Ceiling(text.Length / divisor));
 }

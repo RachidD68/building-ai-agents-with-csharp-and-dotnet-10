@@ -1,0 +1,9 @@
+Tokens are the atomic unit of every LLM call. The model never sees your
+characters or words directly; a tokenizer first splits the text into subword
+pieces, and both your bill and your context window are measured in those
+pieces. English prose averages roughly four characters per token, which makes
+length divided by four a serviceable back-of-the-envelope estimate. Code and
+JSON tokenize worse: symbols, brackets, and camelCase identifiers fragment
+into more pieces per character, so the divisor shrinks. When a wrong estimate
+would overflow the context window or under-bill a customer, switch to a real
+BPE tokenizer — but for budgeting a folder of files, the heuristic is enough.

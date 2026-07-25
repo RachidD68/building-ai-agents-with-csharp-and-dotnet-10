@@ -1,7 +1,15 @@
-﻿// ============================================================================
-// Exercise 01 — Conversation Logger (Beginner)
-// Multi-turn console chat that logs every message (user + assistant) to a
-// text file. Uses AgentSession for conversation memory. FULLY STANDALONE.
+// ============================================================================
+// Exercise 01 — Conversation Logger (Basic)
+// Extends Ch06.AgentSessionDemo: the agent runs with a wired
+// InMemoryChatHistoryProvider, and EVERY turn is appended to a log file in
+// real time. Each log line carries a timestamp, the SESSION ID, the role, and
+// the message text. The log file survives across runs; the in-memory history
+// does not. FULLY STANDALONE.
+//
+// AgentSession has no built-in id in MAF (ChatClientAgentSession.ConversationId
+// stays null for client-side history), so the app assigns each session a short
+// id of its own — which is exactly what makes the log readable: two sessions,
+// two ids, one file.
 // ============================================================================
 
 using System.ClientModel;
@@ -24,77 +32,123 @@ Console.WriteLine("=== Exercise: Conversation Logger ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-string logFile = Path.Combine(
-    Environment.CurrentDirectory,
-    $"conversation-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+// A FIXED file name, appended to on every run — that is what makes the log
+// survive across runs while the in-memory history does not.
+string logFile = Path.Combine(Environment.CurrentDirectory, "conversation.log");
 
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: "You are a helpful .NET programming assistant. Be concise.",
-    name: "LoggedAssistant");
-
-AgentSession session = await agent.CreateSessionAsync(cts.Token);
-
-await LogMessageAsync(logFile, "SYSTEM", $"Session started at {DateTime.Now:O}", cts.Token);
-
-Console.WriteLine($"Logging to: {logFile}");
-Console.WriteLine("Type 'quit' to exit. Conversation is being logged.\n");
-
-int turnCount = 0;
-
-while (true)
+if (File.Exists(logFile))
 {
-    Console.Write("You: ");
-    string? input = Console.ReadLine();
+    int previousLines = File.ReadAllLines(logFile).Length;
+    Console.WriteLine($"Log file already holds {previousLines} lines from previous runs.");
+}
+Console.WriteLine($"Logging to: {logFile}\n");
 
-    if (string.IsNullOrWhiteSpace(input) ||
-        input.Equals("quit", StringComparison.OrdinalIgnoreCase))
+// ---------------------------------------------------------------
+// The agent, with the history provider actually wired
+// ---------------------------------------------------------------
+InMemoryChatHistoryProvider historyProvider = new(new InMemoryChatHistoryProviderOptions());
+
+ChatClientAgentOptions agentOptions = new()
+{
+    Name = "MemoryBot",
+    Description = "An assistant that remembers the conversation — and logs it",
+    ChatHistoryProvider = historyProvider,
+    ChatOptions = new ChatOptions
     {
-        break;
+        Temperature = 0.7f
     }
+};
 
-    turnCount++;
-    await LogMessageAsync(logFile, "USER", input, cts.Token);
+ChatClientAgent agent = new(chatClient, options: agentOptions);
 
-    try
-    {
-        AgentResponse response = await agent.RunAsync(
-            input, session, cancellationToken: cts.Token);
+try
+{
+    // ---------------------------------------------------------------
+    // Session 1 — the three AgentSessionDemo turns, each logged live
+    // ---------------------------------------------------------------
+    AgentSession session = await agent.CreateSessionAsync(cts.Token);
+    string sessionId = NewSessionId();
 
-        string responseText = response.Text ?? string.Empty;
-        Console.WriteLine($"Assistant: {responseText}\n");
+    Console.WriteLine($"Session {sessionId} created. Every turn is logged as it happens.\n");
 
-        await LogMessageAsync(logFile, "ASSISTANT", responseText, cts.Token);
-    }
-    catch (OperationCanceledException)
-    {
-        Console.WriteLine("\n[Cancelled]");
-        break;
-    }
+    await RunLoggedTurnAsync(session, sessionId,
+        "My name is Rachid. I live in Seattle and I love C# programming.");
+
+    await RunLoggedTurnAsync(session, sessionId,
+        "What's my name? Where do I live? What programming language do I love?");
+
+    await RunLoggedTurnAsync(session, sessionId,
+        "Based on what you know about me, suggest a weekend project.");
+
+    // ---------------------------------------------------------------
+    // Session 2 — isolation: a fresh session, a fresh id, same log file
+    // ---------------------------------------------------------------
+    Console.WriteLine(new string('=', 60));
+    Console.WriteLine("SESSION ISOLATION");
+    Console.WriteLine(new string('=', 60));
+
+    AgentSession session2 = await agent.CreateSessionAsync(cts.Token);
+    string sessionId2 = NewSessionId();
+
+    Console.WriteLine($"New session {sessionId2} — asking 'What is my name?'\n");
+
+    await RunLoggedTurnAsync(session2, sessionId2, "What is my name?");
+
+    Console.WriteLine("As expected, the new session has no memory of the first conversation —");
+    Console.WriteLine("but the log file recorded both sessions, each line tagged with its id.\n");
+
+    // ---------------------------------------------------------------
+    // In-memory history vs the log file
+    // ---------------------------------------------------------------
+    int session1Messages = historyProvider.GetMessages(session).Count;
+    int session2Messages = historyProvider.GetMessages(session2).Count;
+    int logLines = File.ReadAllLines(logFile).Length;
+
+    Console.WriteLine(new string('=', 60));
+    Console.WriteLine($"In-memory history: {session1Messages} messages ({sessionId}), " +
+                      $"{session2Messages} messages ({sessionId2}) — gone when the process exits.");
+    Console.WriteLine($"Log file:          {logLines} lines total — survives the next run.");
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("\n[Cancelled]");
 }
 
-await LogMessageAsync(logFile, "SYSTEM",
-    $"Session ended. {turnCount} turns.", cts.Token);
-
-Console.WriteLine($"\nConversation saved to: {logFile}");
-Console.WriteLine($"Total turns: {turnCount}");
-Console.WriteLine("=== Exercise complete! ===");
+Console.WriteLine("\n=== Exercise complete! ===");
 
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
 
+// Runs one turn: logs the user message, runs the agent, logs the reply.
+// Both log writes happen in real time, before the next turn starts.
+async Task RunLoggedTurnAsync(AgentSession session, string sessionId, string message)
+{
+    Console.WriteLine($"You: {message}");
+    await LogTurnAsync(logFile, sessionId, "user", message, cts.Token);
+
+    AgentResponse response = await agent.RunAsync(message, session, cancellationToken: cts.Token);
+
+    Console.WriteLine($"Agent: {response.Text}\n");
+    await LogTurnAsync(logFile, sessionId, "assistant", response.Text ?? string.Empty, cts.Token);
+}
+
+// A short app-assigned session id (see the header note).
+static string NewSessionId() => Guid.NewGuid().ToString("N")[..8];
+
 /// <summary>
-/// Appends a timestamped message to the log file.
+/// Appends one log line: timestamp, session id, role, message text.
 /// </summary>
 /// <param name="path">The log file path.</param>
-/// <param name="role">The message role (USER, ASSISTANT, SYSTEM).</param>
-/// <param name="content">The message content.</param>
+/// <param name="sessionId">The id of the session the turn belongs to.</param>
+/// <param name="role">The message role (user, assistant).</param>
+/// <param name="text">The message text (flattened to a single line).</param>
 /// <param name="cancellationToken">Token to cancel the operation.</param>
-static async Task LogMessageAsync(
-    string path, string role, string content, CancellationToken cancellationToken)
+static async Task LogTurnAsync(
+    string path, string sessionId, string role, string text, CancellationToken cancellationToken)
 {
-    string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{role}] {content}\n";
+    string flattened = text.ReplaceLineEndings(" ");
+    string entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{sessionId}] [{role,-9}] {flattened}\n";
     await File.AppendAllTextAsync(path, entry, cancellationToken);
 }
 

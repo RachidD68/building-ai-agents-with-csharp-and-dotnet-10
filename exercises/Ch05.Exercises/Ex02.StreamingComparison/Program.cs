@@ -1,8 +1,11 @@
-﻿// ============================================================================
+// ============================================================================
 // Exercise 02 — Streaming Comparison (Intermediate)
-// Send the same prompt both streaming and non-streaming.
-// Measure and display time-to-first-token vs. total time.
-// FULLY STANDALONE.
+// Run the SAME prompt through RunAsync and RunStreamingAsync. For streaming,
+// record the Stopwatch timestamp of every update as it arrives, then print a
+// console bar chart of the token-arrival timings — one bar per update, bar
+// length = elapsed ms (one '#' per 50 ms, exactly the hint's
+// new string('#', elapsedMs / 50)). Eyeball the provider's output rate.
+// A TTFT/total comparison summary closes the run. FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
@@ -33,83 +36,98 @@ ChatClientAgent agent = new(
     instructions: "You are a helpful programming tutor. Be concise.",
     name: "TutorAgent");
 
-// ---------------------------------------------------------------
-// Non-Streaming run
-// ---------------------------------------------------------------
-Console.WriteLine("--- Non-Streaming (RunAsync) ---\n");
-
-AgentSession nonStreamSession = await agent.CreateSessionAsync(cts.Token);
-Stopwatch swNonStream = Stopwatch.StartNew();
-
-AgentResponse nonStreamResponse = await agent.RunAsync(
-    prompt, nonStreamSession, cancellationToken: cts.Token);
-
-swNonStream.Stop();
-long nonStreamMs = swNonStream.ElapsedMilliseconds;
-
-Console.WriteLine($"Response ({nonStreamResponse.Text?.Length ?? 0} chars):");
-Console.WriteLine(nonStreamResponse.Text);
-Console.WriteLine($"\n  Total time: {nonStreamMs}ms");
-Console.WriteLine($"  Time to first token: {nonStreamMs}ms (same as total for non-streaming)");
-
-// ---------------------------------------------------------------
-// Streaming run
-// ---------------------------------------------------------------
-Console.WriteLine("\n--- Streaming (RunStreamingAsync) ---\n");
-
-AgentSession streamSession = await agent.CreateSessionAsync(cts.Token);
-Stopwatch swStream = Stopwatch.StartNew();
-long firstTokenMs = 0;
-bool isFirst = true;
-int totalChars = 0;
-int updateCount = 0;
-
-Console.Write("Response: ");
-
-// To get the fully assembled AgentResponse instead of manual concatenation, call updates.ToAgentResponseAsync() (introduced in Chapter 7).
-await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(
-    prompt, streamSession, cancellationToken: cts.Token))
+try
 {
-    if (isFirst && !string.IsNullOrEmpty(update.Text))
+    // ---------------------------------------------------------------
+    // Non-streaming run (RunAsync) — one timing: the whole response
+    // ---------------------------------------------------------------
+    Console.WriteLine("--- Non-Streaming (RunAsync) ---\n");
+
+    AgentSession nonStreamSession = await agent.CreateSessionAsync(cts.Token);
+    Stopwatch swNonStream = Stopwatch.StartNew();
+
+    AgentResponse nonStreamResponse = await agent.RunAsync(
+        prompt, nonStreamSession, cancellationToken: cts.Token);
+
+    swNonStream.Stop();
+    long nonStreamMs = swNonStream.ElapsedMilliseconds;
+
+    Console.WriteLine($"Response ({nonStreamResponse.Text?.Length ?? 0} chars):");
+    Console.WriteLine(nonStreamResponse.Text);
+    Console.WriteLine($"\n  Total time: {nonStreamMs}ms");
+    Console.WriteLine("  Time to first token: same as total — nothing arrives until everything has.");
+
+    // ---------------------------------------------------------------
+    // Streaming run (RunStreamingAsync) — record every update's arrival
+    // ---------------------------------------------------------------
+    Console.WriteLine("\n--- Streaming (RunStreamingAsync) ---\n");
+
+    AgentSession streamSession = await agent.CreateSessionAsync(cts.Token);
+
+    // One entry per update received: (ms since request start, update text).
+    List<(long ElapsedMs, string Text)> arrivals = [];
+
+    Stopwatch swStream = Stopwatch.StartNew();
+
+    Console.Write("Response: ");
+
+    await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(
+        prompt, streamSession, cancellationToken: cts.Token))
     {
-        firstTokenMs = swStream.ElapsedMilliseconds;
-        isFirst = true;
+        if (update.Text is { Length: > 0 } text)
+        {
+            // Stopwatch.Elapsed gives millisecond precision — timestamp the
+            // update the moment it arrives.
+            arrivals.Add((swStream.ElapsedMilliseconds, text));
+            Console.Write(text);
+        }
     }
 
-    if (!string.IsNullOrEmpty(update.Text))
+    swStream.Stop();
+    long streamTotalMs = swStream.ElapsedMilliseconds;
+    long firstTokenMs = arrivals.Count > 0 ? arrivals[0].ElapsedMs : streamTotalMs;
+
+    Console.WriteLine("\n");
+
+    // ---------------------------------------------------------------
+    // Token-arrival bar chart — one bar per update, 1 '#' = 50 ms
+    // ---------------------------------------------------------------
+    Console.WriteLine("--- Token-Arrival Timings ---\n");
+    Console.WriteLine($"  {arrivals.Count} updates. Bar length = arrival time since request start (1 '#' = 50 ms).\n");
+
+    foreach ((long elapsedMs, string text) in arrivals)
     {
-        if (isFirst)
+        // The hint's visualization, verbatim: new string('#', elapsedMs / 50).
+        string bar = new string('#', (int)(elapsedMs / 50));
+
+        // Label: elapsed ms + the update's text, truncated to keep rows tidy.
+        string token = text.ReplaceLineEndings(" ");
+        if (token.Length > 12)
         {
-            firstTokenMs = swStream.ElapsedMilliseconds;
-            isFirst = false;
+            token = token[..12];
         }
-        Console.Write(update.Text);
-        totalChars += update.Text.Length;
-        updateCount++;
+
+        Console.WriteLine($"  {elapsedMs,6} ms | {bar} \"{token}\"");
+    }
+
+    // ---------------------------------------------------------------
+    // Comparison summary — TTFT and total time, side by side
+    // ---------------------------------------------------------------
+    Console.WriteLine("\n--- Comparison Summary ---\n");
+    Console.WriteLine($"  {"Metric",-25} {"Non-Streaming",15} {"Streaming",15}");
+    Console.WriteLine($"  {new string('-', 25)} {new string('-', 15)} {new string('-', 15)}");
+    Console.WriteLine($"  {"Time to first token",-25} {nonStreamMs + "ms",15} {firstTokenMs + "ms",15}");
+    Console.WriteLine($"  {"Total time",-25} {nonStreamMs + "ms",15} {streamTotalMs + "ms",15}");
+
+    if (firstTokenMs > 0 && nonStreamMs > 0)
+    {
+        double speedup = (double)nonStreamMs / firstTokenMs;
+        Console.WriteLine($"\n  Streaming first-token speedup: {speedup:F1}x faster");
     }
 }
-
-swStream.Stop();
-long streamTotalMs = swStream.ElapsedMilliseconds;
-
-Console.WriteLine($"\n\n  Total chars: {totalChars}");
-Console.WriteLine($"  Streaming updates: {updateCount}");
-Console.WriteLine($"  Time to first token: {firstTokenMs}ms");
-Console.WriteLine($"  Total time: {streamTotalMs}ms");
-
-// ---------------------------------------------------------------
-// Comparison summary
-// ---------------------------------------------------------------
-Console.WriteLine("\n--- Comparison Summary ---\n");
-Console.WriteLine($"  {"Metric",-25} {"Non-Streaming",15} {"Streaming",15}");
-Console.WriteLine($"  {new string('-', 25)} {new string('-', 15)} {new string('-', 15)}");
-Console.WriteLine($"  {"Time to first token",-25} {nonStreamMs + "ms",15} {firstTokenMs + "ms",15}");
-Console.WriteLine($"  {"Total time",-25} {nonStreamMs + "ms",15} {streamTotalMs + "ms",15}");
-
-if (firstTokenMs > 0 && nonStreamMs > 0)
+catch (OperationCanceledException)
 {
-    double speedup = (double)nonStreamMs / firstTokenMs;
-    Console.WriteLine($"\n  Streaming first-token speedup: {speedup:F1}x faster");
+    Console.WriteLine("\n[Cancelled]");
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");

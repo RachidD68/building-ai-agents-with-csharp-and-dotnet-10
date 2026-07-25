@@ -45,16 +45,15 @@ Console.WriteLine($"Discovered {tools.Count} tools\n");
 
 ChatClientAgent agent = new(
     chatClient,
-    instructions: "You are a helpful dictionary assistant for software engineering terms. Use the tools to look up definitions and synonyms. Provide helpful context.",
+    instructions: "You are a helpful dictionary assistant. Use the tools to look up definitions and synonyms. Provide helpful context.",
     name: "DictionaryAssistant",
     tools: [.. tools]);
 
 string[] queries =
 [
-    "What does 'middleware' mean in software?",
-    "Find synonyms for 'refactoring'.",
-    "Define 'idempotent' and give me its synonyms.",
-    "What's the difference between concurrency and serialization?"
+    "Define 'reticent' and give me three synonyms.",
+    "What does 'ephemeral' mean?",
+    "Give me synonyms for 'verbose'."
 ];
 
 foreach (string query in queries)

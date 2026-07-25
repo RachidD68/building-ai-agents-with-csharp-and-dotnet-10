@@ -1,114 +1,89 @@
 // ============================================================================
-// Exercise 01 — Record Patterns (Beginner)
-// Create a Shape hierarchy using records and calculate areas with pattern matching.
+// Exercise 01 — Record Patterns (Basic)
+// Classifies a list of LlmResponse records into "low-cost", "medium-cost",
+// "high-cost", or "error" with a switch expression that combines property
+// patterns and relational patterns.
 // ============================================================================
 
-Console.WriteLine("=== Exercise: Record Patterns — Shape Area Calculator ===\n");
+Console.WriteLine("=== Exercise: Record Patterns — LlmResponse Cost Classifier ===\n");
 
-Shape[] shapes =
+// The same LlmResponse/TokenUsage shapes as the companion Ch02.ConsoleApp
+// (src/Ch02.CSharpEssentials). The companion's switch stops at low/moderate
+// usage; here we extend it with two more branches and a cost threshold.
+List<LlmResponse> responses =
 [
-    new Circle(5.0),
-    new Rectangle(4.0, 7.0),
-    new Triangle(6.0, 3.0),
-    new Circle(2.5),
-    new Rectangle(10.0, 10.0),
-    new Triangle(8.0, 4.5),
+    new(200, new TokenUsage(120, 80)),       // 200 total    -> low-cost
+    new(200, new TokenUsage(310, 145)),      // 455 total    -> low-cost
+    new(200, new TokenUsage(900, 400)),      // 1,300 total  -> medium-cost
+    new(200, new TokenUsage(1_500, 480)),    // 1,980 total  -> medium-cost
+    new(200, new TokenUsage(3_200, 1_800)),  // 5,000 total  -> high-cost
+    new(200, new TokenUsage(9_000, 2_500)),  // 11,500 total -> high-cost
+    new(429, new TokenUsage(0, 0)),          // rate limited -> error
+    new(500, new TokenUsage(0, 0)),          // server error -> error
+    new(503, new TokenUsage(0, 0)),          // unavailable  -> error
 ];
 
-double totalArea = 0;
+Console.WriteLine($"  {"Status",6} {"In Tok",8} {"Out Tok",8} {"Total",8}   Category");
+Console.WriteLine($"  {new string('-', 6)} {new string('-', 8)} {new string('-', 8)} {new string('-', 8)}   {new string('-', 11)}");
 
-foreach (Shape shape in shapes)
+foreach (LlmResponse response in responses)
 {
-    double area = CalculateArea(shape);
-    totalArea += area;
-
-    string description = DescribeShape(shape);
-    Console.WriteLine($"  {description,-35} Area = {area,10:F2}");
+    string category = Classify(response);
+    Console.WriteLine($"  {response.StatusCode,6} {response.Usage.InputTokens,8:N0} " +
+                      $"{response.Usage.OutputTokens,8:N0} {response.Usage.TotalTokens,8:N0}   {category}");
 }
 
-Console.WriteLine($"\n  {"Total area",-35} = {totalArea,10:F2}");
-
 // ---------------------------------------------------------------
-// Bonus: Classify shapes by size using pattern matching
+// Summary: how many responses landed in each category
 // ---------------------------------------------------------------
-Console.WriteLine("\n--- Shape Size Classification ---\n");
+Console.WriteLine("\n--- Category Summary ---\n");
 
-foreach (Shape shape in shapes)
+foreach (var group in responses
+    .GroupBy(Classify)
+    .OrderBy(g => g.Key switch { "low-cost" => 0, "medium-cost" => 1, "high-cost" => 2, _ => 3 }))
 {
-    string size = ClassifySize(CalculateArea(shape));
-    Console.WriteLine($"  {DescribeShape(shape),-35} → {size}");
+    Console.WriteLine($"  {group.Key,-12} {group.Count()} response(s)");
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
 
 // ---------------------------------------------------------------
-// Functions using switch expressions and pattern matching
+// The classifier — property patterns + relational patterns
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Calculates the area of any <see cref="Shape"/> using a switch expression.
+/// Classifies an <see cref="LlmResponse"/> by status code and token usage.
+/// Property patterns match on <c>StatusCode</c> and the nested
+/// <c>Usage.TotalTokens</c>; relational patterns supply the cost thresholds.
 /// </summary>
-/// <param name="shape">The shape to calculate the area for.</param>
-/// <returns>The computed area.</returns>
-static double CalculateArea(Shape shape) => shape switch
+/// <param name="response">The response to classify.</param>
+/// <returns>"low-cost", "medium-cost", "high-cost", or "error".</returns>
+static string Classify(LlmResponse response) => response switch
 {
-    Circle(var r) => Math.PI * r * r,
-    Rectangle(var w, var h) => w * h,
-    Triangle(var b, var h) => 0.5 * b * h,
-    _ => throw new ArgumentException($"Unknown shape: {shape.GetType().Name}")
-};
-
-/// <summary>
-/// Returns a human-readable description of a <see cref="Shape"/>.
-/// </summary>
-/// <param name="shape">The shape to describe.</param>
-/// <returns>A formatted description string.</returns>
-static string DescribeShape(Shape shape) => shape switch
-{
-    Circle(var r) => $"Circle (radius={r})",
-    Rectangle(var w, var h) => $"Rectangle ({w} x {h})",
-    Triangle(var b, var h) => $"Triangle (base={b}, height={h})",
-    _ => "Unknown shape"
-};
-
-/// <summary>
-/// Classifies an area value into a size category.
-/// </summary>
-/// <param name="area">The area value to classify.</param>
-/// <returns>A size category string.</returns>
-static string ClassifySize(double area) => area switch
-{
-    < 10 => "Small",
-    >= 10 and < 50 => "Medium",
-    >= 50 and < 100 => "Large",
-    _ => "Extra Large"
+    { StatusCode: 200, Usage.TotalTokens: < 500 } => "low-cost",
+    { StatusCode: 200, Usage.TotalTokens: >= 500 and < 2_000 } => "medium-cost",
+    { StatusCode: 200, Usage.TotalTokens: >= 2_000 } => "high-cost",
+    _ => "error"   // 429, 5xx, or anything else that is not a clean 200
 };
 
 // ---------------------------------------------------------------
-// Shape record hierarchy
+// Records — the same shapes as the companion Ch02.ConsoleApp
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Abstract base record for all shapes.
+/// Token usage information from an LLM response.
 /// </summary>
-abstract record Shape;
+/// <param name="InputTokens">Number of tokens in the prompt.</param>
+/// <param name="OutputTokens">Number of tokens in the completion.</param>
+sealed record TokenUsage(int InputTokens, int OutputTokens)
+{
+    /// <summary>Gets the total token count.</summary>
+    public int TotalTokens => InputTokens + OutputTokens;
+}
 
 /// <summary>
-/// Represents a circle defined by its radius.
+/// Simulated LLM API response with status code and usage data.
 /// </summary>
-/// <param name="Radius">The radius of the circle.</param>
-record Circle(double Radius) : Shape;
-
-/// <summary>
-/// Represents a rectangle defined by its width and height.
-/// </summary>
-/// <param name="Width">The width of the rectangle.</param>
-/// <param name="Height">The height of the rectangle.</param>
-record Rectangle(double Width, double Height) : Shape;
-
-/// <summary>
-/// Represents a triangle defined by its base and height.
-/// </summary>
-/// <param name="Base">The base length of the triangle.</param>
-/// <param name="Height">The height of the triangle.</param>
-record Triangle(double Base, double Height) : Shape;
+/// <param name="StatusCode">HTTP status code.</param>
+/// <param name="Usage">Token usage details.</param>
+sealed record LlmResponse(int StatusCode, TokenUsage Usage);

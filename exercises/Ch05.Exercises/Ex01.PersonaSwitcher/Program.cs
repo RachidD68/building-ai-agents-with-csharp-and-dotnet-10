@@ -1,7 +1,13 @@
-﻿// ============================================================================
-// Exercise 01 — Persona Switcher (Beginner)
-// Create three agents with different personas (Chef, Detective, Poet).
-// Let user pick one and chat. FULLY STANDALONE.
+// ============================================================================
+// Exercise 01 — Persona Switcher (Basic)
+// Type a persona description (e.g., "sarcastic support engineer") followed by
+// a question. A FRESH ChatClientAgent is spun up with those instructions for
+// each question — the IChatClient is reused across calls; only the agent
+// changes. FULLY STANDALONE.
+//
+// Note: the instructions constructor accepts any string, so the user's text
+// goes into the system prompt verbatim. That is an injection vector — fine
+// for this exercise; Chapter 16 shows how to sanitize.
 // ============================================================================
 
 using System.ClientModel;
@@ -17,6 +23,8 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
+
+// One IChatClient for the whole run — reused by every agent we create below.
 IChatClient chatClient = CreateChatClient(config);
 
 Console.WriteLine("=== Exercise: Persona Switcher ===\n");
@@ -24,71 +32,48 @@ Console.WriteLine("=== Exercise: Persona Switcher ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Define personas
-// ---------------------------------------------------------------
-Dictionary<string, (string Name, string Instructions)> personas = new()
+Console.WriteLine("Describe a persona, then ask it a question.");
+Console.WriteLine("A fresh agent is created with your persona for every question.");
+Console.WriteLine("Example persona: sarcastic support engineer");
+Console.WriteLine("Leave the persona blank (or type 'quit') to exit.\n");
+
+while (!cts.Token.IsCancellationRequested)
 {
-    ["1"] = ("Chef Gordon", """
-        You are Chef Gordon, a passionate and dramatic celebrity chef.
-        You relate everything to cooking metaphors and food analogies.
-        You occasionally shout enthusiastically about the beauty of food.
-        Keep answers to 3-5 sentences.
-        """),
-    ["2"] = ("Detective Holmes", """
-        You are Detective Holmes, a brilliant but eccentric detective.
-        You analyze everything with deductive reasoning and often say 'Elementary!'
-        You speak in a formal Victorian style and see clues everywhere.
-        Keep answers to 3-5 sentences.
-        """),
-    ["3"] = ("Poet Luna", """
-        You are Poet Luna, a dreamy and philosophical poet.
-        You speak in flowing, poetic language with occasional rhymes.
-        You find beauty and metaphor in everything, even technical topics.
-        Keep answers to 3-5 sentences.
-        """)
-};
+    Console.Write("Persona: ");
+    string? persona = Console.ReadLine()?.Trim();
 
-Console.WriteLine("Choose your persona:");
-Console.WriteLine("  1. Chef Gordon — dramatic culinary artist");
-Console.WriteLine("  2. Detective Holmes — deductive reasoning master");
-Console.WriteLine("  3. Poet Luna — philosophical dreamer");
-Console.Write("\nYour choice (1-3): ");
-
-string choice = Console.ReadLine()?.Trim() ?? "1";
-if (!personas.TryGetValue(choice, out var persona))
-{
-    persona = personas["1"];
-}
-
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: persona.Instructions,
-    name: persona.Name,
-    description: $"A chatbot with the {persona.Name} persona");
-
-Console.WriteLine($"\nYou are now chatting with {persona.Name}!");
-Console.WriteLine("Type 'quit' to exit.\n");
-
-AgentSession session = await agent.CreateSessionAsync(cts.Token);
-
-while (true)
-{
-    Console.Write("You: ");
-    string? input = Console.ReadLine();
-
-    if (string.IsNullOrWhiteSpace(input) ||
-        input.Equals("quit", StringComparison.OrdinalIgnoreCase))
+    if (string.IsNullOrEmpty(persona) ||
+        persona.Equals("quit", StringComparison.OrdinalIgnoreCase))
     {
         break;
     }
 
+    Console.Write("Question: ");
+    string? question = Console.ReadLine()?.Trim();
+
+    if (string.IsNullOrEmpty(question))
+    {
+        Console.WriteLine("  (No question — try again.)\n");
+        continue;
+    }
+
+    // A fresh agent per question: same chat client, new instructions.
+    // The persona description the user typed IS the system prompt.
+    ChatClientAgent agent = new(
+        chatClient,
+        instructions: persona,
+        name: "PersonaAgent",
+        description: $"An agent acting as: {persona}");
+
     try
     {
+        // Single-turn call — no session needed; MAF creates a throwaway
+        // session internally just for this run.
         AgentResponse response = await agent.RunAsync(
-            input, session, cancellationToken: cts.Token);
+            question,
+            cancellationToken: cts.Token);
 
-        Console.WriteLine($"{persona.Name}: {response.Text}\n");
+        Console.WriteLine($"\n[{persona}]: {response.Text}\n");
     }
     catch (OperationCanceledException)
     {

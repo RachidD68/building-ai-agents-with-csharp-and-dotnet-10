@@ -1,49 +1,46 @@
-# Exercise 01 — Record Patterns (Beginner)
+# Exercise 01 — Record Patterns (Basic)
 
 ## Prompt
 
-Create a **Shape hierarchy** using C# records (`Circle`, `Rectangle`, `Triangle`) that inherit from an abstract `Shape` record. Use **switch expressions** with **positional pattern matching** to:
-
-1. Calculate the area of each shape.
-2. Describe each shape as a human-readable string.
-3. Classify shapes by area size (Small / Medium / Large / Extra Large).
+Given a list of `LlmResponse` records, write a **switch expression** that classifies each one into `"low-cost"`, `"medium-cost"`, `"high-cost"`, or `"error"` based on status code and token usage. Use **property patterns** and **relational patterns**.
 
 ## Hints
 
-- Use `abstract record Shape;` as the base type.
-- Positional patterns deconstruct records: `Circle(var r) => ...`
-- Switch expressions can use relational patterns: `< 10 => "Small"`
-- Records give you value equality and `ToString()` for free.
+- Start from the `LlmResponse` switch in the companion `Program.cs` (`src/Ch02.CSharpEssentials/Ch02.ConsoleApp`). You're extending the same shape with two more branches and a cost threshold.
+- Property patterns reach into nested members: `{ StatusCode: 200, Usage.TotalTokens: < 500 }`
+- Relational patterns combine with `and`: `>= 500 and < 2_000`
+- Anything that is not a clean 200 (429, 5xx, ...) falls through to `"error"`.
 
 ## Expected Outcome
 
 ```
-=== Exercise: Record Patterns — Shape Area Calculator ===
+=== Exercise: Record Patterns — LlmResponse Cost Classifier ===
 
-  Circle (radius=5)                    Area =      78.54
-  Rectangle (4 x 7)                    Area =      28.00
-  Triangle (base=6, height=3)          Area =       9.00
-  Circle (radius=2.5)                  Area =      19.63
-  Rectangle (10 x 10)                  Area =     100.00
-  Triangle (base=8, height=4.5)        Area =      18.00
+  Status   In Tok  Out Tok    Total   Category
+  ------ -------- -------- --------   -----------
+     200      120       80      200   low-cost
+     200      310      145      455   low-cost
+     200      900      400    1,300   medium-cost
+     200    1,500      480    1,980   medium-cost
+     200    3,200    1,800    5,000   high-cost
+     200    9,000    2,500   11,500   high-cost
+     429        0        0        0   error
+     500        0        0        0   error
+     503        0        0        0   error
 
-  Total area                           =     253.17
+--- Category Summary ---
 
---- Shape Size Classification ---
-
-  Circle (radius=5)                    → Large
-  Rectangle (4 x 7)                    → Medium
-  Triangle (base=6, height=3)          → Small
-  Circle (radius=2.5)                  → Medium
-  Rectangle (10 x 10)                  → Extra Large
-  Triangle (base=8, height=4.5)        → Medium
+  low-cost     2 response(s)
+  medium-cost  2 response(s)
+  high-cost    2 response(s)
+  error        3 response(s)
 
 === Exercise complete! ===
 ```
 
 ## Key Concepts
 
-- Records and positional deconstruction
-- Switch expressions with pattern matching
-- Relational and combinatory patterns (`and`, `or`)
-- Abstract record hierarchies
+- Records with value equality and computed properties (`TotalTokens`)
+- Switch expressions with property patterns (including nested `Usage.TotalTokens`)
+- Relational patterns and the `and` combinator for threshold branching
+- A discard arm (`_`) as the error catch-all

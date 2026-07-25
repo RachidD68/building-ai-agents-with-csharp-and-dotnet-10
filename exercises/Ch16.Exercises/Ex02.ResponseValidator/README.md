@@ -2,11 +2,16 @@
 
 ## Prompt
 
-Middleware that validates agent responses: must not exceed a character limit. Log validation failures and truncate if needed.
+Build a post-response validator middleware that checks the model's output against a
+set of rules (no URLs, minimum length, maximum length, no unexpected code block in a
+short/casual response). When any rule fails, replace the response with a safe
+fallback message. Log the rule that triggered.
 
 ## Key Concepts
 
-- Post-processing middleware pattern
-- Response validation and transformation
-- `DelegatingChatClient` for response inspection
-- Configurable validation rules
+- Post-processing middleware: `base.GetResponseAsync(...)` first, then inspect
+  `response.Text`
+- Any violated rule routes to the safe fallback — replacement, never truncation
+- Logging the violated rule(s), same shape as `ContentFilterMiddleware`
+- Streaming path: buffer the stream, validate the full text, then emit either the
+  buffered updates or the single fallback update

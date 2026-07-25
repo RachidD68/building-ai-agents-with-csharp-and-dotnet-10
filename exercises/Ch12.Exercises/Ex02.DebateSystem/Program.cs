@@ -1,9 +1,15 @@
-﻿// ============================================================================
+// ============================================================================
 // Exercise 02 — Debate System (Intermediate)
-// Two agents debate a topic. A JudgeAgent scores each round. FULLY STANDALONE.
+// Two agents — a Proponent and a Skeptic — debate a technical topic over
+// three rounds. Both share ONE List<ChatMessage> conversation log, so every
+// turn sees the full history, not just the previous argument. A Judge scores
+// each round "X/10"; the scores are parsed and totalled at the end.
+// FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Microsoft.Agents.AI;
@@ -23,37 +29,52 @@ Console.WriteLine("=== Exercise: Debate System ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-string topic = "Should all software be open source?";
+string topic = "Should all new web services use microservices?";
 
-ChatClientAgent proAgent = new(chatClient,
+ChatClientAgent proponent = new(chatClient,
     instructions: $"""
-        You are a passionate debater arguing FOR the position. The topic is: "{topic}"
-        Make compelling arguments with examples. Keep each response to 3-4 sentences.
-        Address your opponent's previous arguments when applicable.
+        You are "Proponent" in a structured technical debate. The topic is:
+        "{topic}"
+        You argue FOR the position. Read the full debate so far and respond
+        to your opponent's latest argument with a compelling, concrete case.
+        Keep each response to 3-4 sentences.
         """,
-    name: "ProDebater");
+    name: "Proponent");
 
-ChatClientAgent conAgent = new(chatClient,
+ChatClientAgent skeptic = new(chatClient,
     instructions: $"""
-        You are a passionate debater arguing AGAINST the position. The topic is: "{topic}"
-        Make compelling counterarguments with examples. Keep each response to 3-4 sentences.
-        Address your opponent's previous arguments when applicable.
+        You are "Skeptic" in a structured technical debate. The topic is:
+        "{topic}"
+        You challenge the position. Read the full debate so far and counter
+        your opponent's latest argument with concrete objections and examples.
+        Keep each response to 3-4 sentences.
         """,
-    name: "ConDebater");
+    name: "Skeptic");
 
 ChatClientAgent judge = new(chatClient,
     instructions: """
-        You are an impartial debate judge. Score each round on a scale of 1-10 for each debater.
-        Consider argument strength, evidence, and rhetorical skill.
-        Format: "Pro: X/10, Con: Y/10. Brief explanation." Keep it to 2 sentences.
+        You are an impartial debate judge. Score the round you are given on a
+        1-10 scale for each debater, considering argument strength, evidence,
+        and rhetorical skill. Reply in EXACTLY this format:
+        Proponent: X/10, Skeptic: Y/10. <one-sentence explanation>
         """,
     name: "Judge");
 
 Console.WriteLine($"Topic: {topic}\n");
 Console.WriteLine(new string('=', 60));
 
-int proTotal = 0, conTotal = 0;
-string previousArgument = $"Opening statement on: {topic}";
+// One shared conversation log — both debaters see the SAME full history.
+// Each turn is appended with a speaker prefix so the transcript stays
+// readable to both models (this is a hand-rolled group chat).
+List<ChatMessage> conversation =
+[
+    new(ChatRole.User,
+        $"Debate topic: {topic} Proponent argues FOR, Skeptic argues AGAINST. Proponent opens.")
+];
+
+int proponentTotal = 0;
+int skepticTotal = 0;
+int scoredRounds = 0;
 
 try
 {
@@ -61,34 +82,45 @@ try
     {
         Console.WriteLine($"\n--- Round {round} ---\n");
 
-        // Pro argues
-        AgentSession proSession = await proAgent.CreateSessionAsync(cts.Token);
-        AgentResponse proResponse = await proAgent.RunAsync(
-            $"Round {round}. Previous argument from opponent: {previousArgument}",
-            proSession, cancellationToken: cts.Token);
+        // Proponent speaks — receives the full shared log.
+        AgentResponse proResponse = await proponent.RunAsync(
+            conversation, cancellationToken: cts.Token);
         string proText = proResponse.Text ?? string.Empty;
-        Console.WriteLine($"  [PRO] {proText}\n");
+        conversation.Add(new ChatMessage(ChatRole.User, $"Proponent: {proText}")
+        {
+            AuthorName = "Proponent"
+        });
+        Console.WriteLine($"  [PROPONENT] {proText}\n");
 
-        // Con argues
-        AgentSession conSession = await conAgent.CreateSessionAsync(cts.Token);
-        AgentResponse conResponse = await conAgent.RunAsync(
-            $"Round {round}. Previous argument from opponent: {proText}",
-            conSession, cancellationToken: cts.Token);
-        string conText = conResponse.Text ?? string.Empty;
-        Console.WriteLine($"  [CON] {conText}\n");
+        // Skeptic responds — same log, now including the argument above.
+        AgentResponse skepticResponse = await skeptic.RunAsync(
+            conversation, cancellationToken: cts.Token);
+        string skepticText = skepticResponse.Text ?? string.Empty;
+        conversation.Add(new ChatMessage(ChatRole.User, $"Skeptic: {skepticText}")
+        {
+            AuthorName = "Skeptic"
+        });
+        Console.WriteLine($"  [SKEPTIC] {skepticText}\n");
 
-        previousArgument = conText;
-
-        // Judge scores
+        // Judge scores the round; parse the REAL "X/10" scores it produces.
         AgentSession judgeSession = await judge.CreateSessionAsync(cts.Token);
         AgentResponse judgeResponse = await judge.RunAsync(
-            $"Round {round} debate on '{topic}':\nPro: {proText}\nCon: {conText}\n\nScore this round.",
+            $"Round {round} of the debate on \"{topic}\":\n" +
+            $"Proponent: {proText}\nSkeptic: {skepticText}\n\nScore this round.",
             judgeSession, cancellationToken: cts.Token);
-        Console.WriteLine($"  [JUDGE] {judgeResponse.Text}");
+        string verdict = judgeResponse.Text ?? string.Empty;
+        Console.WriteLine($"  [JUDGE] {verdict}");
 
-        // Simple score extraction (just add round number as proxy if parsing fails)
-        proTotal += round;
-        conTotal += round;
+        if (TryParseScores(verdict, out int proScore, out int skepticScore))
+        {
+            proponentTotal += proScore;
+            skepticTotal += skepticScore;
+            scoredRounds++;
+        }
+        else
+        {
+            Console.WriteLine("  [JUDGE] Could not parse \"X/10\" scores — round excluded from totals.");
+        }
     }
 }
 catch (OperationCanceledException)
@@ -97,8 +129,45 @@ catch (OperationCanceledException)
 }
 
 Console.WriteLine($"\n{new string('=', 60)}");
-Console.WriteLine("Debate complete! See judge's per-round scores above.");
+if (scoredRounds > 0)
+{
+    Console.WriteLine($"Final score over {scoredRounds} scored round(s): " +
+                      $"Proponent {proponentTotal} — Skeptic {skepticTotal}");
+    string outcome = proponentTotal > skepticTotal
+        ? "The Proponent takes the debate!"
+        : skepticTotal > proponentTotal
+            ? "The Skeptic takes the debate!"
+            : "A dead heat.";
+    Console.WriteLine(outcome);
+}
+else
+{
+    Console.WriteLine("No rounds could be scored — check the judge's output format.");
+}
+Console.WriteLine($"Shared log: {conversation.Count} messages ({conversation.Count - 1} debate turns).");
 Console.WriteLine("\n=== Exercise complete! ===");
+
+// ---------------------------------------------------------------
+// Score parsing
+// ---------------------------------------------------------------
+
+/// <summary>Extracts "Proponent: X/10" and "Skeptic: Y/10" from the verdict.</summary>
+static bool TryParseScores(string verdict, out int proponentScore, out int skepticScore)
+{
+    proponentScore = 0;
+    skepticScore = 0;
+
+    Match pro = Regex.Match(verdict, @"Proponent:\s*(\d{1,2})\s*/\s*10", RegexOptions.IgnoreCase);
+    Match ske = Regex.Match(verdict, @"Skeptic:\s*(\d{1,2})\s*/\s*10", RegexOptions.IgnoreCase);
+    if (!pro.Success || !ske.Success)
+    {
+        return false;
+    }
+
+    proponentScore = int.Parse(pro.Groups[1].Value, CultureInfo.InvariantCulture);
+    skepticScore = int.Parse(ske.Groups[1].Value, CultureInfo.InvariantCulture);
+    return true;
+}
 
 // ---------------------------------------------------------------
 // Provider factory

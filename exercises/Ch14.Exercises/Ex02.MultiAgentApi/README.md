@@ -2,26 +2,30 @@
 
 ## Prompt
 
-Web API hosting 3 agents (translator, summarizer, analyzer) with keyed services. Each
-has its own endpoint. One agent also exposes a streaming endpoint: `POST /summarize/stream`
-returns the summary token by token via Server-Sent Events.
+Host four keyed agents in one API — a translator, a summarizer, a formalizer,
+and a classifier — each at its own endpoint via `[FromKeyedServices]`, plus a
+`/agents` discovery endpoint that lists them. One agent also exposes a
+streaming endpoint: `POST /summarize/stream` returns the summary token by
+token via `TypedResults.ServerSentEvents` over `RunStreamingAsync`.
 
 ## Endpoints
 
-| Method | Path                | Description                          |
-|--------|---------------------|--------------------------------------|
-| POST   | `/translate`        | Translate text to English           |
-| POST   | `/summarize`        | Summarize text (JSON)               |
-| POST   | `/summarize/stream` | Summarize text (SSE, token by token) |
-| POST   | `/analyze`          | Sentiment analysis                  |
-| GET    | `/agents`           | List registered agents              |
+| Method | Path                | Description                              |
+|--------|---------------------|------------------------------------------|
+| POST   | `/translate`        | Translate text to English                |
+| POST   | `/summarize`        | Summarize text (JSON)                    |
+| POST   | `/summarize/stream` | Summarize text (SSE, token by token)     |
+| POST   | `/formalize`        | Rewrite text in formal business tone     |
+| POST   | `/classify`         | Classify text (sentiment + topic label)  |
+| GET    | `/agents`           | List registered agents                   |
 
 ## Key Concepts
 
-- Keyed DI services for multiple agents
+- Keyed DI services: one registration per agent (four in total)
 - `[FromKeyedServices]` for endpoint resolution
-- Multiple specialized agents in one API
+- `/agents` discovery endpoint
 - SSE streaming with `TypedResults.ServerSentEvents` + `RunStreamingAsync`
+  (`[EnumeratorCancellation]` local iterator, `eventType: "token"`)
 - Clean API design with record types
 
 ## Try the stream

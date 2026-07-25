@@ -59,9 +59,8 @@ ChatClientAgent agent = new(
 
 string[] queries =
 [
-    "What time is it right now in Tokyo?",
-    "If it's 2:30 PM in New York, what time is it in London?",
-    "What's the current time in UTC and Pacific time?"
+    "What time is it in Tokyo right now?",
+    "What's the current time in UTC and in London?"
 ];
 
 foreach (string query in queries)

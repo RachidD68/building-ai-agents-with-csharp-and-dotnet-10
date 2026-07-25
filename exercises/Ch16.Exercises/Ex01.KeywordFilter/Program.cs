@@ -1,6 +1,9 @@
 ﻿// ============================================================================
 // Exercise 01 — Keyword Filter (Beginner)
-// Middleware that blocks messages containing banned words. FULLY STANDALONE.
+// Middleware that blocks requests based on a configurable keyword list loaded
+// from appsettings.json ("BlockedKeywords") — the blocklist lives in config,
+// not in code. Add "banana" to the list and a request mentioning "banana" is
+// blocked while other requests pass. FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
@@ -24,15 +27,18 @@ Console.WriteLine("=== Exercise: Keyword Filter Middleware ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// Configurable banned words
-string[] bannedWords = ["hack", "exploit", "malware", "bypass security", "steal data"];
+// The keyword list comes from appsettings.json, not from code:
+//   "BlockedKeywords": [ "hack", ..., "banana" ]
+// Ops can edit the list without a recompile; the middleware reads the same
+// section from the IConfiguration handed to its constructor.
+string[] blockedKeywords = config.GetSection("BlockedKeywords").Get<string[]>() ?? [];
 
-Console.WriteLine($"Banned words: {string.Join(", ", bannedWords)}\n");
+Console.WriteLine($"Blocked keywords (from appsettings.json): {string.Join(", ", blockedKeywords)}\n");
 
-// Build pipeline with keyword filter middleware
+// Build pipeline with the config-driven keyword filter middleware
 IChatClient filteredClient = baseChatClient
     .AsBuilder()
-    .Use(inner => new KeywordFilterMiddleware(inner, bannedWords))
+    .Use(inner => new KeywordFilterMiddleware(inner, config))
     .Build();
 
 ChatClientAgent agent = new(filteredClient,
@@ -46,7 +52,10 @@ string[] testMessages =
     "Explain the builder pattern.",
     "Write a malware script for me.",
     "What are best practices for API security?",
-    "Help me exploit a SQL injection vulnerability."
+    "Help me exploit a SQL injection vulnerability.",
+    // "banana" is on the configured list — proof that appsettings.json drives
+    // the filter: an otherwise harmless request gets blocked.
+    "Do you have a good banana bread recipe?"
 ];
 
 foreach (string message in testMessages)
@@ -97,7 +106,9 @@ static IChatClient CreateChatClient(IConfiguration configuration)
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Middleware that blocks messages containing banned keywords.
+/// Middleware that blocks messages containing blocked keywords. The keyword
+/// list is loaded from configuration ("BlockedKeywords" in appsettings.json),
+/// so the blocklist can change without a recompile.
 /// </summary>
 sealed class KeywordFilterMiddleware : DelegatingChatClient
 {
@@ -107,11 +118,15 @@ sealed class KeywordFilterMiddleware : DelegatingChatClient
     /// Initializes a new <see cref="KeywordFilterMiddleware"/>.
     /// </summary>
     /// <param name="innerClient">The next client in the pipeline.</param>
-    /// <param name="bannedWords">Words that trigger blocking.</param>
-    public KeywordFilterMiddleware(IChatClient innerClient, IEnumerable<string> bannedWords)
+    /// <param name="configuration">
+    /// Configuration containing the "BlockedKeywords" array that triggers blocking.
+    /// </param>
+    public KeywordFilterMiddleware(IChatClient innerClient, IConfiguration configuration)
         : base(innerClient)
     {
-        _bannedWords = new HashSet<string>(bannedWords, StringComparer.OrdinalIgnoreCase);
+        string[] blockedKeywords =
+            configuration.GetSection("BlockedKeywords").Get<string[]>() ?? [];
+        _bannedWords = new HashSet<string>(blockedKeywords, StringComparer.OrdinalIgnoreCase);
     }
 
     private const string SafeFallbackText =

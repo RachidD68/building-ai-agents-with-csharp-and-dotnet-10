@@ -1,161 +1,134 @@
 // ============================================================================
 // Exercise 02 — Prompt Template Engine (Intermediate)
-// Define templates with {placeholder} variables, fill them, and display the
-// final prompt with estimated token count.
+// A small prompt-template class with {placeholder} substitution from a
+// dictionary, an estimated token count for every rendered prompt, and a hard
+// token cap: if the rendered prompt exceeds the cap, Render throws.
+// Tested with three templates — a system prompt, a user question template,
+// and a few-shot classification template.
 // ============================================================================
 
 using System.Text.RegularExpressions;
 
-Console.WriteLine("=== Exercise: Prompt Template Engine ===\n");
+Console.WriteLine("=== Exercise: Prompt Template Engine — Budgeted Rendering ===\n");
 
 // ---------------------------------------------------------------
-// Step 1: Define reusable prompt templates
+// Step 1: Three templates — system, user question, few-shot
 // ---------------------------------------------------------------
-PromptTemplate codeReview = new(
-    "CodeReview",
+PromptTemplate systemPrompt = new(
+    "SystemPrompt",
     """
-    You are a senior {language} developer performing a code review.
-    Review the following code for {aspects}.
-    Provide specific, actionable feedback.
+    You are {assistant_name}, a support assistant for {product}.
+    Rules:
+      - Answer only from the provided documentation.
+      - If you don't know, say so and offer to open a ticket.
+      - Never invent order numbers or prices.
+    """,
+    MaxTokens: 120);
 
-    Code:
-    ```{language}
-    {code}
-    ```
-    """);
-
-PromptTemplate summarizer = new(
-    "Summarizer",
+PromptTemplate userQuestion = new(
+    "UserQuestion",
     """
-    Summarize the following {content_type} in {style} style.
-    Target audience: {audience}.
-    Maximum length: {max_length} words.
+    Customer tier: {tier}
+    Question: {question}
+    """,
+    MaxTokens: 80);
 
-    Content:
-    {content}
-    """);
-
-PromptTemplate translator = new(
-    "Translator",
+PromptTemplate fewShotClassifier = new(
+    "FewShotClassifier",
     """
-    Translate the following text from {source_language} to {target_language}.
-    Maintain the {tone} tone of the original.
+    Classify the support message into exactly one category:
+    billing, bug, how-to, or feature-request.
 
-    Text: {text}
-    """);
+    Message: "I was charged twice this month."
+    Category: billing
 
-PromptTemplate[] templates = [codeReview, summarizer, translator];
+    Message: "The export button crashes the app."
+    Category: bug
 
-// ---------------------------------------------------------------
-// Step 2: Display available templates and their placeholders
-// ---------------------------------------------------------------
-Console.WriteLine("--- Available Templates ---\n");
+    Message: "How do I invite a teammate to my workspace?"
+    Category: how-to
 
+    Message: "{message}"
+    Category:
+    """,
+    MaxTokens: 160);
+
+PromptTemplate[] templates = [systemPrompt, userQuestion, fewShotClassifier];
+
+Console.WriteLine("--- Templates ---\n");
 foreach (PromptTemplate template in templates)
 {
-    string[] placeholders = template.GetPlaceholders();
     Console.WriteLine($"  {template.Name}:");
-    Console.WriteLine($"    Placeholders: {string.Join(", ", placeholders)}");
-    Console.WriteLine($"    Base tokens (est): {EstimateTokens(template.Template)}");
+    Console.WriteLine($"    Placeholders: {string.Join(", ", template.GetPlaceholders())}");
+    Console.WriteLine($"    Hard cap:     {template.MaxTokens} tokens");
     Console.WriteLine();
 }
 
 // ---------------------------------------------------------------
-// Step 3: Fill templates with sample data
+// Step 2: Render all three within budget
 // ---------------------------------------------------------------
-Console.WriteLine("--- Filled Templates ---\n");
+Console.WriteLine("--- Rendered Prompts ---\n");
 
-string filledCodeReview = codeReview.Fill(new Dictionary<string, string>
+Display(systemPrompt, systemPrompt.Render(new Dictionary<string, string>
 {
-    ["language"] = "C#",
-    ["aspects"] = "performance, readability, and error handling",
-    ["code"] = "public async Task<int> GetCount() => await _db.Items.CountAsync();"
-});
+    ["assistant_name"] = "Contoso Assistant",
+    ["product"] = "Contoso Cloud",
+}));
 
-DisplayFilledTemplate("CodeReview", filledCodeReview);
-
-string filledSummarizer = summarizer.Fill(new Dictionary<string, string>
+Display(userQuestion, userQuestion.Render(new Dictionary<string, string>
 {
-    ["content_type"] = "technical blog post",
-    ["style"] = "executive summary",
-    ["audience"] = "C-level executives",
-    ["max_length"] = "100",
-    ["content"] = "The new .NET 10 release introduces significant improvements to AI integration..."
-});
+    ["tier"] = "pro",
+    ["question"] = "How do I rotate my API key?",
+}));
 
-DisplayFilledTemplate("Summarizer", filledSummarizer);
-
-string filledTranslator = translator.Fill(new Dictionary<string, string>
+Display(fewShotClassifier, fewShotClassifier.Render(new Dictionary<string, string>
 {
-    ["source_language"] = "English",
-    ["target_language"] = "Spanish",
-    ["tone"] = "professional",
-    ["text"] = "Our quarterly revenue exceeded expectations by 15%."
-});
-
-DisplayFilledTemplate("Translator", filledTranslator);
+    ["message"] = "Please add dark mode to the dashboard.",
+}));
 
 // ---------------------------------------------------------------
-// Step 4: Interactive mode
+// Step 3: Blow the budget — the hard cap throws
 // ---------------------------------------------------------------
-Console.WriteLine("--- Interactive Mode ---\n");
-Console.WriteLine("Pick a template (1=CodeReview, 2=Summarizer, 3=Translator, q=quit):");
+// A prompt blows its budget the moment someone pastes a wall of text into a
+// placeholder. The cap turns a silent cost overrun into a loud exception.
+Console.WriteLine("--- Hard Cap ---\n");
 
-while (true)
+string pastedWallOfText = string.Join(' ', Enumerable.Repeat(
+    "The app crashed again and here is the full stack trace I copied from the log viewer:", 20));
+
+try
 {
-    Console.Write("\nChoice: ");
-    string? choice = Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrEmpty(choice) || choice.Equals("q", StringComparison.OrdinalIgnoreCase))
+    userQuestion.Render(new Dictionary<string, string>
     {
-        break;
-    }
+        ["tier"] = "free",
+        ["question"] = pastedWallOfText,
+    });
 
-    PromptTemplate? selected = choice switch
-    {
-        "1" => codeReview,
-        "2" => summarizer,
-        "3" => translator,
-        _ => null
-    };
-
-    if (selected is null)
-    {
-        Console.WriteLine("Invalid choice. Try 1, 2, 3, or q.");
-        continue;
-    }
-
-    string[] placeholders = selected.GetPlaceholders();
-    Dictionary<string, string> values = [];
-
-    foreach (string placeholder in placeholders)
-    {
-        Console.Write($"  {placeholder}: ");
-        string? value = Console.ReadLine();
-        values[placeholder] = value ?? string.Empty;
-    }
-
-    string result = selected.Fill(values);
-    DisplayFilledTemplate(selected.Name, result);
+    Console.WriteLine("  (unreachable — the render above must throw)");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"  Caught: {ex.Message}");
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
 
 // ---------------------------------------------------------------
-// Helper functions
+// Helper
 // ---------------------------------------------------------------
 
 /// <summary>
-/// Displays a filled template with its estimated token count.
+/// Prints a rendered prompt with its estimated token count and budget.
 /// </summary>
-/// <param name="name">The template name.</param>
-/// <param name="filled">The filled template text.</param>
-static void DisplayFilledTemplate(string name, string filled)
+/// <param name="template">The template that produced the prompt.</param>
+/// <param name="rendered">The rendered prompt text.</param>
+static void Display(PromptTemplate template, string rendered)
 {
-    Console.WriteLine($"  [{name}] ({filled.Length} chars, ~{EstimateTokens(filled)} tokens):");
+    int tokens = PromptTemplate.EstimateTokens(rendered);
+    Console.WriteLine($"  [{template.Name}] ~{tokens}/{template.MaxTokens} tokens ({rendered.Length} chars):");
     Console.WriteLine();
 
-    foreach (string line in filled.Split('\n'))
+    foreach (string line in rendered.Split('\n'))
     {
         Console.WriteLine($"    {line.TrimEnd()}");
     }
@@ -163,27 +136,18 @@ static void DisplayFilledTemplate(string name, string filled)
     Console.WriteLine();
 }
 
-/// <summary>
-/// Estimates token count using the 4-characters-per-token heuristic.
-/// </summary>
-/// <param name="text">The text to estimate.</param>
-/// <returns>Estimated token count.</returns>
-static int EstimateTokens(string text)
-{
-    if (string.IsNullOrEmpty(text)) return 0;
-    return (int)Math.Ceiling(text.Length / 4.0);
-}
-
 // ---------------------------------------------------------------
 // Prompt template type
 // ---------------------------------------------------------------
 
 /// <summary>
-/// A reusable prompt template with <c>{placeholder}</c> variables.
+/// A reusable prompt template with <c>{placeholder}</c> variables and a hard
+/// token cap enforced at render time.
 /// </summary>
 /// <param name="Name">The template name.</param>
 /// <param name="Template">The template string with placeholders.</param>
-sealed partial record PromptTemplate(string Name, string Template)
+/// <param name="MaxTokens">The hard cap on the rendered prompt's estimated tokens.</param>
+sealed partial record PromptTemplate(string Name, string Template, int MaxTokens)
 {
     /// <summary>
     /// Extracts all unique placeholder names from the template.
@@ -191,25 +155,48 @@ sealed partial record PromptTemplate(string Name, string Template)
     /// <returns>An array of placeholder names.</returns>
     public string[] GetPlaceholders()
     {
-        return PlaceholderRegex().Matches(Template)
+        return [.. PlaceholderRegex().Matches(Template)
             .Select(m => m.Groups[1].Value)
-            .Distinct()
-            .ToArray();
+            .Distinct()];
     }
 
     /// <summary>
-    /// Fills the template by replacing all placeholders with provided values.
+    /// Renders the template by substituting every placeholder from the
+    /// dictionary — the one-line Regex.Replace trick — then enforces the hard
+    /// cap: if the rendered prompt's estimated token count exceeds
+    /// <see cref="MaxTokens"/>, this method throws.
     /// </summary>
     /// <param name="values">A dictionary mapping placeholder names to values.</param>
-    /// <returns>The filled template string.</returns>
-    public string Fill(Dictionary<string, string> values)
+    /// <returns>The rendered prompt.</returns>
+    /// <exception cref="KeyNotFoundException">A placeholder has no value in the dictionary.</exception>
+    /// <exception cref="InvalidOperationException">The rendered prompt exceeds the hard token cap.</exception>
+    public string Render(IReadOnlyDictionary<string, string> values)
     {
-        string result = Template;
-        foreach ((string key, string value) in values)
+        string rendered = PlaceholderRegex().Replace(Template, match =>
+            values.TryGetValue(match.Groups[1].Value, out string? value)
+                ? value
+                : throw new KeyNotFoundException(
+                    $"No value provided for placeholder '{match.Groups[1].Value}' in template '{Name}'."));
+
+        int estimatedTokens = EstimateTokens(rendered);
+        if (estimatedTokens > MaxTokens)
         {
-            result = result.Replace($"{{{key}}}", value);
+            throw new InvalidOperationException(
+                $"Template '{Name}' rendered to ~{estimatedTokens} tokens — over its hard cap of {MaxTokens}.");
         }
-        return result;
+
+        return rendered;
+    }
+
+    /// <summary>
+    /// Estimates token count with the same length / 4 trick as Chapter 3.
+    /// </summary>
+    /// <param name="text">The text to estimate.</param>
+    /// <returns>Estimated token count.</returns>
+    public static int EstimateTokens(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return 0;
+        return (int)Math.Ceiling(text.Length / 4.0);
     }
 
     [GeneratedRegex(@"\{(\w+)\}")]

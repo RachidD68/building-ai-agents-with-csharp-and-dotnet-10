@@ -4,4 +4,14 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The samples are data for the exercise, not part of the build:
+         exclude the sample .cs from compilation and copy the whole folder
+         next to the binary so the program runs with zero arguments. -->
+    <Compile Remove="samples\**" />
+    <Content Include="samples\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

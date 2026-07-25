@@ -1,6 +1,9 @@
-﻿// ============================================================================
+// ============================================================================
 // Exercise 02 — Multi-Agent API (Intermediate)
-// Web API hosting 3 agents with keyed services. FULLY STANDALONE.
+// Web API hosting FOUR keyed agents — translator, summarizer, formalizer,
+// classifier — each at its own endpoint via [FromKeyedServices], plus a
+// /agents discovery endpoint and an SSE streaming endpoint for the
+// summarizer. FULLY STANDALONE.
 // ============================================================================
 
 using System.ClientModel;
@@ -25,10 +28,15 @@ builder.Services.AddKeyedSingleton("summarizer", (sp, _) =>
         instructions: "You are a summarizer. Condense the given text into 2-3 sentences. Return ONLY the summary.",
         name: "Summarizer"));
 
-builder.Services.AddKeyedSingleton("analyzer", (sp, _) =>
+builder.Services.AddKeyedSingleton("formalizer", (sp, _) =>
     new ChatClientAgent(sp.GetRequiredService<IChatClient>(),
-        instructions: "You are a sentiment analyzer. Analyze the sentiment of the given text. Return: sentiment (positive/negative/neutral), confidence (high/medium/low), and a brief explanation.",
-        name: "Analyzer"));
+        instructions: "Rewrite the given text in formal business tone, preserving meaning. Return ONLY the rewritten text.",
+        name: "Formalizer"));
+
+builder.Services.AddKeyedSingleton("classifier", (sp, _) =>
+    new ChatClientAgent(sp.GetRequiredService<IChatClient>(),
+        instructions: "You are a text classifier. Classify the given text and return: sentiment (positive/negative/neutral), a one-or-two-word topic label, and a one-sentence justification.",
+        name: "Classifier"));
 
 WebApplication app = builder.Build();
 
@@ -50,14 +58,23 @@ app.MapPost("/summarize", async (
     return Results.Ok(new AgentResult(agent.Name ?? "summarizer", response.Text ?? ""));
 }).WithName("Summarize");
 
-app.MapPost("/analyze", async (
-    [FromKeyedServices("analyzer")] ChatClientAgent agent,
+app.MapPost("/formalize", async (
+    [FromKeyedServices("formalizer")] ChatClientAgent agent,
     AgentRequest req, CancellationToken ct) =>
 {
     AgentSession session = await agent.CreateSessionAsync(ct);
     AgentResponse response = await agent.RunAsync(req.Text, session, cancellationToken: ct);
-    return Results.Ok(new AgentResult(agent.Name ?? "analyzer", response.Text ?? ""));
-}).WithName("Analyze");
+    return Results.Ok(new AgentResult(agent.Name ?? "formalizer", response.Text ?? ""));
+}).WithName("Formalize");
+
+app.MapPost("/classify", async (
+    [FromKeyedServices("classifier")] ChatClientAgent agent,
+    AgentRequest req, CancellationToken ct) =>
+{
+    AgentSession session = await agent.CreateSessionAsync(ct);
+    AgentResponse response = await agent.RunAsync(req.Text, session, cancellationToken: ct);
+    return Results.Ok(new AgentResult(agent.Name ?? "classifier", response.Text ?? ""));
+}).WithName("Classify");
 
 // SSE: stream the summarizer's output token by token. TypedResults.ServerSentEvents
 // writes each string as a `data:` frame under the "token" event type; the framework
@@ -91,11 +108,12 @@ app.MapGet("/agents", () => Results.Ok(new[]
     new { Name = "Translator", Endpoint = "/translate" },
     new { Name = "Summarizer", Endpoint = "/summarize" },
     new { Name = "Summarizer", Endpoint = "/summarize/stream (SSE)" },
-    new { Name = "Analyzer", Endpoint = "/analyze" }
+    new { Name = "Formalizer", Endpoint = "/formalize" },
+    new { Name = "Classifier", Endpoint = "/classify" }
 })).WithName("ListAgents");
 
 Console.WriteLine("=== Exercise: Multi-Agent API ===");
-Console.WriteLine("Endpoints: POST /translate, /summarize, /summarize/stream (SSE), /analyze | GET /agents");
+Console.WriteLine("Endpoints: POST /translate, /summarize, /summarize/stream (SSE), /formalize, /classify | GET /agents");
 app.Run();
 
 /// <summary>Creates an IChatClient from configuration.</summary>
