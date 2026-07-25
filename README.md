@@ -58,7 +58,7 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 
 ## Companion code
 
-**122 runnable projects**: 77 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+**120 runnable projects** across 122 in total: 77 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries. Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
 
 ### Target stack
 
