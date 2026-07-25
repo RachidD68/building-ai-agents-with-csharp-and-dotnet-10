@@ -8,17 +8,23 @@
 
 <p align="center"><em>From your first call to an LLM to a production-hosted, observable, safety-filtered multi-agent system — in C# 14 and .NET 10.</em></p>
 
-<p align="center"><strong>📖 <a href="https://leanpub.com/buildingAIAgentsWithCSandNet10">Read it on Leanpub</a> — pay what you want.</strong></p>
-
-<p align="center"><sub>The book itself ships through Leanpub. This repository hosts the companion code, errata, and reader feedback.</sub></p>
+<p align="center"><sub>This repository hosts the companion code, errata, and reader feedback for the book.</sub></p>
 
 ---
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.13.0 release** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.14.0 release** and **.NET 10 / C# 14**.
 
-Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.13.0** — no preview ceremony.
+Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.14.0** — no preview ceremony, no alpha-only attributes, no shifting namespaces.
+
+By the final chapter you will have built the Contoso FAQ agent — a small but real production system — and developed the intuition to design, build, and ship your own.
+
+## Who this book is for
+
+This book is written for .NET developers who want to build AI-powered agent systems without abandoning the tools and patterns they already know. You should be comfortable with C# fundamentals, have written at least one ASP.NET Core service or console application, and have a working relationship with dependency injection. If you can write a class, use LINQ, and navigate your IDE without a tutorial, you're ready.
+
+No prior machine-learning background is assumed. The book explains what you need to know about how LLMs behave, from a developer's point of view, as you go.
 
 ## Table of Contents
 
@@ -44,14 +50,18 @@ Across nineteen chapters in five parts you go from your first call to an LLM, th
 | 18 | Evaluation | V |
 | 19 | Your Next Steps | V |
 
+Plus five appendices — a themed package reference, a Semantic Kernel and AutoGen migration guide, a troubleshooting catalogue, a glossary, and worked solutions to every exercise — followed by a keyword index.
+
 ---
 
 ## Companion code
 
+**122 runnable projects**: 77 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.13.0**
+- **Microsoft Agent Framework 1.14.0**
 - **Microsoft.Extensions.AI 10.7.0**
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
@@ -122,10 +132,30 @@ GitHub Models uses the endpoint `https://models.github.ai/inference` with publis
 | `src/Ch19.NextSteps/` | 19 | Your Next Steps |
 | `exercises/` | 2–16 | Worked exercise solutions (also indexed in Appendix E) |
 
+## Exercise solutions
+
+The [`exercises/`](./exercises) folder holds the full worked answers to every Practice Exercise in the book — 45 projects across Chapters 2–16, one folder per chapter. Each solution matches the brief printed in its chapter and reproduced in **Appendix E**, and each runs on its own:
+
+```bash
+dotnet run --project exercises/Ch08.Exercises/Ex01.UnitConverterTool
+```
+
+Try the exercise yourself first — the chapter gives you hints, and Appendix E walks through the reasoning before you reach for the code here.
+
 ## Errata & feedback
 
-Spotted a typo, a code sample that won't compile, or an outdated API? Please open an [**errata report**](../../issues/new?template=errata.yml). Reader corrections are how the book gets better.
+Found a typo, an outdated API, a code sample that doesn't compile, or a factual mistake? Help make the next printing better:
+
+- 📋 [**Open an errata report**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues/new?template=errata.yml) — guided form that asks for the page number, chapter, and what's wrong.
+- 🔍 [**Browse known errata**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues?q=is%3Aissue+label%3Aerrata) — see what's already been reported before filing a duplicate.
+
+For general feedback, questions about the companion code, or suggestions, use [the Issues tab](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues) without the `errata` label.
 
 ## License
 
-Companion code released under the [MIT License](LICENSE). The book text is © 2026 Rachid Dahir and distributed via [Leanpub](https://leanpub.com/buildingAIAgentsWithCSandNet10).
+- The **companion code** in this repository is released under the [MIT License](./LICENSE) — use it, fork it, build on it freely.
+- The **book** itself is sold separately; the full copyright page is inside the book.
+
+---
+
+<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.14.0 · Last updated 2026</sub></p>
