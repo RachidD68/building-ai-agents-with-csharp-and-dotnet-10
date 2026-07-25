@@ -84,7 +84,11 @@ while (!cts.Token.IsCancellationRequested)
     Console.Write($"{prefix}: ");
     string? input = Console.ReadLine()?.Trim();
 
-    if (string.IsNullOrEmpty(input)) continue;
+    // ReadLine returns null at end-of-input (Ctrl+Z, or redirected stdin
+    // running dry). Treating null like an empty line spins this loop forever;
+    // it means "no more input is ever coming", so leave.
+    if (input is null) break;
+    if (input.Length == 0) continue;
 
     if (input.Equals("/quit", StringComparison.OrdinalIgnoreCase)) break;
 

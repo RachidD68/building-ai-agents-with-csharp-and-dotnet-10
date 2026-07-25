@@ -22,7 +22,10 @@ Console.WriteLine("=== Exercise: Multi-Provider Chat ===\n");
 Console.WriteLine("Available providers: azure, openai, github, ollama");
 Console.Write("Select provider: ");
 
-string provider = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "github";
+// Empty input (or EOF) falls back to the repo's offline default, ollama —
+// never to a hosted provider that would then fail on a missing credential.
+string? providerInput = Console.ReadLine()?.Trim().ToLowerInvariant();
+string provider = string.IsNullOrEmpty(providerInput) ? "ollama" : providerInput;
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -88,15 +91,20 @@ static IChatClient CreateChatClient(string providerName, IConfiguration configur
             .AsIChatClient(),
 
         "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"]
-                    ?? throw new InvalidOperationException("Missing LlmProvider:OpenAI:ApiKey"))
+                configuration["LlmProvider:OpenAI:ApiKey"] is { Length: > 0 } oaKey
+                    ? oaKey
+                    : throw new InvalidOperationException("Missing LlmProvider:OpenAI:ApiKey"))
             .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-4o-mini")
             .AsIChatClient(),
 
+        // is { Length: > 0 } rejects the empty-string placeholder that ships in
+        // appsettings.json — a bare null-check lets "" through to
+        // ApiKeyCredential, which throws a far less helpful ArgumentException.
         "github" => new OpenAI.OpenAIClient(
                 new ApiKeyCredential(
-                    configuration["LlmProvider:GitHub:Token"]
-                        ?? throw new InvalidOperationException("Missing LlmProvider:GitHub:Token")),
+                    configuration["LlmProvider:GitHub:Token"] is { Length: > 0 } ghToken
+                        ? ghToken
+                        : throw new InvalidOperationException("Missing LlmProvider:GitHub:Token")),
                 new OpenAI.OpenAIClientOptions
                 {
                     Endpoint = new Uri(

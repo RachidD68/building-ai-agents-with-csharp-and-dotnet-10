@@ -55,8 +55,14 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         .GetEmbeddingClient(config["LlmProvider:GitHub:EmbeddingModel"] ?? "text-embedding-3-small")
         .AsIEmbeddingGenerator(),
 
+    // The offline default: OllamaApiClient implements IEmbeddingGenerator
+    // directly, with nomic-embed-text as the local embedding model.
+    "ollama" => new OllamaSharp.OllamaApiClient(
+        new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
+        config["LlmProvider:Ollama:EmbeddingModel"] ?? "nomic-embed-text"),
+
     _ => throw new InvalidOperationException(
-        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, or github.")
+        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, github, or ollama.")
 };
 
 Console.WriteLine($"Embedding provider: {provider}\n");

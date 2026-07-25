@@ -370,3 +370,6 @@ MigrationBackup/
 FodyWeavers.xsd
 # Generated single-file code dump — not part of the companion sources
 AgenticAI_Code.txt
+
+# Runtime artifacts from the Ch06 session-manager exercise (created on first run).
+exercises/Ch06.Exercises/Ex02.SessionManager/sessions/

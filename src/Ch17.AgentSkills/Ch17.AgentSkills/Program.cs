@@ -146,29 +146,62 @@ foreach (string question in questions)
 {
     Console.WriteLine($">> {question}");
 
-    await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(
-        question, session, cancellationToken: cts.Token))
+    // run_skill_script sits behind ReadOnlyToolsAutoApprovalRule, so the run
+    // can PAUSE with a ToolApprovalRequestContent. Since MAF 1.14, leaving
+    // that request unanswered and continuing the session throws — approvals
+    // bind to the request id. Collect the requests, answer them, resume.
+    List<ToolApprovalRequestContent> approvals = [];
+
+    async Task DrainAsync(IAsyncEnumerable<AgentResponseUpdate> updates)
     {
-        foreach (AIContent content in update.Contents)
+        await foreach (AgentResponseUpdate update in updates)
         {
-            switch (content)
+            foreach (AIContent content in update.Contents)
             {
-                // The framework-injected skill tools surface as ordinary
-                // function calls. Printing them is what turns "progressive
-                // disclosure" from a diagram into something you can watch.
-                case FunctionCallContent call:
-                    Console.WriteLine($"   [tool] {call.Name}({FormatArgs(call.Arguments)})");
-                    break;
+                switch (content)
+                {
+                    // The framework-injected skill tools surface as ordinary
+                    // function calls. Printing them is what turns "progressive
+                    // disclosure" from a diagram into something you can watch.
+                    case FunctionCallContent call:
+                        Console.WriteLine($"   [tool] {call.Name}({FormatArgs(call.Arguments)})");
+                        break;
 
-                case FunctionResultContent result:
-                    Console.WriteLine($"   [ ->  ] {Truncate(result.Result?.ToString())}");
-                    break;
+                    case FunctionResultContent result:
+                        Console.WriteLine($"   [ ->  ] {Truncate(result.Result?.ToString())}");
+                        break;
 
-                case TextContent { Text: { Length: > 0 } text }:
-                    Console.Write(text);
-                    break;
+                    case ToolApprovalRequestContent request:
+                        approvals.Add(request);
+                        Console.WriteLine(
+                            $"   [approval requested] {(request.ToolCall as FunctionCallContent)?.Name}");
+                        break;
+
+                    case TextContent { Text: { Length: > 0 } text }:
+                        Console.Write(text);
+                        break;
+                }
             }
         }
+    }
+
+    await DrainAsync(agent.RunStreamingAsync(question, session, cancellationToken: cts.Token));
+
+    if (approvals.Count > 0)
+    {
+        List<AIContent> decisions = [];
+        foreach (ToolApprovalRequestContent request in approvals)
+        {
+            Console.WriteLine(
+                $"   [approval] {(request.ToolCall as FunctionCallContent)?.Name} -> APPROVE (demo auto-approves its own bundled script)");
+            decisions.Add(request.CreateResponse(
+                approved: true, reason: "Reviewed: bundled demo script."));
+        }
+        approvals.Clear();
+
+        ChatMessage decisionMessage = new(ChatRole.User, decisions);
+        await DrainAsync(agent.RunStreamingAsync(
+            [decisionMessage], session, cancellationToken: cts.Token));
     }
 
     Console.WriteLine();
