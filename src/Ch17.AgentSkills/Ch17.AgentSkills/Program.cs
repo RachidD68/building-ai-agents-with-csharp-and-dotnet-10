@@ -125,7 +125,17 @@ ChatClientAgentOptions options = new()
     },
 };
 
-ChatClientAgent agent = new(chatClient, options: options);
+ChatClientAgent skillsAgent = new(chatClient, options: options);
+
+// The skills provider gates ITS OWN injected tools behind approval. Without a
+// rule, every one of them pauses the run — including the read-only load_skill
+// and read_skill_resource, which turns progressive disclosure into a stream of
+// prompts. ReadOnlyToolsAutoApprovalRule waves those through and leaves only
+// run_skill_script (the one that executes code) for a human.
+ToolApprovalAgent agent = new(skillsAgent, new ToolApprovalAgentOptions
+{
+    AutoApprovalRules = [AgentSkillsProvider.ReadOnlyToolsAutoApprovalRule],
+});
 
 AgentSession session = await agent.CreateSessionAsync(cts.Token);
 
