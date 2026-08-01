@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.AI.Evaluation" />
     <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
-    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" VersionOverride="10.1.0" />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory" />
     <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="Azure.Identity" />

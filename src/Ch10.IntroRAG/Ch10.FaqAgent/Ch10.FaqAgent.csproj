@@ -10,7 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.AI"      />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions"      />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI"      />
-    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" VersionOverride="10.1.0"      />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory"      />
     <PackageReference Include="Azure.AI.OpenAI"      />
     <PackageReference Include="Azure.Identity"      />
