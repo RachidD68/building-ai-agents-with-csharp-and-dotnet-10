@@ -53,7 +53,7 @@ AIFunction cancelTool = new ApprovalRequiredAIFunction(
     AIFunctionFactory.Create((Delegate)CancelOrder, name: "cancel_order"));
 
 // Auto-approve the read-only call; everything else escalates to a human.
-// (1.14: rules receive a ToolAutoApprovalRuleContext; the pending call is
+// (since 1.14: rules receive a ToolAutoApprovalRuleContext; the pending call is
 // context.FunctionCallContent.)
 var approvalOptions = new ToolApprovalAgentOptions
 {

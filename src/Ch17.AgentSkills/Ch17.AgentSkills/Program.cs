@@ -237,7 +237,7 @@ static string Truncate(string? value, int max = 96)
     return value.Length <= max ? value : value[..max] + "…";
 }
 
-// Minimal subprocess runner for file-based skill scripts (MAF 1.14 shape).
+// Minimal subprocess runner for file-based skill scripts (MAF 1.16 shape).
 // The runner delegate receives the owning skill, the AgentFileSkillScript
 // (with its absolute FullPath), and the raw JSON arguments — a string array
 // of command-line arguments, per AgentFileSkillScript.ParametersSchema. It

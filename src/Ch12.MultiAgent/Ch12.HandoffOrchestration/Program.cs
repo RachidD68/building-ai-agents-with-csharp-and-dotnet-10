@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Handoff orchestration (MAF 1.14)
+// Chapter 12 — Handoff orchestration (MAF 1.16)
 // ----------------------------------------------------------------------------
 // The built-in Handoff orchestration transfers control between agents based on
 // context. A triage agent fields the first message, then hands off to the
