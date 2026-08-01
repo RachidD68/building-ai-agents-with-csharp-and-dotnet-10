@@ -40,7 +40,7 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
     <!-- Vector Data / RAG -->
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.7.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
+    <PackageVersion Include="CommunityToolkit.VectorData.InMemory" Version="1.0.0" />
     <!-- Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />

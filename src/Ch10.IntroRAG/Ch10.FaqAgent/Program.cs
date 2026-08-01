@@ -25,7 +25,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.SemanticKernel.Connectors.InMemory;
+using CommunityToolkit.VectorData.InMemory;
 using AgenticAI.Common.Extensions;
 using Ch10.FaqAgent;
 

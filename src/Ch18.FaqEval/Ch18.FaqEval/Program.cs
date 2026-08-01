@@ -34,7 +34,7 @@ using Microsoft.Extensions.AI.Evaluation.Quality;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.SemanticKernel.Connectors.InMemory;
+using CommunityToolkit.VectorData.InMemory;
 using AgenticAI.Common.Extensions;
 using Ch18.FaqEval;
 

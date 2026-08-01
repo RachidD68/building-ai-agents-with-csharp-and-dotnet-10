@@ -19,7 +19,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.VectorData;
-using Microsoft.SemanticKernel.Connectors.InMemory;
+using CommunityToolkit.VectorData.InMemory;
 using Ch10.RagPipeline;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
