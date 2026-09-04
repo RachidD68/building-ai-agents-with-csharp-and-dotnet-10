@@ -33,7 +33,8 @@ public static class ServiceCollectionExtensions
     /// instead — Foundry returns an <see cref="AIAgent"/> directly, not an
     /// <see cref="IChatClient"/>.
     /// </summary>
-    public static IServiceCollection AddLlmChatClient(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddLlmChatClient(this IServiceCollection services, IConfiguration configuration,
+        TimeSpan? attemptTimeout = null)
     {
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
@@ -46,7 +47,7 @@ public static class ServiceCollectionExtensions
         // every slow completion into a retry storm. (Streaming responses return
         // at the headers, so the attempt timeout does not cut off a stream
         // mid-token.)
-        services.AddHttpClient("llm").AddLlmResilienceHandler();
+        services.AddHttpClient("llm").AddLlmResilienceHandler(attemptTimeout);
 
         // IHttpClientFactory logs every request/response at Information, which
         // would drown each demo's console output. Keep the pipeline, quiet the
@@ -122,18 +123,27 @@ public static class ServiceCollectionExtensions
     /// legitimately generate for minutes, and a non-streamed completion does not
     /// return headers until generation finishes.
     /// </summary>
-    public static IHttpClientBuilder AddLlmResilienceHandler(this IHttpClientBuilder builder)
+    /// <param name="attemptTimeout">
+    /// Per-attempt timeout. Defaults to two minutes, which suits a single chat
+    /// call. Compositions that send a large tool schema and then loop -- the
+    /// agent harness in Chapter 19 is the clearest case -- can legitimately
+    /// exceed that on local hardware, so they widen it here rather than
+    /// letting Polly cancel a call that was going to succeed.
+    /// </param>
+    public static IHttpClientBuilder AddLlmResilienceHandler(this IHttpClientBuilder builder,
+        TimeSpan? attemptTimeout = null)
     {
+        TimeSpan attempt = attemptTimeout ?? TimeSpan.FromMinutes(2);
         builder.AddStandardResilienceHandler(options =>
         {
             options.Retry.MaxRetryAttempts = 3;                      // the standard defaults,
             options.Retry.BackoffType = DelayBackoffType.Exponential; // spelled out so the
             options.Retry.UseJitter = true;                           // knobs are visible
             options.Retry.Delay = TimeSpan.FromSeconds(2);
-            options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);       // LLM calls are slow
-            options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            options.AttemptTimeout.Timeout = attempt;                        // LLM calls are slow
+            options.TotalRequestTimeout.Timeout = attempt * 2.5;
             // Options validation requires SamplingDuration >= 2x the attempt timeout.
-            options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(4);
+            options.CircuitBreaker.SamplingDuration = attempt * 2;
         });
         return builder;
     }

@@ -191,4 +191,11 @@
     <Project Path="exercises/Ch16.Exercises/Ex04.ToolApproval/Ex04.ToolApproval.csproj" />
     <Project Path="exercises/Ch16.Exercises/Ex05.ConsumptionLimits/Ex05.ConsumptionLimits.csproj" />
   </Folder>
+  <Folder Name="/src/Ch19.AgentHarness/">
+    <Project Path="src/Ch19.AgentHarness/Ch19.HarnessBasics/Ch19.HarnessBasics.csproj" />
+    <Project Path="src/Ch19.AgentHarness/Ch19.HarnessComposition/Ch19.HarnessComposition.csproj" />
+    <Project Path="src/Ch19.AgentHarness/Ch19.HarnessFiles/Ch19.HarnessFiles.csproj" />
+    <Project Path="src/Ch19.AgentHarness/Ch19.HarnessLoop/Ch19.HarnessLoop.csproj" />
+    <Project Path="src/Ch19.AgentHarness/Ch19.HarnessBackgroundAgents/Ch19.HarnessBackgroundAgents.csproj" />
+  </Folder>
 </Solution>
