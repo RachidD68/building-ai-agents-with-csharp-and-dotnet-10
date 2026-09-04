@@ -16,9 +16,9 @@
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.16.0 release** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.20.0 release** and **.NET 10 / C# 14**.
 
-Across nineteen chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.16.0** — no preview ceremony, no alpha-only attributes, no shifting namespaces.
+Across twenty chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.20.0** — no preview ceremony, no alpha-only attributes, no shifting namespaces.
 
 By the final chapter you will have built the Contoso FAQ agent — a small but real production system — and developed the intuition to design, build, and ship your own.
 
@@ -50,7 +50,8 @@ No prior machine-learning background is assumed. The book explains what you need
 | 16 | Safety and Guardrails | V |
 | 17 | Agent Skills | V |
 | 18 | Evaluation | V |
-| 19 | Your Next Steps | V |
+| 19 | The Agent Harness | V |
+| 20 | Your Next Steps | V |
 
 Plus five appendices — a themed package reference, a Semantic Kernel and AutoGen migration guide, a troubleshooting catalogue, a glossary, and worked solutions to every exercise — followed by a keyword index.
 
@@ -58,13 +59,13 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 
 ## Companion code
 
-**120 runnable projects** across 122 in total: 77 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries. Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+**125 runnable projects** across 127 in total: 82 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries. Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
 
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.16.0**
-- **Microsoft.Extensions.AI 10.7.0**
+- **Microsoft Agent Framework 1.20.0**
+- **Microsoft.Extensions.AI 10.9.0**
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
 Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The full, themed package list is **Appendix A** of the book.
@@ -72,8 +73,8 @@ Every package version is pinned centrally in `Directory.Packages.props` (Central
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- A model provider. The samples default to **Ollama** running locally — zero cost, no API key — using **llama3.2**. They also support Azure OpenAI, OpenAI, GitHub Models, Anthropic, and Microsoft Foundry. Chapter 4 walks through each one.
-- For the **multimodal** samples (Chapter 11), a vision-capable model — `ollama pull llava` locally, or a cloud `gpt-4o`-class model.
+- A model provider. The samples default to **Ollama** running locally — zero cost, no API key — using **llama3.2**. They also support Azure OpenAI, OpenAI, Anthropic, and Microsoft Foundry. Chapter 4 walks through each one.
+- For the **multimodal** samples (Chapter 11), a vision-capable model — `ollama pull llava` locally, or a cloud GPT-5.6-class model.
 
 For the zero-config local default:
 
@@ -106,7 +107,7 @@ dotnet user-secrets set "AzureOpenAI:Endpoint" "https://YOUR-RESOURCE.openai.azu
 dotnet user-secrets set "AzureOpenAI:ApiKey" "YOUR-KEY"
 ```
 
-GitHub Models uses the endpoint `https://models.github.ai/inference` with publisher-prefixed model ids (e.g. `openai/gpt-4o-mini`). Azure/Foundry auth uses `DefaultAzureCredential` (run `az login` once for local dev; scope the credential chain in production).
+Azure/Foundry auth uses `DefaultAzureCredential` (run `az login` once for local dev; scope the credential chain in production).
 
 ### Repository layout
 
@@ -131,7 +132,8 @@ GitHub Models uses the endpoint `https://models.github.ai/inference` with publis
 | `src/Ch16.SafetyGuardrails/` | 16 | Safety and Guardrails |
 | `src/Ch17.AgentSkills/` | 17 | Agent Skills |
 | `src/Ch18.EvalSuite/`, `Ch18.FaqEval/`, `Ch18.EvalTests/` | 18 | Evaluation |
-| `src/Ch19.NextSteps/` | 19 | Your Next Steps |
+| `src/Ch19.AgentHarness/` | 19 | The Agent Harness |
+| `src/Ch20.NextSteps/` | 20 | Your Next Steps |
 | `exercises/` | 2–16 | Worked exercise solutions (also indexed in Appendix E) |
 
 ## Exercise solutions
@@ -160,4 +162,4 @@ For general feedback, questions about the companion code, or suggestions, use [t
 
 ---
 
-<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.16.0 · Last updated 2026</sub></p>
+<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.20.0 · Last updated 2026</sub></p>

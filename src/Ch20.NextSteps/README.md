@@ -1,4 +1,4 @@
-# Chapter 16 — Your Next Steps
+# Chapter 20 — Your Next Steps
 
 Congratulations on completing the book! You now have a solid foundation in
 building agentic AI applications with .NET. Here are resources and areas
