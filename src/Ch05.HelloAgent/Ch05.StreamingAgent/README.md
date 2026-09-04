@@ -12,8 +12,8 @@ The same pirate agent, but using `RunStreamingAsync()` to display tokens as they
 
 ```bash
 cd src/Ch05.HelloAgent/Ch05.StreamingAgent
-dotnet user-secrets set "LlmProvider:Provider" "github"
-dotnet user-secrets set "LlmProvider:GitHub:Token" "<your-token>"
+dotnet user-secrets set "LlmProvider:Provider" "openai"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
 ```
 
 ## Run

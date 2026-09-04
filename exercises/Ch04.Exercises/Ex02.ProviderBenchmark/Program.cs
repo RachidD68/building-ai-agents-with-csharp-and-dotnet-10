@@ -20,7 +20,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Bind the companion LlmSettings shape from the "LlmProvider" section
 // (appsettings.json, overridable via environment variables such as
-// LlmProvider__GitHub__Token or User Secrets).
+// LlmProvider__OpenAI__ApiKey or User Secrets).
 LlmSettings settings = new();
 builder.Configuration.GetSection("LlmProvider").Bind(settings);
 
@@ -29,14 +29,13 @@ builder.Configuration.GetSection("LlmProvider").Bind(settings);
 // ---------------------------------------------------------------
 // A provider counts as configured when its section carries the one field it
 // cannot work without: an endpoint for Azure/Ollama, a key/token for
-// OpenAI/GitHub. Read from the raw section so record defaults don't count.
+// OpenAI. Read from the raw section so record defaults don't count.
 IConfigurationSection llmSection = builder.Configuration.GetSection("LlmProvider");
 
 (string Name, string RequiredField)[] candidates =
 [
     ("azure",  "AzureOpenAI:Endpoint"),
     ("openai", "OpenAI:ApiKey"),
-    ("github", "GitHub:Token"),
     ("ollama", "Ollama:Endpoint"),
 ];
 
@@ -47,7 +46,7 @@ string[] providerNames = [.. candidates
 if (providerNames.Length == 0)
 {
     Console.WriteLine("No providers configured. Set at least one required field in the");
-    Console.WriteLine("LlmProvider section — e.g. Ollama:Endpoint, GitHub:Token, OpenAI:ApiKey,");
+    Console.WriteLine("LlmProvider section — e.g. Ollama:Endpoint, OpenAI:ApiKey, OpenAI:ApiKey,");
     Console.WriteLine("or AzureOpenAI:Endpoint — via appsettings.json, User Secrets, or env vars.");
     return;
 }
@@ -216,15 +215,6 @@ static IChatClient CreateChatClient(string providerName, LlmSettings settings) =
             .GetChatClient(settings.OpenAI.Model)
             .AsIChatClient(),
 
-        "github" => new OpenAI.OpenAIClient(
-                new ApiKeyCredential(settings.GitHub.Token),
-                new OpenAI.OpenAIClientOptions
-                {
-                    Endpoint = new Uri(settings.GitHub.Endpoint)
-                })
-            .GetChatClient(settings.GitHub.Model)
-            .AsIChatClient(),
-
         "ollama" => new OllamaSharp.OllamaApiClient(
                 new Uri(settings.Ollama.Endpoint),
                 settings.Ollama.Model),
@@ -240,7 +230,6 @@ static string ModelFor(string providerName, LlmSettings settings) => providerNam
 {
     "azure" => settings.AzureOpenAI.Model,
     "openai" => settings.OpenAI.Model,
-    "github" => settings.GitHub.Model,
     "ollama" => settings.Ollama.Model,
     _ => "unknown"
 };
@@ -254,11 +243,10 @@ static (decimal InputPer1M, decimal OutputPer1M) GetPricing(string model)
     string m = model.ToLowerInvariant();
     return m switch
     {
-        _ when m.Contains("gpt-4o-mini") => (0.15m, 0.60m),
-        _ when m.Contains("gpt-4o") => (2.50m, 10.00m),
-        _ when m.Contains("gpt-4.1-nano") => (0.10m, 0.40m),
-        _ when m.Contains("gpt-4.1-mini") => (0.40m, 1.60m),
-        _ when m.Contains("gpt-4.1") => (2.00m, 8.00m),
+        _ when m.Contains("gpt-6-astra") => (10.00m, 50.00m),
+        _ when m.Contains("gpt-5.6-sol") => (4.00m, 20.00m),
+        _ when m.Contains("gpt-5.6-terra") => (2.00m, 12.00m),
+        _ when m.Contains("gpt-5.6-luna") => (0.20m, 1.20m),
         _ => (0.00m, 0.00m)   // local (Ollama) or unknown — treat as free
     };
 }
@@ -309,9 +297,6 @@ sealed record LlmSettings
     /// <summary>OpenAI configuration.</summary>
     public OpenAISettings OpenAI { get; init; } = new();
 
-    /// <summary>GitHub Models configuration.</summary>
-    public GitHubModelsSettings GitHub { get; init; } = new();
-
     /// <summary>Ollama (local) configuration.</summary>
     public OllamaSettings Ollama { get; init; } = new();
 }
@@ -321,22 +306,14 @@ sealed record AzureOpenAISettings
 {
     public string Endpoint { get; init; } = string.Empty;
     public string ApiKey { get; init; } = string.Empty;
-    public string Model { get; init; } = "gpt-4o-mini";
+    public string Model { get; init; } = "gpt-5.6-luna";
 }
 
 /// <summary>OpenAI provider settings.</summary>
 sealed record OpenAISettings
 {
     public string ApiKey { get; init; } = string.Empty;
-    public string Model { get; init; } = "gpt-4o-mini";
-}
-
-/// <summary>GitHub Models provider settings.</summary>
-sealed record GitHubModelsSettings
-{
-    public string Token { get; init; } = string.Empty;
-    public string Model { get; init; } = "openai/gpt-4o-mini";
-    public string Endpoint { get; init; } = "https://models.github.ai/inference";
+    public string Model { get; init; } = "gpt-5.6-luna";
 }
 
 /// <summary>Ollama (local) provider settings.</summary>

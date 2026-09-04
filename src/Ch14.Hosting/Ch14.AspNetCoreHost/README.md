@@ -23,7 +23,7 @@ application using the Microsoft Agent Framework (MAF) Hosting package.
 
 ```bash
 # Set your API key via User Secrets
-dotnet user-secrets set "LlmProvider:GitHub:Token" "your-token"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
 
 # Run the host
 dotnet run

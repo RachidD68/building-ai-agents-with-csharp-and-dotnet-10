@@ -91,7 +91,7 @@ catch (OperationCanceledException)
 // resilience (retries, backoff, circuit breakers) around this exact call.
 catch (ClientResultException ex)
 {
-    // OpenAI-compatible providers (GitHub Models, OpenAI, Azure OpenAI) throw
+    // OpenAI-compatible providers (OpenAI, Azure OpenAI) throw
     // ClientResultException; ex.Status carries the HTTP status code.
     string reason = ex.Status switch
     {

@@ -16,8 +16,8 @@ Your first agent built with the Microsoft Agent Framework (MAF). Demonstrates cr
 
 ```bash
 cd src/Ch05.HelloAgent/Ch05.BasicAgent
-dotnet user-secrets set "LlmProvider:Provider" "github"
-dotnet user-secrets set "LlmProvider:GitHub:Token" "<your-token>"
+dotnet user-secrets set "LlmProvider:Provider" "openai"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
 ```
 
 ## Run

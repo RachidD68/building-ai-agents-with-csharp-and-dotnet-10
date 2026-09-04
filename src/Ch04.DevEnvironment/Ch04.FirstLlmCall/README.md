@@ -14,7 +14,6 @@ Your first real conversation with an AI model. This project connects to an LLM p
 | Provider | Cost | Best For |
 |----------|------|----------|
 | **Ollama** (local) | Free | Privacy, offline development, no account needed |
-| **GitHub Models** | Free tier | Quick start with a GitHub account |
 | **OpenAI** | Pay-as-you-go | Direct access, latest models |
 | **Azure OpenAI** | Pay-as-you-go | Enterprise, managed deployments |
 
@@ -30,17 +29,13 @@ Your first real conversation with an AI model. This project connects to an LLM p
 2. Run: `ollama pull llama3.2`
 3. No API key needed -- it runs locally
 
-**GitHub Models:**
-1. Go to https://github.com/marketplace/models
-2. Generate a personal access token with `models:read` scope
-
 **OpenAI:**
 1. Sign up at https://platform.openai.com
 2. Go to API Keys and create a new secret key
 
 **Azure OpenAI:**
 1. Create an Azure OpenAI resource in the Azure portal
-2. Deploy a model (e.g., gpt-4o-mini)
+2. Deploy a model (e.g., gpt-5.6-luna)
 3. Note your endpoint URL -- authentication uses DefaultAzureCredential
 
 ### 3. Configure User Secrets
@@ -75,25 +70,18 @@ dotnet user-secrets set "LlmProvider:Ollama:Endpoint" "http://localhost:11434"
 dotnet user-secrets set "LlmProvider:Ollama:Model" "llama3.2"
 ```
 
-**For GitHub Models:**
-```bash
-dotnet user-secrets set "LlmProvider:Provider" "github"
-dotnet user-secrets set "LlmProvider:GitHub:Token" "your-github-token"
-dotnet user-secrets set "LlmProvider:GitHub:Model" "openai/gpt-4o-mini"
-```
-
 **For OpenAI:**
 ```bash
 dotnet user-secrets set "LlmProvider:Provider" "openai"
 dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "sk-your-key-here"
-dotnet user-secrets set "LlmProvider:OpenAI:Model" "gpt-4o-mini"
+dotnet user-secrets set "LlmProvider:OpenAI:Model" "gpt-5.6-luna"
 ```
 
 **For Azure OpenAI:**
 ```bash
 dotnet user-secrets set "LlmProvider:Provider" "azure"
 dotnet user-secrets set "LlmProvider:AzureOpenAI:Endpoint" "https://your-resource.openai.azure.com/"
-dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "gpt-4o-mini"
+dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "gpt-5.6-luna"
 ```
 
 ### 4. Run
@@ -114,6 +102,6 @@ dotnet run --project src/Ch04.DevEnvironment/Ch04.FirstLlmCall
 | Problem | Solution |
 |---------|----------|
 | "Missing configuration" error | Run the `dotnet user-secrets set` commands above |
-| "Unknown LLM provider" | Check that `LlmProvider:Provider` is one of: azure, openai, github, ollama |
+| "Unknown LLM provider" | Check that `LlmProvider:Provider` is one of: azure, openai, ollama |
 | Connection refused (Ollama) | Make sure Ollama is running: `ollama serve` |
 | 401 Unauthorized | Your API key may be invalid or expired |

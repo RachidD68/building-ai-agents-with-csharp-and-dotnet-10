@@ -12,7 +12,7 @@
 // Usage:  dotnet run -- "C:\path\to\photo.jpg"
 //         (with no argument it looks for sample.png next to the executable)
 //
-// Needs a vision model under "VisionModel" (ollama llava / cloud gpt-4o). If none
+// Needs a vision model under "VisionModel" (ollama llava / cloud gpt-5.6-terra). If none
 // is configured, prints a clear "[skipped]" note and exits 0.
 // ============================================================================
 
@@ -39,7 +39,7 @@ IChatClient? visionClient = BuildVisionClient(config);
 if (visionClient is null)
 {
     Console.WriteLine("[skipped: configure a vision model]");
-    Console.WriteLine("Set \"VisionModel\" in appsettings.json (ollama llava, or openai/azure/github gpt-4o).");
+    Console.WriteLine("Set \"VisionModel\" in appsettings.json (ollama llava, or openai/azure gpt-5.6-terra).");
     Console.WriteLine("Local vision: ollama pull llava");
     return;
 }
@@ -108,14 +108,14 @@ else
     catch (Exception ex)
     {
         Console.WriteLine($"[error] Local-bytes vision call failed: {ex.Message}");
-        Console.WriteLine("Confirm the model is a VISION model (llava / gpt-4o), not text-only llama3.2.\n");
+        Console.WriteLine("Confirm the model is a VISION model (llava / gpt-5.6-terra), not text-only llama3.2.\n");
     }
 }
 
 // ---------------------------------------------------------------
 // Run 2 — HOSTED URL via UriContent
 // The model fetches the bytes itself, so this path needs a provider that
-// fetches URLs server-side. Cloud models (gpt-4o) do; local Ollama models
+// fetches URLs server-side. Cloud models (gpt-5.6-terra) do; local Ollama models
 // do NOT — on Ollama this run typically fails and is reported as skipped.
 // A stable public-domain image (Wikimedia "example" test JPEG).
 // ---------------------------------------------------------------
@@ -152,7 +152,7 @@ catch (OperationCanceledException)
 catch (Exception ex)
 {
     Console.WriteLine($"[skipped] UriContent run failed on this provider: {ex.Message}");
-    Console.WriteLine("URL images require a provider that fetches URLs (cloud gpt-4o does;");
+    Console.WriteLine("URL images require a provider that fetches URLs (cloud gpt-5.6-terra does;");
     Console.WriteLine("local Ollama does not). Switch VisionModel to a cloud provider to see this path.\n");
 }
 
@@ -201,23 +201,14 @@ static IChatClient? BuildVisionClient(IConfiguration config)
         {
             string? key = config["VisionModel:OpenAI:ApiKey"];
             return string.IsNullOrWhiteSpace(key) ? null
-                : new OpenAI.OpenAIClient(key).GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-4o").AsIChatClient();
+                : new OpenAI.OpenAIClient(key).GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         case "azure":
         {
             string? endpoint = config["VisionModel:AzureOpenAI:Endpoint"];
             return string.IsNullOrWhiteSpace(endpoint) ? null
                 : new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
-                    .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-4o").AsIChatClient();
-        }
-        case "github":
-        {
-            string? token = config["VisionModel:GitHub:Token"];
-            return string.IsNullOrWhiteSpace(token) ? null
-                : new OpenAI.OpenAIClient(
-                        new ApiKeyCredential(token),
-                        new OpenAI.OpenAIClientOptions { Endpoint = new Uri(config["VisionModel:GitHub:Endpoint"] ?? "https://models.github.ai/inference") })
-                    .GetChatClient(config["VisionModel:GitHub:Model"] ?? "openai/gpt-4o").AsIChatClient();
+                    .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         default:
             return null;

@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
     /// <c>AddStandardResilienceHandler</c> — transient-fault retries, a circuit
     /// breaker, and timeouts re-tuned for LLM latency (see Chapter 14).
     ///
-    /// Supports the four chat-completion providers: azure, openai, github, ollama.
+    /// Supports the three chat-completion providers: azure, openai, ollama.
     /// For the Microsoft Foundry path (provider="foundry"), use
     /// <see cref="AddFoundryAgent(IServiceCollection, IConfiguration, string, string)"/>
     /// instead — Foundry returns an <see cref="AIAgent"/> directly, not an
@@ -90,16 +90,6 @@ public static class ServiceCollectionExtensions
                     .GetChatClient(settings.OpenAI.Model)
                     .AsIChatClient(),
 
-                "github" => new OpenAI.OpenAIClient(
-                        new ApiKeyCredential(settings.GitHub.Token),
-                        new OpenAI.OpenAIClientOptions
-                        {
-                            Endpoint = new Uri(settings.GitHub.Endpoint),
-                            Transport = new HttpClientPipelineTransport(http)
-                        })
-                    .GetChatClient(settings.GitHub.Model)
-                    .AsIChatClient(),
-
                 "ollama" => CreateOllamaClient(http, settings),
 
                 "foundry" => throw new InvalidOperationException(
@@ -109,7 +99,7 @@ public static class ServiceCollectionExtensions
 
                 _ => throw new InvalidOperationException(
                     $"Unknown LLM provider: '{settings.Provider}'. " +
-                    "Valid values: azure, openai, github, ollama, foundry.")
+                    "Valid values: azure, openai, ollama, foundry.")
             };
         });
 

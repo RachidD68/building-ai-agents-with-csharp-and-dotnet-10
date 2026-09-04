@@ -14,8 +14,8 @@ Exposes the pirate agent as an HTTP service using ASP.NET Core Minimal APIs.
 
 ```bash
 cd src/Ch05.HelloAgent/Ch05.MinimalApiAgent
-dotnet user-secrets set "LlmProvider:Provider" "github"
-dotnet user-secrets set "LlmProvider:GitHub:Token" "<your-token>"
+dotnet user-secrets set "LlmProvider:Provider" "openai"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
 ```
 
 ## Run

@@ -7,7 +7,7 @@ abstract concrete. Every piece is explained in full by Chapter 5 (the host and D
 in Chapter 4).
 
 The provider is chosen in `appsettings.json` (or User Secrets) and works across Azure
-OpenAI, OpenAI, GitHub Models, and Ollama without touching the code — see Chapter 4.
+OpenAI, OpenAI, and Ollama without touching the code — see Chapter 4.
 
 ## Run it
 

@@ -17,7 +17,7 @@
 // appsettings.json (separate from the chat "LlmProvider" so your default
 // llama3.2 chat config is untouched):
 //   - Ollama  : "llava" or "llama3.2-vision"   (local, offline)
-//   - Cloud   : "gpt-4o" via openai/azure/github
+//   - Cloud   : "gpt-5.6-terra" via openai/azure
 // The default Ollama chat model llama3.2 is TEXT-ONLY: it will NOT accept images.
 //
 // If no vision model is reachable, the program prints a clear "[skipped]" note
@@ -55,9 +55,9 @@ if (visionClient is null)
     Console.WriteLine();
     Console.WriteLine("Set a VISION model under \"VisionModel\" in appsettings.json (or user secrets):");
     Console.WriteLine("  Provider = ollama   Model = llava   (or llama3.2-vision)  -> local, offline");
-    Console.WriteLine("  Provider = openai   Model = gpt-4o   ApiKey = ...");
-    Console.WriteLine("  Provider = azure    Model = gpt-4o   Endpoint = ...");
-    Console.WriteLine("  Provider = github   Model = openai/gpt-4o   Token = ...");
+    Console.WriteLine("  Provider = openai   Model = gpt-5.6-terra   ApiKey = ...");
+    Console.WriteLine("  Provider = azure    Model = gpt-5.6-terra   Endpoint = ...");
+    Console.WriteLine("  Provider = github   Model = openai/gpt-5.6-terra   Token = ...");
     Console.WriteLine();
     Console.WriteLine("NOTE: the default Ollama chat model 'llama3.2' is TEXT-ONLY and will");
     Console.WriteLine("      reject images. Pull a vision model first:  ollama pull llava");
@@ -171,7 +171,7 @@ static IChatClient? BuildVisionClient(IConfiguration config)
         {
             string? key = config["VisionModel:OpenAI:ApiKey"];
             if (string.IsNullOrWhiteSpace(key)) return null;
-            string model = config["VisionModel:OpenAI:Model"] ?? "gpt-4o";
+            string model = config["VisionModel:OpenAI:Model"] ?? "gpt-5.6-terra";
             return new OpenAI.OpenAIClient(key).GetChatClient(model).AsIChatClient();
         }
 
@@ -179,21 +179,8 @@ static IChatClient? BuildVisionClient(IConfiguration config)
         {
             string? endpoint = config["VisionModel:AzureOpenAI:Endpoint"];
             if (string.IsNullOrWhiteSpace(endpoint)) return null;
-            string model = config["VisionModel:AzureOpenAI:Model"] ?? "gpt-4o";
+            string model = config["VisionModel:AzureOpenAI:Model"] ?? "gpt-5.6-terra";
             return new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
-                .GetChatClient(model)
-                .AsIChatClient();
-        }
-
-        case "github":
-        {
-            string? token = config["VisionModel:GitHub:Token"];
-            if (string.IsNullOrWhiteSpace(token)) return null;
-            string model = config["VisionModel:GitHub:Model"] ?? "openai/gpt-4o";
-            string endpoint = config["VisionModel:GitHub:Endpoint"] ?? "https://models.github.ai/inference";
-            return new OpenAI.OpenAIClient(
-                    new ApiKeyCredential(token),
-                    new OpenAI.OpenAIClientOptions { Endpoint = new Uri(endpoint) })
                 .GetChatClient(model)
                 .AsIChatClient();
         }

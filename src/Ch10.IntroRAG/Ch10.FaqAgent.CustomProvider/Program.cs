@@ -51,21 +51,12 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         .GetEmbeddingClient(config["LlmProvider:OpenAI:EmbeddingModel"] ?? "text-embedding-3-small")
         .AsIEmbeddingGenerator(),
 
-    "github" => new OpenAI.OpenAIClient(
-            new System.ClientModel.ApiKeyCredential(config.GetRequiredValue("LlmProvider:GitHub:Token")),
-            new OpenAI.OpenAIClientOptions
-            {
-                Endpoint = new Uri(config["LlmProvider:GitHub:Endpoint"] ?? "https://models.github.ai/inference")
-            })
-        .GetEmbeddingClient(config["LlmProvider:GitHub:EmbeddingModel"] ?? "text-embedding-3-small")
-        .AsIEmbeddingGenerator(),
-
     "ollama" => new OllamaSharp.OllamaApiClient(
         new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
         config["LlmProvider:Ollama:EmbeddingModel"] ?? "nomic-embed-text"),
 
     _ => throw new InvalidOperationException(
-        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, github, or ollama.")
+        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, or ollama.")
 };
 
 // Step 2: Ingest the FAQ corpus into the vector store.

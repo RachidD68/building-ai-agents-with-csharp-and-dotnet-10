@@ -99,7 +99,7 @@ ChatClientAgent manager = new(
 // local model such as llama3.2 spends most of its round budget on that protocol
 // and may hit WithMaxRounds before shipping a finished brief — you'll see
 // "stopped due to hitting the maximum round count limit". A more capable model
-// (e.g. gpt-4o-mini via the GitHub or OpenAI provider) completes the brief in
+// (e.g. gpt-5.6-luna via the OpenAI provider) completes the brief in
 // far fewer rounds. The orchestration API is identical across providers.
 Workflow magenticWorkflow = new MagenticWorkflowBuilder(manager)
     .AddParticipants([researcher, writer, reviewer])

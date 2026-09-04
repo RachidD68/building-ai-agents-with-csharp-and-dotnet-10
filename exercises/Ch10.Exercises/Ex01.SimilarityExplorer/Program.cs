@@ -160,7 +160,7 @@ async Task ShowTopMatchesAsync(string query)
 /// </summary>
 static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(IConfiguration configuration)
 {
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "github";
+    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
 
     return provider switch
     {
@@ -168,12 +168,6 @@ static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(IC
                 new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
                 new DefaultAzureCredential())
             .GetEmbeddingClient(configuration["LlmProvider:AzureOpenAI:EmbeddingModel"] ?? "text-embedding-3-small")
-            .AsIEmbeddingGenerator(),
-
-        "github" => new OpenAI.OpenAIClient(
-                new ApiKeyCredential(configuration["LlmProvider:GitHub:Token"] ?? throw new InvalidOperationException("Missing token")),
-                new OpenAI.OpenAIClientOptions { Endpoint = new Uri(configuration["LlmProvider:GitHub:Endpoint"] ?? "https://models.github.ai/inference") })
-            .GetEmbeddingClient(configuration["LlmProvider:GitHub:EmbeddingModel"] ?? "text-embedding-3-small")
             .AsIEmbeddingGenerator(),
 
         "openai" => new OpenAI.OpenAIClient(

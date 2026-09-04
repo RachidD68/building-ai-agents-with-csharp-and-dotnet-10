@@ -62,9 +62,8 @@ foreach ((string label, string text) in contextExamples)
 
 Console.WriteLine();
 Console.WriteLine("  Context window reference:");
-Console.WriteLine("    GPT-4o:      128K tokens");
-Console.WriteLine("    GPT-4o-mini: 128K tokens");
-Console.WriteLine("    Llama 3.2:   128K tokens");
+Console.WriteLine("    GPT-5.6 (all tiers): 272K tokens");
+Console.WriteLine("    Llama 3.2:           128K tokens");
 
 #endregion
 
@@ -73,12 +72,12 @@ Console.WriteLine("    Llama 3.2:   128K tokens");
 // ----------------------------------------------------------------------------
 // The length/4 estimate above is fine for back-of-the-envelope work, but when
 // precision matters, use a real BPE tokenizer. Microsoft.ML.Tokenizers ships
-// TiktokenTokenizer, which matches OpenAI's o200k_base (GPT-4o / GPT-4.1 / GPT-5
+// TiktokenTokenizer, which matches OpenAI's o200k_base (GPT-4o / GPT-4.1 / GPT-5 / GPT-5.6
 // family) and cl100k_base exactly — offline, no network call.
 
 WriteSection("Real Tokenizer vs the length/4 Estimate");
 
-// o200k_base is the encoding used by the current GPT-4o / GPT-4.1 / GPT-5 family.
+// o200k_base is the encoding used by the current GPT-5 / GPT-5.6 family.
 // The vocab ships in the Microsoft.ML.Tokenizers.Data.O200kBase package.
 Tokenizer tokenizer = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
@@ -149,8 +148,8 @@ List<ChatMessage> conversation =
      "using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); await foreach (var i in Count().WithCancellation(cts.Token)) Log(i);"),
 ];
 
-// GPT-4o input rate, per 1M tokens (verify current rate before relying on it).
-const decimal inputRatePer1M = 2.50m;
+// GPT-5.6 Terra input rate, per 1M tokens (verify current rate before relying on it).
+const decimal inputRatePer1M = 2.00m;
 
 Console.WriteLine("  Each turn re-sends the ENTIRE array. Running input cost per turn:\n");
 Console.WriteLine(string.Format("  {0,-5} {1,10} {2,14} {3,14}",
@@ -293,12 +292,11 @@ WriteSection("Token Cost Calculator");
 
 (string Model, decimal InputPer1M, decimal OutputPer1M)[] pricing =
 [
-    ("GPT-4o",       2.50m,  10.00m),
-    ("GPT-4o-mini",  0.15m,   0.60m),
-    ("GPT-4.1",      2.00m,   8.00m),
-    ("GPT-4.1-mini", 0.40m,   1.60m),
-    ("GPT-4.1-nano", 0.10m,   0.40m),
-    ("Ollama local", 0.00m,   0.00m),
+    ("GPT-6 Astra",   10.00m,  50.00m),
+    ("GPT-5.6 Sol",    4.00m,  20.00m),
+    ("GPT-5.6 Terra",  2.00m,  12.00m),
+    ("GPT-5.6 Luna",   0.20m,   1.20m),
+    ("Ollama local",   0.00m,   0.00m),
 ];
 
 // Scenario: 100 requests/day, average 500 input + 200 output tokens each
@@ -328,17 +326,17 @@ foreach (var (model, inputRate, outputRate) in pricing)
 
 // --- Four cost dimensions, not two -------------------------------------------
 // Input and output are only half the picture. Cached input and batch are the
-// other two levers. Rates below are illustrative mid-2026 GPT-4.1 figures;
-// re-verify against the live rate card before you trust them.
+// other two levers. Rates below are GPT-5.6 Terra figures published in
+// September 2026; re-verify against the live rate card before you trust them.
 //   input   = $2.00 / 1M
-//   cached  = $0.50 / 1M  (automatic on >=1,024-token prefixes; 128-token steps)
+//   cached  = $0.20 / 1M  (automatic on >=1,024-token prefixes; 128-token steps)
 //   batch   = 50% off both input and output (async, within 24h)
 const decimal inRate = 2.00m;     // fresh input
-const decimal cachedRate = 0.50m; // cached input (a repeated, stable prefix)
-const decimal outRate = 8.00m;    // output
+const decimal cachedRate = 0.20m; // cached input (a repeated, stable prefix)
+const decimal outRate = 12.00m;   // output
 
 Console.WriteLine();
-Console.WriteLine("  Same volume, four pricing dimensions (GPT-4.1 illustrative rates):\n");
+Console.WriteLine("  Same volume, four pricing dimensions (GPT-5.6 Terra rates):\n");
 
 // A realistic agent-style split: the prompt is dominated by a stable
 // system+tool-schema prefix that is big enough to actually cache — the

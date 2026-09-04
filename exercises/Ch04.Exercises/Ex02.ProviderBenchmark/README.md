@@ -16,7 +16,7 @@ Write a program that takes the **same 10 questions**, asks **each of your config
 Configure one or more providers in `appsettings.json`, environment variables (`LlmProvider__GitHub__Token`), or User Secrets:
 
 ```bash
-dotnet user-secrets set "LlmProvider:GitHub:Token" "your-token"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
 ```
 
 Ollama is configured out of the box (`http://localhost:11434`, `llama3.2`). The program discovers configured providers itself — there is no hardcoded provider list to edit. Ctrl+C stops the benchmark cleanly; partial results still print.
@@ -26,9 +26,9 @@ Ollama is configured out of the box (`http://localhost:11434`, `llama3.2`). The 
 ```
 === Exercise: Provider Benchmark ===
 
-Configured providers: github, ollama
+Configured providers: openai, ollama
 
---- github (openai/gpt-4o-mini) ---
+--- github (openai/gpt-5.6-luna) ---
   Q 1:    412 ms,   18 out tokens
   ...
 
@@ -36,10 +36,10 @@ Configured providers: github, ollama
 
   Provider   Answered     Avg ms  Avg out tok  Est. cost ($)
   ---------- -------- ---------- ------------ --------------
-  github           10        450         19.4       0.000031
+  openai           10        450         19.4       0.000031
   ollama           10       1830         24.1       0.000000
 
-Fastest provider: github (450 ms average)
+Fastest provider: openai (450 ms average)
 ```
 
 ## Key Concepts

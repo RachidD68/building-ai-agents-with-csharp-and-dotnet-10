@@ -120,7 +120,7 @@ else
     // deployment name, then the evaluator names to run. The project client is
     // the same Microsoft Foundry handle the rest of the book uses (Chapter 4).
     AIProjectClient projectClient = new(new Uri(foundryEndpoint), new DefaultAzureCredential());
-    string judgeModel = config["LlmProvider:Foundry:Model"] ?? "gpt-4o";
+    string judgeModel = config["LlmProvider:Foundry:Model"] ?? "gpt-5.6-terra";
 
     FoundryEvals foundry = new(
         projectClient,

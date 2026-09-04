@@ -28,6 +28,6 @@ Response ←  ContentFilter  ←  Timing  ←  Logging  ←  LLM
 ## Running
 
 ```bash
-dotnet user-secrets set "LlmProvider:GitHub:Token" "your-token"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
 dotnet run
 ```

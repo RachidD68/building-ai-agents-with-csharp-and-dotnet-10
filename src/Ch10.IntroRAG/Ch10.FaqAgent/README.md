@@ -48,6 +48,6 @@ dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent
 > `10.1.0` via `VersionOverride`. The in-memory connector references a type
 > (`VectorSearchFilter`) that was removed in 10.5.0, so `SearchAsync` throws a
 > `TypeLoadException` against the higher pin. 10.1.0 has everything the chapter
-> and `TextSearchProvider` need. A frontier chat model (gpt-4o-mini via the
-> `github`/`openai`/`azure` providers) gives crisper grounded answers than a
+> and `TextSearchProvider` need. A frontier chat model (gpt-5.6-luna via the
+> `openai`/`azure` providers) gives crisper grounded answers than a
 > small local model.

@@ -2,14 +2,14 @@
 
 ## Prompt
 
-Extend the companion `EstimateTokenCount` method to accept a **content type hint** (`"prose"`, `"code"`, `"json"`) and adjust the divisor accordingly (**4.0** for prose, **3.0** for code, **2.5** for JSON). Then process a sample folder of `.txt`, `.cs`, and `.json` files and print a table of file → estimated tokens → estimated GPT-4o input cost.
+Extend the companion `EstimateTokenCount` method to accept a **content type hint** (`"prose"`, `"code"`, `"json"`) and adjust the divisor accordingly (**4.0** for prose, **3.0** for code, **2.5** for JSON). Then process a sample folder of `.txt`, `.cs`, and `.json` files and print a table of file → estimated tokens → estimated GPT-5.6 Terra input cost.
 
 ## Hints
 
 - You already have `File.ReadAllTextAsync` from Chapter 2.
 - For the content-type hint, use the file extension (`.cs` → code, `.json` → json, everything else → prose).
 - Keep it simple — a 20-line method beats a framework.
-- GPT-4o input pricing: ~$2.50 per 1M tokens (verify current rates before relying on them).
+- GPT-5.6 Terra input pricing: ~$2.50 per 1M tokens (verify current rates before relying on them).
 
 ## Run it
 

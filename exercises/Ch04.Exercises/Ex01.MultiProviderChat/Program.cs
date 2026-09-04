@@ -1,7 +1,7 @@
 ﻿// ============================================================================
 // Exercise 01 — Multi-Provider Chat (Beginner)
 // Interactive console chat that lets the user pick a provider
-// (azure/openai/github/ollama) and have a single-turn conversation.
+// (azure/openai/ollama) and have a single-turn conversation.
 // FULLY STANDALONE — no project references to Common.
 // ============================================================================
 
@@ -19,7 +19,7 @@ using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
 Console.WriteLine("=== Exercise: Multi-Provider Chat ===\n");
-Console.WriteLine("Available providers: azure, openai, github, ollama");
+Console.WriteLine("Available providers: azure, openai, ollama");
 Console.Write("Select provider: ");
 
 // Empty input (or EOF) falls back to the repo's offline default, ollama —
@@ -77,7 +77,7 @@ Console.WriteLine("=== Exercise complete! ===");
 /// <summary>
 /// Creates an <see cref="IChatClient"/> for the specified provider.
 /// </summary>
-/// <param name="providerName">The provider name: azure, openai, github, or ollama.</param>
+/// <param name="providerName">The provider name: azure, openai, or ollama.</param>
 /// <param name="configuration">The configuration containing User Secrets.</param>
 /// <returns>A configured <see cref="IChatClient"/>.</returns>
 static IChatClient CreateChatClient(string providerName, IConfiguration configuration) =>
@@ -87,37 +87,23 @@ static IChatClient CreateChatClient(string providerName, IConfiguration configur
                 new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"]
                     ?? throw new InvalidOperationException("Missing LlmProvider:AzureOpenAI:Endpoint")),
                 new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-4o-mini")
+            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
             .AsIChatClient(),
 
         "openai" => new OpenAI.OpenAIClient(
                 configuration["LlmProvider:OpenAI:ApiKey"] is { Length: > 0 } oaKey
                     ? oaKey
                     : throw new InvalidOperationException("Missing LlmProvider:OpenAI:ApiKey"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-4o-mini")
+            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
             .AsIChatClient(),
 
         // is { Length: > 0 } rejects the empty-string placeholder that ships in
         // appsettings.json — a bare null-check lets "" through to
         // ApiKeyCredential, which throws a far less helpful ArgumentException.
-        "github" => new OpenAI.OpenAIClient(
-                new ApiKeyCredential(
-                    configuration["LlmProvider:GitHub:Token"] is { Length: > 0 } ghToken
-                        ? ghToken
-                        : throw new InvalidOperationException("Missing LlmProvider:GitHub:Token")),
-                new OpenAI.OpenAIClientOptions
-                {
-                    Endpoint = new Uri(
-                        configuration["LlmProvider:GitHub:Endpoint"]
-                            ?? "https://models.github.ai/inference")
-                })
-            .GetChatClient(configuration["LlmProvider:GitHub:Model"] ?? "openai/gpt-4o-mini")
-            .AsIChatClient(),
-
         "ollama" => new OllamaSharp.OllamaApiClient(
                 new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
                 configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
 
         _ => throw new InvalidOperationException(
-            $"Unknown provider: '{providerName}'. Valid: azure, openai, github, ollama.")
+            $"Unknown provider: '{providerName}'. Valid: azure, openai, ollama.")
     };

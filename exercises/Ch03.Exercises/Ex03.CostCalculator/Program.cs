@@ -25,10 +25,10 @@ const int PerMessageOverhead = 4; // approximate role/delimiter framing per mess
 // ---------------------------------------------------------------------------
 ModelPricing[] catalogue =
 [
-    new("GPT-4o",       InputPer1M: 2.50m, OutputPer1M: 10.00m, CachedInputPer1M: 1.25m, ReasoningMultiplier: 0.0),
-    new("GPT-4o-mini",  InputPer1M: 0.15m, OutputPer1M:  0.60m, CachedInputPer1M: 0.075m, ReasoningMultiplier: 0.0),
-    new("GPT-4.1",      InputPer1M: 2.00m, OutputPer1M:  8.00m, CachedInputPer1M: 0.50m, ReasoningMultiplier: 0.0),
-    new("GPT-4.1-mini", InputPer1M: 0.40m, OutputPer1M:  1.60m, CachedInputPer1M: 0.10m, ReasoningMultiplier: 0.0),
+    new("GPT-6 Astra",   InputPer1M: 10.00m, OutputPer1M: 50.00m, CachedInputPer1M: 1.00m, ReasoningMultiplier: 0.0),
+    new("GPT-5.6 Sol",   InputPer1M:  4.00m, OutputPer1M: 20.00m, CachedInputPer1M: 0.40m, ReasoningMultiplier: 0.0),
+    new("GPT-5.6 Terra", InputPer1M:  2.00m, OutputPer1M: 12.00m, CachedInputPer1M: 0.20m, ReasoningMultiplier: 0.0),
+    new("GPT-5.6 Luna",  InputPer1M:  0.20m, OutputPer1M:  1.20m, CachedInputPer1M: 0.02m, ReasoningMultiplier: 0.0),
     new("o4-mini",      InputPer1M: 1.10m, OutputPer1M:  4.40m, CachedInputPer1M: 0.275m, ReasoningMultiplier: 5.0),
 ];
 
@@ -82,9 +82,9 @@ Console.WriteLine($"  Windowed input tokens (system + last {windowTurns} turns):
 Console.WriteLine($"  Volume: {requestsPerDay}/day x {daysPerMonth} days = {callsPerMonth:N0} calls/month.\n");
 
 // ---------------------------------------------------------------------------
-// Three strategies for GPT-4.1, the worked headline example.
+// Three strategies for GPT-5.6 Terra, the worked headline example.
 // ---------------------------------------------------------------------------
-ModelPricing headline = catalogue.First(m => m.Name == "GPT-4.1");
+ModelPricing headline = catalogue.First(m => m.Name == "GPT-5.6 Terra");
 
 decimal uncached = MonthlyCost(headline, fullInputTokens, cachedPrefix: 0, avgOutputTokens, callsPerMonth);
 decimal cached = MonthlyCost(headline, fullInputTokens, cachedPrefix: prefixTokens, avgOutputTokens, callsPerMonth);

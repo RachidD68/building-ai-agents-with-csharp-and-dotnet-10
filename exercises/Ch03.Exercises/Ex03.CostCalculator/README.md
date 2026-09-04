@@ -45,10 +45,10 @@ reasoning-token multiplier (extra tokens billed at the output rate).
 
     Model             Monthly $    Reasoning x
     --------------------------------------------
-    GPT-4o-mini           $1.33            0.0
+    GPT-5.6 Luna           $1.33            0.0
     GPT-4.1-mini          $3.47            0.0
     GPT-4.1              $17.33            0.0
-    GPT-4o               $22.22            0.0
+    GPT-5.6 Terra               $22.22            0.0
     o4-mini              $49.13            5.0
 ```
 

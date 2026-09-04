@@ -7,7 +7,7 @@ namespace AgenticAI.Common.Configuration;
 public sealed record LlmSettings
 {
     /// <summary>
-    /// The active provider: "azure", "openai", "github", "ollama", "foundry", or "anthropic".
+    /// The active provider: "azure", "openai", "ollama", "foundry", or "anthropic".
     /// Microsoft Foundry is the Microsoft-recommended path for new MAF projects
     /// (see Chapter 4) and uses the Azure AI Projects client via AIProjectClient.
     /// </summary>
@@ -18,9 +18,6 @@ public sealed record LlmSettings
 
     /// <summary>OpenAI configuration.</summary>
     public OpenAISettings OpenAI { get; init; } = new();
-
-    /// <summary>GitHub Models configuration.</summary>
-    public GitHubModelsSettings GitHub { get; init; } = new();
 
     /// <summary>Ollama (local) configuration.</summary>
     public OllamaSettings Ollama { get; init; } = new();
@@ -37,22 +34,14 @@ public sealed record AzureOpenAISettings
 {
     public string Endpoint { get; init; } = string.Empty;
     public string ApiKey { get; init; } = string.Empty;
-    public string Model { get; init; } = "gpt-4o-mini";
+    public string Model { get; init; } = "gpt-5.6-luna";
 }
 
 /// <summary>OpenAI provider settings.</summary>
 public sealed record OpenAISettings
 {
     public string ApiKey { get; init; } = string.Empty;
-    public string Model { get; init; } = "gpt-4o-mini";
-}
-
-/// <summary>GitHub Models provider settings.</summary>
-public sealed record GitHubModelsSettings
-{
-    public string Token { get; init; } = string.Empty;
-    public string Model { get; init; } = "openai/gpt-4o-mini";
-    public string Endpoint { get; init; } = "https://models.github.ai/inference";
+    public string Model { get; init; } = "gpt-5.6-luna";
 }
 
 /// <summary>Ollama (local) provider settings.</summary>
@@ -71,8 +60,8 @@ public sealed record FoundrySettings
     /// </summary>
     public string ProjectEndpoint { get; init; } = string.Empty;
 
-    /// <summary>The deployed model name, e.g. "gpt-4o-mini".</summary>
-    public string Model { get; init; } = "gpt-4o-mini";
+    /// <summary>The deployed model name, e.g. "gpt-5.6-luna".</summary>
+    public string Model { get; init; } = "gpt-5.6-luna";
 }
 
 /// <summary>Anthropic (Claude) provider settings.</summary>

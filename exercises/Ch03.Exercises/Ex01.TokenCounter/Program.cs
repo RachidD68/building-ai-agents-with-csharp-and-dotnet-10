@@ -3,11 +3,11 @@
 // Extends the companion EstimateTokenCount method with a content-type hint
 // ("prose", "code", "json") and per-type divisors, then processes a folder of
 // .txt/.cs/.json files and prints a table of file -> estimated tokens ->
-// estimated GPT-4o input cost.
+// estimated GPT-5.6 Terra input cost.
 // ============================================================================
 
-// GPT-4o input rate, per 1M tokens (verify current rates before relying on them).
-const decimal InputRatePer1M = 2.50m;
+// GPT-5.6 Terra input rate, per 1M tokens (verify current rates before relying on them).
+const decimal InputRatePer1M = 2.00m;
 
 Console.WriteLine("=== Exercise: Token Counter — Content-Type-Aware Estimator ===\n");
 

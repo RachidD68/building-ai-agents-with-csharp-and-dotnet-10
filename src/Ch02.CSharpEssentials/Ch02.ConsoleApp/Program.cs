@@ -121,12 +121,12 @@ Console.WriteLine();
 Console.WriteLine("--- Collection Expressions ---");
 
 // Array creation with collection expression syntax
-string[] models = ["gpt-4o", "gpt-4o-mini", "llama3.2", "phi-4"];
+string[] models = ["gpt-5.6-terra", "gpt-5.6-luna", "llama3.2", "phi-4"];
 Console.WriteLine($"  Available models: {string.Join(", ", models)}");
 
 // Spread operator to combine collections
 string[] localModels = ["llama3.2", "phi-4"];
-string[] cloudModels = ["gpt-4o", "gpt-4o-mini"];
+string[] cloudModels = ["gpt-5.6-terra", "gpt-5.6-luna"];
 string[] allModels = [.. localModels, .. cloudModels];
 Console.WriteLine($"  All models: {string.Join(", ", allModels)}");
 
@@ -149,7 +149,7 @@ var config = new ProviderConfig
 {
     ProviderName = "openai",
     ApiKey = "sk-placeholder-key",
-    ModelId = "gpt-4o-mini"
+    ModelId = "gpt-5.6-luna"
 };
 Console.WriteLine($"  Config: Provider={config.ProviderName}, Model={config.ModelId}");
 // Uncommenting the following would cause a compiler error because ProviderName is required:

@@ -21,4 +21,4 @@ dotnet run
 ```
 
 Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`,
-or cloud `gpt-4o`). Local: `ollama pull llava`. A frontier model gives crisper numbers.
+or cloud `gpt-5.6-terra`). Local: `ollama pull llava`. A frontier model gives crisper numbers.

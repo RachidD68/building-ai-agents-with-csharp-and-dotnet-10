@@ -119,16 +119,13 @@ app.Run();
 /// <summary>Creates an IChatClient from configuration.</summary>
 static IChatClient CreateChatClient(IConfiguration config)
 {
-    string provider = config["LlmProvider:Provider"]?.ToLowerInvariant() ?? "github";
+    string provider = config["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
     return provider switch
     {
         "azure" => new AzureOpenAIClient(new Uri(config["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing")), new DefaultAzureCredential())
-            .GetChatClient(config["LlmProvider:AzureOpenAI:Model"] ?? "gpt-4o-mini").AsIChatClient(),
+            .GetChatClient(config["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
         "openai" => new OpenAI.OpenAIClient(config["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing"))
-            .GetChatClient(config["LlmProvider:OpenAI:Model"] ?? "gpt-4o-mini").AsIChatClient(),
-        "github" => new OpenAI.OpenAIClient(new ApiKeyCredential(config["LlmProvider:GitHub:Token"] ?? throw new InvalidOperationException("Missing")),
-                new OpenAI.OpenAIClientOptions { Endpoint = new Uri(config["LlmProvider:GitHub:Endpoint"] ?? "https://models.github.ai/inference") })
-            .GetChatClient(config["LlmProvider:GitHub:Model"] ?? "openai/gpt-4o-mini").AsIChatClient(),
+            .GetChatClient(config["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
         "ollama" => new OllamaSharp.OllamaApiClient(new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), config["LlmProvider:Ollama:Model"] ?? "llama3.2"),
         _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
     };

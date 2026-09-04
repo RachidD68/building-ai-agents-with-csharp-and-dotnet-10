@@ -15,7 +15,7 @@
 // X-REF Chapter 7: everything about RunAsync<T>, the typed AgentResponse<T>.Result,
 // and JSON-schema response formats is taught there. Here we just feed it a picture.
 //
-// Needs a VISION model (Ollama llava / llama3.2-vision, or cloud gpt-4o), configured
+// Needs a VISION model (Ollama llava / llama3.2-vision, or cloud gpt-5.6-terra), configured
 // under "VisionModel" in appsettings.json. If none is reachable, prints a clear
 // "[skipped]" note and exits 0.
 // ============================================================================
@@ -46,7 +46,7 @@ if (visionClient is null)
 {
     Console.WriteLine("[skipped: configure a vision model]");
     Console.WriteLine("Set a VISION model under \"VisionModel\" in appsettings.json:");
-    Console.WriteLine("  ollama -> llava (or llama3.2-vision); or openai/azure/github -> gpt-4o.");
+    Console.WriteLine("  ollama -> llava (or llama3.2-vision); or openai/azure -> gpt-5.6-terra.");
     Console.WriteLine("Pull a local vision model first:  ollama pull llava");
     return;
 }
@@ -131,13 +131,13 @@ catch (JsonException ex)
 {
     Console.WriteLine($"\nJSON deserialization error: {ex.Message}");
     Console.WriteLine("The model's output did not match the Invoice schema. Smaller vision");
-    Console.WriteLine("models (llava) can drift; a frontier model (gpt-4o) is far more reliable");
+    Console.WriteLine("models (llava) can drift; a frontier model (gpt-5.6-terra) is far more reliable");
     Console.WriteLine("for structured extraction. Try the cloud provider for crisp results.");
 }
 catch (Exception ex)
 {
     Console.WriteLine($"\n[error] The vision call failed: {ex.Message}");
-    Console.WriteLine("Confirm the configured model is a VISION model (llava / gpt-4o).");
+    Console.WriteLine("Confirm the configured model is a VISION model (llava / gpt-5.6-terra).");
 }
 
 // ---------------------------------------------------------------
@@ -166,24 +166,14 @@ static IChatClient? BuildVisionClient(IConfiguration config)
             string? key = config["VisionModel:OpenAI:ApiKey"];
             if (string.IsNullOrWhiteSpace(key)) return null;
             return new OpenAI.OpenAIClient(key)
-                .GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-4o").AsIChatClient();
+                .GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         case "azure":
         {
             string? endpoint = config["VisionModel:AzureOpenAI:Endpoint"];
             if (string.IsNullOrWhiteSpace(endpoint)) return null;
             return new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
-                .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-4o").AsIChatClient();
-        }
-        case "github":
-        {
-            string? token = config["VisionModel:GitHub:Token"];
-            if (string.IsNullOrWhiteSpace(token)) return null;
-            string endpoint = config["VisionModel:GitHub:Endpoint"] ?? "https://models.github.ai/inference";
-            return new OpenAI.OpenAIClient(
-                    new ApiKeyCredential(token),
-                    new OpenAI.OpenAIClientOptions { Endpoint = new Uri(endpoint) })
-                .GetChatClient(config["VisionModel:GitHub:Model"] ?? "openai/gpt-4o").AsIChatClient();
+                .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         default:
             return null;

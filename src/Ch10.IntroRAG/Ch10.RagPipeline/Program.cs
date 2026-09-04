@@ -48,15 +48,6 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         .GetEmbeddingClient(config["LlmProvider:OpenAI:EmbeddingModel"] ?? "text-embedding-3-small")
         .AsIEmbeddingGenerator(),
 
-    "github" => new OpenAI.OpenAIClient(
-            new System.ClientModel.ApiKeyCredential(config.GetRequiredValue("LlmProvider:GitHub:Token")),
-            new OpenAI.OpenAIClientOptions
-            {
-                Endpoint = new Uri(config["LlmProvider:GitHub:Endpoint"] ?? "https://models.github.ai/inference")
-            })
-        .GetEmbeddingClient(config["LlmProvider:GitHub:EmbeddingModel"] ?? "text-embedding-3-small")
-        .AsIEmbeddingGenerator(),
-
     // Local, offline embeddings via Ollama. OllamaApiClient implements
     // IEmbeddingGenerator<string, Embedding<float>> directly, so the rest of the
     // pipeline is identical — only the dimension differs (nomic-embed-text is 768).
@@ -65,7 +56,7 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         config["LlmProvider:Ollama:EmbeddingModel"] ?? "nomic-embed-text"),
 
     _ => throw new InvalidOperationException(
-        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, github, or ollama.")
+        $"Unsupported provider '{provider}' for embeddings. Use azure, openai, or ollama.")
 };
 
 // ---------------------------------------------------------------

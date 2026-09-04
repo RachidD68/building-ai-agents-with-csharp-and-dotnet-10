@@ -105,5 +105,5 @@ catch (Exception ex)
 {
     Console.WriteLine($"\n[error] {ex.Message}");
     Console.WriteLine("This demo needs a tool-calling model. The default Ollama llama3.2 supports");
-    Console.WriteLine("tools; a cloud gpt-4o-class model is the most reliable for multi-tool flows.");
+    Console.WriteLine("tools; a cloud GPT-5.6-class model is the most reliable for multi-tool flows.");
 }

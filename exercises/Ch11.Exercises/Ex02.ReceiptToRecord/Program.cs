@@ -9,7 +9,7 @@
 //
 // X-REF Chapter 7 for RunAsync<T> and JSON-schema response formats.
 //
-// Needs a vision model under "VisionModel" (ollama llava / cloud gpt-4o). If none
+// Needs a vision model under "VisionModel" (ollama llava / cloud gpt-5.6-terra). If none
 // is configured, prints "[skipped]" and exits 0.
 // ============================================================================
 
@@ -38,7 +38,7 @@ IChatClient? visionClient = BuildVisionClient(config);
 if (visionClient is null)
 {
     Console.WriteLine("[skipped: configure a vision model]");
-    Console.WriteLine("Set \"VisionModel\" (ollama llava, or openai/azure/github gpt-4o). Local: ollama pull llava");
+    Console.WriteLine("Set \"VisionModel\" (ollama llava, or openai/azure gpt-5.6-terra). Local: ollama pull llava");
     return;
 }
 
@@ -114,7 +114,7 @@ catch (OperationCanceledException)
 catch (JsonException ex)
 {
     Console.WriteLine($"\nJSON error: {ex.Message}");
-    Console.WriteLine("Small vision models can drift; gpt-4o is far more reliable for extraction.");
+    Console.WriteLine("Small vision models can drift; gpt-5.6-terra is far more reliable for extraction.");
 }
 catch (Exception ex)
 {
@@ -141,23 +141,14 @@ static IChatClient? BuildVisionClient(IConfiguration config)
         {
             string? key = config["VisionModel:OpenAI:ApiKey"];
             return string.IsNullOrWhiteSpace(key) ? null
-                : new OpenAI.OpenAIClient(key).GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-4o").AsIChatClient();
+                : new OpenAI.OpenAIClient(key).GetChatClient(config["VisionModel:OpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         case "azure":
         {
             string? endpoint = config["VisionModel:AzureOpenAI:Endpoint"];
             return string.IsNullOrWhiteSpace(endpoint) ? null
                 : new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
-                    .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-4o").AsIChatClient();
-        }
-        case "github":
-        {
-            string? token = config["VisionModel:GitHub:Token"];
-            return string.IsNullOrWhiteSpace(token) ? null
-                : new OpenAI.OpenAIClient(
-                        new ApiKeyCredential(token),
-                        new OpenAI.OpenAIClientOptions { Endpoint = new Uri(config["VisionModel:GitHub:Endpoint"] ?? "https://models.github.ai/inference") })
-                    .GetChatClient(config["VisionModel:GitHub:Model"] ?? "openai/gpt-4o").AsIChatClient();
+                    .GetChatClient(config["VisionModel:AzureOpenAI:Model"] ?? "gpt-5.6-terra").AsIChatClient();
         }
         default:
             return null;

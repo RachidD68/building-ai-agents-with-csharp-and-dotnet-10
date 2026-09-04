@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
 // 1. Wire up an LLM chat client. The provider is chosen in appsettings.json /
-//    User Secrets and works across Azure OpenAI, OpenAI, GitHub Models, or
+//    User Secrets and works across Azure OpenAI, OpenAI, or
 //    Ollama without changing this code — all set up in Chapter 4.
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
