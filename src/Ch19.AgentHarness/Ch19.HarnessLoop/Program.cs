@@ -47,8 +47,10 @@ HarnessAgentOptions options = new()
 {
     Name = "SummaryWriter",
     HarnessInstructions =
-        "You write short product summaries. When you believe the summary is complete " +
-        "and meets every requirement, end your reply with the exact word DONE.",
+        "You write short product summaries. Facts you may use: the Contoso Ergonomic " +
+        "Keyboard costs $79.99 and carries a two-year warranty. Never state a fact you " +
+        "were not given. When you believe the summary is complete and meets every " +
+        "requirement, end your reply with the exact word DONE.",
     ChatOptions = new ChatOptions { Instructions = "Write plainly. No marketing language." },
     DisableWebSearch = true,
     DisableFileMemory = true,
@@ -64,30 +66,35 @@ HarnessAgent worker = chatClient.AsHarnessAgent(options);
 CompletionMarkerLoopEvaluator markerEvaluator = new("DONE");
 
 // ── Evaluator 2: your own rule ────────────────────────────────────────
-// DelegateLoopEvaluator lets you enforce something a marker cannot: here,
-// that the summary actually mentions the price and the warranty.
+// DelegateLoopEvaluator enforces something the prompt never said. That is the
+// whole reason to reach for a loop instead of a better prompt: the constraint
+// lives in code, where it can be tested, rather than in a sentence the model
+// may or may not honour. Here the summary must carry the price AND fit a hard
+// 22-word budget -- a first pass almost always overshoots the budget.
+const int WordBudget = 22;
 int lastIteration = 0;
 DelegateLoopEvaluator requirementsEvaluator = new((ctx, ct) =>
 {
     // LoopContext gives you the run so far: which pass this is, and what the
     // agent last said. That is all a judge needs.
     lastIteration = ctx.Iteration;
-    string text = ctx.LastResponse?.Text ?? string.Empty;
+    string text = (ctx.LastResponse?.Text ?? string.Empty).Replace("DONE", "").Trim();
+    int words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
     bool hasPrice = text.Contains('$');
-    bool hasWarranty = text.Contains("warranty", StringComparison.OrdinalIgnoreCase);
+    bool withinBudget = words <= WordBudget;
 
-    Console.WriteLine($"   [evaluator] iteration {ctx.Iteration}: price={hasPrice}, warranty={hasWarranty}");
+    Console.WriteLine($"   [evaluator] iteration {ctx.Iteration}: words={words} (budget {WordBudget}), price={hasPrice}");
 
-    if (hasPrice && hasWarranty)
+    if (hasPrice && withinBudget)
     {
         return ValueTask.FromResult(LoopEvaluation.Stop());
     }
 
-    List<string> missing = [];
-    if (!hasPrice) missing.Add("the price");
-    if (!hasWarranty) missing.Add("the warranty term");
-    return ValueTask.FromResult(
-        LoopEvaluation.Continue($"The summary is missing {string.Join(" and ", missing)}. Add it."));
+    List<string> problems = [];
+    if (!withinBudget) problems.Add($"it is {words} words, the limit is {WordBudget}");
+    if (!hasPrice) problems.Add("it does not state the price");
+    return ValueTask.FromResult(LoopEvaluation.Continue(
+        $"Rewrite the summary: {string.Join("; ", problems)}. Keep it factual."));
 });
 
 // ── The loop ──────────────────────────────────────────────────────────
@@ -101,12 +108,12 @@ LoopAgentOptions loopOptions = new()
 LoopAgent loop = new(worker, [markerEvaluator, requirementsEvaluator], loopOptions);
 
 Console.WriteLine($"LoopAgent wraps {worker.Name}; MaxIterations = {loopOptions.MaxIterations}");
-Console.WriteLine("Evaluators: CompletionMarkerLoopEvaluator(\"DONE\") + DelegateLoopEvaluator(price & warranty)");
+Console.WriteLine($"Evaluators: CompletionMarkerLoopEvaluator(\"DONE\") + DelegateLoopEvaluator(price + {WordBudget}-word budget)");
 Console.WriteLine();
 
-const string task =
-    "Write a two-sentence summary of the Contoso Ergonomic Keyboard. " +
-    "It costs $79.99 and carries a two-year warranty.";
+// Deliberately vague: the task does not say "mention the price and warranty".
+// The evaluator is what discovers the gap, which is the point of the loop.
+const string task = "Write a two-sentence summary of the Contoso Ergonomic Keyboard.";
 
 Console.WriteLine($"You: {task}");
 Console.WriteLine();

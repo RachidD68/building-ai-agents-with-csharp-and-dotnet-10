@@ -69,8 +69,10 @@ HarnessAgentOptions options = new()
 {
     Name = "PolicyDesk",
     HarnessInstructions =
-        "You answer Contoso policy questions strictly from the files in your workspace. " +
-        "Search or read the files before answering. Never guess a policy.",
+        "You answer Contoso policy questions strictly from files in your workspace. " +
+        "The workspace contains exactly two files: refund-policy.md and " +
+        "shipping-policy.md. ALWAYS call the file read tool on the relevant file " +
+        "before answering, then quote the matching line. Never guess a policy.",
     ChatOptions = new ChatOptions { Instructions = "Answer in two sentences at most." },
 
     // Opt in to file access, and pin memory somewhere explicit instead of
@@ -93,13 +95,27 @@ HarnessAgentOptions options = new()
 HarnessAgent agent = chatClient.AsHarnessAgent(options);
 AgentSession session = await agent.CreateSessionAsync(cts.Token);
 
+// The store is a plain object you can query yourself -- useful when you want
+// to prove the agent's view of the world before you trust its answers.
+IReadOnlyList<FileStoreEntry> visible = await accessStore.ListChildrenAsync("", cts.Token);
+Console.WriteLine($"Files the agent can reach ({visible.Count}):");
+foreach (FileStoreEntry entry in visible)
+{
+    Console.WriteLine($"  {entry.Name}  ({entry.Type})");
+}
+
 Console.WriteLine("Auto-approval: read-only file tools only (writes would pause for a human).");
 Console.WriteLine();
 
+// NOTE the shape of these questions. A frontier model infers which file to
+// open from "how long do I have to request a refund?"; a small local model
+// needs the filename in the sentence. Naming the file is not cheating -- it
+// is what you do when your model is small, and it is why the instructions
+// above list the workspace contents.
 string[] questions =
 [
-    "How long do I have to request a refund?",
-    "How fast is expedited shipping?",
+    "Read the file refund-policy.md and tell me how many days I have to request a refund.",
+    "Read the file shipping-policy.md and tell me how fast expedited shipping is.",
 ];
 
 foreach (string q in questions)
