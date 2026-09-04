@@ -13,13 +13,17 @@
 // ============================================================================
 
 using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Same registration as the stdio host — only the transport line changes.
 builder.Services
     .AddMcpServer()
-    .WithHttpTransport()        // streamable HTTP instead of WithStdioServerTransport()
+    // Streamable HTTP instead of WithStdioServerTransport(). Since the
+    // 2026-07-28 spec revision there is no Mcp-Session-Id on the wire, and the
+    // SDK defaults to stateless; we set it explicitly so the intent is visible.
+    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .WithToolsFromAssembly();   // discovers [McpServerToolType] classes in this assembly
 
 var app = builder.Build();
