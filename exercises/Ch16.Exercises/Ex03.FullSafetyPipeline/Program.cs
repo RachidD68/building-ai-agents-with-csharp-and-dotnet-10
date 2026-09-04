@@ -433,7 +433,19 @@ static IChatClient CreateChatClient(IConfiguration configuration)
             .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
         "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing"))
             .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
+        // HttpClient's default 100-second timeout is too short here: every prompt
+        // makes two local model calls (the agent, then the critic), and the first
+        // one on a cold model can exceed it. The exception surfaces as a
+        // TaskCanceledException, which reads like a cancellation rather than a
+        // deadline -- the run prints "[Cancelled]" and exits ZERO. Give the client
+        // a deadline that matches the workload.
+        "ollama" => new OllamaSharp.OllamaApiClient(
+            new HttpClient
+            {
+                BaseAddress = new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
+                Timeout = TimeSpan.FromMinutes(10),
+            },
+            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
         _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
     };
 }
