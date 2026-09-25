@@ -3,31 +3,32 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Microsoft Agent Framework — 1.20.0 (dotnet-1.20.0) -->
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.20.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.20.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.20.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.20.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Harness" Version="1.20.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.20.0-preview.260831.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.20.0-preview.260831.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.OpenAI" Version="1.20.0-alpha.260831.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.20.0-preview.260831.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.20.0-preview.260831.1" />
+    <!-- Microsoft Agent Framework — 1.22.0 (dotnet-1.22.0, 2026-09-18) -->
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Harness" Version="1.22.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.22.0-preview.260918.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.22.0-preview.260918.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.OpenAI" Version="1.22.0-alpha.260918.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.22.0-preview.260918.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.22.0-preview.260918.1" />
     <!-- New provider packages (1.10) — referenced from Phase 2 chapters (Ch04/Ch18) -->
-    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.20.0-preview.260831.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.GitHub.Copilot" Version="1.20.0" />
-    <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...) -->
-    <PackageVersion Include="Azure.AI.Projects" Version="2.1.0-beta.4" />
+    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.22.0-preview.260918.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.GitHub.Copilot" Version="1.22.0" />
+    <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...).
+         3.0.0-beta.2 = the floor Microsoft.Agents.AI.Foundry 1.22.0-preview requires (major bump from 2.x). -->
+    <PackageVersion Include="Azure.AI.Projects" Version="3.0.0-beta.2" />
     <!-- AI Abstractions & Providers -->
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
     <!-- Evaluation (Ch14 harness / Ch17 eval suite) -->
-    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Quality" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Reporting" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Safety" Version="10.9.0-preview.1.26411.16" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Quality" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Reporting" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Safety" Version="10.10.0-preview.1.26459.2" />
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="OllamaSharp" Version="5.4.25" />
@@ -40,15 +41,15 @@
     <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <!-- Vector Data / RAG -->
-    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.8.2" />
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.10.0" />
     <PackageVersion Include="CommunityToolkit.VectorData.InMemory" Version="1.0.1" />
-    <!-- Observability -->
-    <PackageVersion Include="OpenTelemetry" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <!-- Observability (MAF 1.22 raises the OpenTelemetry.Api floor to 1.18.0) -->
+    <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
     <!-- Hosting -->
     <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />

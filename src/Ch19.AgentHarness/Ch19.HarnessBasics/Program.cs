@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 19 — The Agent Harness: your first harness agent (MAF 1.20)
+// Chapter 19 — The Agent Harness: your first harness agent (MAF 1.22)
 // ----------------------------------------------------------------------------
 // Everything Part V built by hand -- a chat client wrapped in middleware, a
 // context provider for memory, tool approval, OpenTelemetry -- the harness

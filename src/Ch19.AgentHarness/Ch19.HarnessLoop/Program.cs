@@ -8,7 +8,7 @@
 // LoopAgent is the OUTERMOST decorator: it re-invokes the whole agent, so
 // every iteration gets the harness's tools, approvals and telemetry.
 //
-// The evaluators that ship at 1.20:
+// The evaluators that ship as of 1.22:
 //   CompletionMarkerLoopEvaluator        stop when the text contains a marker
 //   TodoCompletionLoopEvaluator          stop when the to-do list is empty
 //   BackgroundTaskCompletionLoopEvaluator stop when delegated work finishes
@@ -17,7 +17,7 @@
 //
 // Every one returns a LoopEvaluation: Continue(feedback) to go round again
 // with a note for the model, or Stop() to finish. All of this is
-// [Experimental("MAAI001")] at 1.20.
+// [Experimental("MAAI001")] as of 1.22.
 //
 // ALWAYS bound an autonomous loop. LoopAgentOptions.MaxIterations defaults to
 // 10; this demo sets 3 so a local model cannot spin.

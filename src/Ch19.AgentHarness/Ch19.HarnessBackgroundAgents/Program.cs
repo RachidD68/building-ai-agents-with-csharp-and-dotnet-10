@@ -17,7 +17,7 @@
 // releases everything still running for a session -- important, because a
 // task nobody collects is a task still burning tokens.
 //
-// All of this is [Experimental("MAAI001")] at 1.20.
+// All of this is [Experimental("MAAI001")] as of 1.22.
 // ============================================================================
 
 using Microsoft.Agents.AI;

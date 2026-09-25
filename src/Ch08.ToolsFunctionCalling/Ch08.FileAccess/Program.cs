@@ -2,8 +2,8 @@
 // Chapter 8 — FileAccessProvider: a sandboxed scratchpad for your agent
 // ----------------------------------------------------------------------------
 // MAF ships (since 1.13) a built-in context provider that gives an agent a SAFE, scoped
-// filesystem: FileAccessProvider. Register it and the model gains seven tools —
-// read, write, delete, ls, grep, replace, and replace_lines — all confined to a
+// filesystem: FileAccessProvider. Register it and the model gains eight tools —
+// read, read_lines, write, delete, ls, grep, replace, and replace_lines — all confined to a
 // store you choose. No System.IO, no path the
 // model can wander out of.
 //
@@ -12,11 +12,11 @@
 //      dictionary, used here) for demos/tests; FileSystemAgentFileStore(rootPath)
 //      for a real disk folder (symlink-guarded, so the agent can't escape it).
 //   2. FileAccessProvider(store) — registered on ChatClientAgentOptions
-//      .AIContextProviders, it exposes the seven tools over that store.
+//      .AIContextProviders, it exposes the eight tools over that store.
 //
 // SAFETY (the 1.13 headline): file tools are gated. We wrap the agent in a
 // ToolApprovalAgent and pass FileAccessProvider.ReadOnlyToolsAutoApprovalRule,
-// which waves through the read-only tools (read/ls/grep) but still pauses
+// which waves through the read-only tools (read/read_lines/ls/grep) but still pauses
 // on write, delete, and replace. That boundary — reads are cheap, writes need a human — is
 // the whole point. Cross-reference: Chapter 16 (Safety and Guardrails).
 // ============================================================================

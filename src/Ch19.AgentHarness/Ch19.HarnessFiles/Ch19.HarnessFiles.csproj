@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- This project uses HarnessAgentOptions members that are still
-         [Experimental("MAAI001")] at 1.20 - file access, looping and
+         [Experimental("MAAI001")] as of 1.22 - file access, looping and
          background agents. The suppression is deliberate and scoped to
          this project so the experimental surface stays visible. -->
     <NoWarn>$(NoWarn);MAAI001</NoWarn>
