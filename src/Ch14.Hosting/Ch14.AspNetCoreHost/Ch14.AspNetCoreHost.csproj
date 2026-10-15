@@ -18,6 +18,8 @@
     <PackageReference Include="Microsoft.Extensions.AI"      />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI"      />
     <PackageReference Include="Microsoft.Identity.Web"      />
+    <!-- Bump the vulnerable System.Security.Cryptography.Pkcs that Identity.Web pulls in (GHSA-846f-f764-76mx). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Azure.AI.OpenAI"      />
     <PackageReference Include="Azure.Identity"      />
     <PackageReference Include="OllamaSharp"      />
