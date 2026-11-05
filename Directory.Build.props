@@ -5,5 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- One user-secrets store for every sample, so a key set once works in
+         every chapter: dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<key>"
+         (run it from any project folder; no "user-secrets init" needed). -->
+    <UserSecretsId>building-ai-agents-dotnet10</UserSecretsId>
+    <!-- Running a sample from the repo root (dotnet run with the project option)
+         still runs it in its own folder, so its appsettings.json is the one that loads. -->
+    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
 </Project>

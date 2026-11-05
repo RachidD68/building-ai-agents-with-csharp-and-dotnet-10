@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch09.McpConsumer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

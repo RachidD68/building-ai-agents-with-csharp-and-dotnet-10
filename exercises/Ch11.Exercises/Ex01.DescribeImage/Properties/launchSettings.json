@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex01.DescribeImage": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

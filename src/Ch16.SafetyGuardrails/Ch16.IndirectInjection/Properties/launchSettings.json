@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch16.IndirectInjection": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

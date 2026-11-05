@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch06.HistoryReduction": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

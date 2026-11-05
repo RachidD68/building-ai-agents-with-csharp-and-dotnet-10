@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch12.SequentialPipeline": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

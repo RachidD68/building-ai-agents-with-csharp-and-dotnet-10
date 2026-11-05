@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch07.EntityExtraction": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

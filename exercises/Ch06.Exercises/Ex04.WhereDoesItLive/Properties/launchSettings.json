@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex04.WhereDoesItLive": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

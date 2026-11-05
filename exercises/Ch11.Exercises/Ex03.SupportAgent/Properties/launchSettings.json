@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex03.SupportAgent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

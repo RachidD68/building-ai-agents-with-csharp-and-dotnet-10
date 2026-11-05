@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch06.StatelessDemo": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

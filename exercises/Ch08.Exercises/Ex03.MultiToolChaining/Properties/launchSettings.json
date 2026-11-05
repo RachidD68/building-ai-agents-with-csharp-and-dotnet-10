@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex03.MultiToolChaining": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

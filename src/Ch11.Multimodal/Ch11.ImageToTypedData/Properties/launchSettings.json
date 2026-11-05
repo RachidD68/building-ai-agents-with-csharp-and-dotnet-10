@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch11.ImageToTypedData": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

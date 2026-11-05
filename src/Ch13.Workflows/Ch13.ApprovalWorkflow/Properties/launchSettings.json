@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch13.ApprovalWorkflow": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch08.DatabaseLookupTool": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch17.AgentSkills": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

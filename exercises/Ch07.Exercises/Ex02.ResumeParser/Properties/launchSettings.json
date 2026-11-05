@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex02.ResumeParser": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

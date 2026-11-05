@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex02.TracedPipeline": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

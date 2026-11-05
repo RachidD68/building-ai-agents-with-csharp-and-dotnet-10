@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch12.OrchestratorPattern": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

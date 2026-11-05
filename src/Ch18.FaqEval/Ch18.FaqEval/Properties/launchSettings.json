@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch18.FaqEval": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

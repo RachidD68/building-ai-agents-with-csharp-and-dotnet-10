@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch15.OpenTelemetryAgent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

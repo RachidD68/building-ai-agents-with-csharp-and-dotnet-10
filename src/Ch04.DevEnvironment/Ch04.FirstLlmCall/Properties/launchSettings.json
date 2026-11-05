@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch04.FirstLlmCall": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

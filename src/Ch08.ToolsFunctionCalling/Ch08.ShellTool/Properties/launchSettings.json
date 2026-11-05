@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch08.ShellTool": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

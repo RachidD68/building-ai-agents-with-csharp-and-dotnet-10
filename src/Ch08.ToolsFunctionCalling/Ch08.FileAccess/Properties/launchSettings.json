@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch08.FileAccess": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

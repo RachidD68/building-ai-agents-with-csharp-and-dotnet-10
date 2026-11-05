@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch01.FirstGlimpse": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

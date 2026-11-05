@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch19.HarnessComposition": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

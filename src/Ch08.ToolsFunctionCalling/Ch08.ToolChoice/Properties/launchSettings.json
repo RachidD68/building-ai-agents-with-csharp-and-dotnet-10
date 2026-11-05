@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch08.ToolChoice": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

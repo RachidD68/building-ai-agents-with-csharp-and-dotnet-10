@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch12.HandoffOrchestration": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

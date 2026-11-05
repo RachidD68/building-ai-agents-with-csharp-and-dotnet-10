@@ -36,8 +36,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddLlmChatClient(this IServiceCollection services, IConfiguration configuration,
         TimeSpan? attemptTimeout = null)
     {
+        LlmConfigCheck.RunIfRequested(configuration);   // dotnet run -- --config-check
+
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
+        ValidateChatClientSettings(settings);
 
         // Every provider call rides one named HttpClient wrapped in the
         // standard resilience handler (retry on transient 408/429/5xx, circuit
@@ -66,19 +69,7 @@ public static class ServiceCollectionExtensions
 
             return settings.Provider.ToLowerInvariant() switch
             {
-                "azure" => new AzureOpenAIClient(
-                        new Uri(settings.AzureOpenAI.Endpoint),
-                        // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
-                        // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
-                        // great for local dev but adds cold-start latency in production. There,
-                        // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
-                        // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
-                        // — or use ManagedIdentityCredential directly.
-                        new DefaultAzureCredential(),
-                        new AzureOpenAIClientOptions
-                        {
-                            Transport = new HttpClientPipelineTransport(http)
-                        })
+                "azure" => CreateAzureOpenAIClient(http, settings.AzureOpenAI)
                     .GetChatClient(settings.AzureOpenAI.Model)
                     .AsIChatClient(),
 
@@ -105,6 +96,48 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    // An API key, when configured, is used as-is; otherwise Microsoft Entra ID
+    // through DefaultAzureCredential (run `az login` once for local dev).
+    private static AzureOpenAIClient CreateAzureOpenAIClient(HttpClient http, AzureOpenAISettings azure)
+    {
+        AzureOpenAIClientOptions options = new() { Transport = new HttpClientPipelineTransport(http) };
+        Uri endpoint = new(azure.Endpoint);
+
+        if (!string.IsNullOrWhiteSpace(azure.ApiKey))
+        {
+            return new AzureOpenAIClient(endpoint, new ApiKeyCredential(azure.ApiKey), options);
+        }
+
+        // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
+        // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
+        // great for local dev but adds cold-start latency in production. There,
+        // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
+        // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
+        // — or use ManagedIdentityCredential directly.
+        return new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options);
+    }
+
+    // Fail at startup, before any model call, with the name of the missing
+    // setting — instead of an opaque "Value cannot be an empty string".
+    private static void ValidateChatClientSettings(LlmSettings settings)
+    {
+        string? missing = settings.Provider.ToLowerInvariant() switch
+        {
+            "openai" when string.IsNullOrWhiteSpace(settings.OpenAI.ApiKey) => "LlmProvider:OpenAI:ApiKey",
+            "azure" when string.IsNullOrWhiteSpace(settings.AzureOpenAI.Endpoint) => "LlmProvider:AzureOpenAI:Endpoint",
+            _ => null,
+        };
+
+        if (missing is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{settings.Provider}' needs {missing}. Set it with " +
+                $"dotnet user-secrets set \"{missing}\" \"<value>\" (from the project folder) " +
+                $"or the environment variable {missing.Replace(":", "__")}. " +
+                "Run with --config-check to see which settings were found.");
+        }
     }
 
     private static IChatClient CreateOllamaClient(HttpClient http, LlmSettings settings)
@@ -164,6 +197,8 @@ public static class ServiceCollectionExtensions
         string instructions,
         string name)
     {
+        LlmConfigCheck.RunIfRequested(configuration);   // dotnet run -- --config-check
+
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
 
@@ -210,18 +245,27 @@ public static class ServiceCollectionExtensions
         string instructions,
         string name)
     {
+        LlmConfigCheck.RunIfRequested(configuration);   // dotnet run -- --config-check
+
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
 
-        if (string.IsNullOrWhiteSpace(settings.Anthropic.ApiKey))
+        // LlmProvider:Anthropic:ApiKey wins; the conventional ANTHROPIC_API_KEY
+        // environment variable is the fallback.
+        string apiKey = !string.IsNullOrWhiteSpace(settings.Anthropic.ApiKey)
+            ? settings.Anthropic.ApiKey
+            : configuration["ANTHROPIC_API_KEY"] ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException(
-                "LlmProvider:Anthropic:ApiKey is required. " +
-                "Set it via user secrets (or the ANTHROPIC_API_KEY environment variable) — " +
-                "create a key in the Anthropic Console.");
+                "LlmProvider:Anthropic:ApiKey is required. Set it with " +
+                "dotnet user-secrets set \"LlmProvider:Anthropic:ApiKey\" \"<key>\" " +
+                "or the ANTHROPIC_API_KEY environment variable. " +
+                "Run with --config-check to see which settings were found.");
         }
 
-        AnthropicClient client = new() { ApiKey = settings.Anthropic.ApiKey };
+        AnthropicClient client = new() { ApiKey = apiKey };
 
         AIAgent agent = client.AsAIAgent(
             model: settings.Anthropic.Model,

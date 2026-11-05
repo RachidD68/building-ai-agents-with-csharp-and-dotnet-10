@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch10.FaqAgent.CustomProvider": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

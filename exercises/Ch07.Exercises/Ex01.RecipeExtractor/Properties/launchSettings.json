@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex01.RecipeExtractor": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

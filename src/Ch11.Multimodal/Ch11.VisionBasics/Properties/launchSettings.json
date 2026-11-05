@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch11.VisionBasics": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

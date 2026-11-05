@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch07.ResponseFormat": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

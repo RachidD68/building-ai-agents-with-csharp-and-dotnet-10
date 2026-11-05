@@ -16,9 +16,9 @@
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built entirely on the **stable 1.27.0 release** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built on **Microsoft Agent Framework 1.27.0** and **.NET 10 / C# 14**.
 
-Across twenty chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.27.0** — no preview ceremony, no alpha-only attributes, no shifting namespaces.
+Across twenty chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.27.0**. The core packages are generally available; where a chapter uses an API Microsoft still marks experimental, or a package published only as a preview, the book says so and the project opts in explicitly (Appendix A lists every package and its status).
 
 By the final chapter you will have built the Contoso FAQ agent — a small but real production system — and developed the intuition to design, build, and ship your own.
 
@@ -65,7 +65,7 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 
 - **.NET 10** (LTS) / **C# 14**
 - **Microsoft Agent Framework 1.27.0** (the first paperback printing was verified against 1.20.0; every listing it prints builds and runs unchanged on 1.27.0)
-- **Microsoft.Extensions.AI 10.9.0**
+- **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
 Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The full, themed package list is **Appendix A** of the book.
@@ -100,14 +100,25 @@ dotnet run --project src/Ch05.HelloAgent/Ch05.BasicAgent
 
 ### Configuration
 
-Provider settings live in each project's `appsettings.json`; secrets belong in a gitignored `appsettings.local.json` or in [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) — never in source control. For example, to use Azure OpenAI:
+Provider settings live in each project's `appsettings.json`, under `LlmProvider`. Keys belong in [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables — never in source control. Every sample shares one user-secrets store, so a value you set once works in every chapter, and no `dotnet user-secrets init` is needed. Run these from any project folder:
 
 ```bash
-dotnet user-secrets set "AzureOpenAI:Endpoint" "https://YOUR-RESOURCE.openai.azure.com/"
-dotnet user-secrets set "AzureOpenAI:ApiKey" "YOUR-KEY"
+cd src/Ch04.DevEnvironment/Ch04.FirstLlmCall
+dotnet user-secrets set "LlmProvider:Provider" "openai"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "YOUR-KEY"
 ```
 
-Azure/Foundry auth uses `DefaultAzureCredential` (run `az login` once for local dev; scope the credential chain in production).
+Azure OpenAI signs in with Microsoft Entra ID by default (run `az login` once; your account needs the *Cognitive Services OpenAI User* role on the resource). An API key is optional:
+
+```bash
+dotnet user-secrets set "LlmProvider:Provider" "azure"
+dotnet user-secrets set "LlmProvider:AzureOpenAI:Endpoint" "https://YOUR-RESOURCE.openai.azure.com/"
+dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "YOUR-DEPLOYMENT-NAME"
+```
+
+User secrets load in the Development environment, which each sample's launch profile sets (`dotnet run` and Visual Studio both use it). Environment variables work everywhere: `LlmProvider__Provider`, `LlmProvider__OpenAI__ApiKey`, and for Anthropic either `LlmProvider__Anthropic__ApiKey` or `ANTHROPIC_API_KEY`. Microsoft Foundry also signs in through `DefaultAzureCredential`.
+
+Not sure which settings a sample will use? `dotnet run -- --config-check` lists each one and where it comes from — appsettings.json, user secrets or an environment variable — without printing values or calling a model.
 
 ### Repository layout
 

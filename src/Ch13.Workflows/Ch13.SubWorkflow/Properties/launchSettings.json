@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch13.SubWorkflow": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

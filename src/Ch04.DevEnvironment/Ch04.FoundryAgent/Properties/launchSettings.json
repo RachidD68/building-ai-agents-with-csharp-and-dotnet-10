@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch04.FoundryAgent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
