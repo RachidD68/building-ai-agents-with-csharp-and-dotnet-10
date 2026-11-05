@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../Ch14.AspireOrchestration/Ch14.AspireOrchestration.ServiceDefaults/Ch14.AspireOrchestration.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

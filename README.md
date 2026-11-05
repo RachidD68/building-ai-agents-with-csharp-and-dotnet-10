@@ -68,7 +68,7 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 - **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
-Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The full, themed package list is **Appendix A** of the book.
+Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The one exception is the Aspire AppHost (`src/Ch14.Hosting/Ch14.AspireOrchestration/…AppHost`), which opts out because the Aspire SDK adds its own package references; it pins Aspire 13.5.3 and a few patched transitive packages itself. The full, themed package list is **Appendix A** of the book.
 
 ### Prerequisites
 

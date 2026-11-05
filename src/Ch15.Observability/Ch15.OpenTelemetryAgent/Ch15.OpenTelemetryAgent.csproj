@@ -16,7 +16,7 @@
     <PackageReference Include="OpenTelemetry"    />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting"     />
     <PackageReference Include="OpenTelemetry.Exporter.Console"     />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" VersionOverride="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http"     />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
   </ItemGroup>

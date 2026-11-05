@@ -35,10 +35,15 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Extensions.AI;
 using AgenticAI.Common.Extensions;
+using Ch14.AspireOrchestration.ServiceDefaults;
 
 if (args.Contains("--self-test")) return RateLimitKeys.SelfTest();
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// Service defaults: OpenTelemetry (OTLP to the Aspire dashboard when Aspire
+// runs this project) and the health checks behind /health.
+builder.AddServiceDefaults();
 
 // ---------------------------------------------------------------
 // Step 1: Register the IChatClient from Common configuration
@@ -203,6 +208,9 @@ app.MapPost("/summarize", async (
 })
 .RequireAuthorization()
 .RequireRateLimiting("per-user");
+
+// Liveness for load balancers and the Aspire dashboard (anonymous).
+app.MapHealthChecks("/health");
 
 app.MapGet("/agents", () => Results.Ok(new
 {

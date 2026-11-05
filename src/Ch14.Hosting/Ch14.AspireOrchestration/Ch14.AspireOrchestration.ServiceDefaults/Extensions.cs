@@ -41,7 +41,8 @@ public static class Extensions
     public static IHostApplicationBuilder ConfigureOpenTelemetry(
         this IHostApplicationBuilder builder)
     {
-        builder.Services.AddOpenTelemetry()
+        OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
+        otel
             .WithTracing(tracing =>
             {
                 tracing
@@ -56,6 +57,14 @@ public static class Extensions
                     .AddHttpClientInstrumentation()
                     .AddConsoleExporter();
             });
+
+        // The Aspire dashboard receives telemetry over OTLP, not from the console.
+        // Aspire passes its endpoint to every project it starts, so export there
+        // when it is set; run on its own, the console exporter is all you get.
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+        {
+            otel.UseOtlpExporter();
+        }
 
         return builder;
     }
