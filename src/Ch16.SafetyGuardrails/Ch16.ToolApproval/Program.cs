@@ -25,14 +25,20 @@
 // ("MAAI001")] through MAF 1.13; they are GA in 1.14, so the old <NoWarn>
 // suppression is gone from the .csproj. The ApprovalRequiredAIFunction /
 // ToolApprovalRequestContent types in Microsoft.Extensions.AI are stable.
+//
+// Offline check of the refund rule: dotnet run -- --self-test
 // ============================================================================
 
 using System.ComponentModel;
+using System.Globalization;
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return RefundRule.SelfTest();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -66,10 +72,10 @@ AIFunction refundTool = new ApprovalRequiredAIFunction(
 // AutoApprovalRules receive a ToolAutoApprovalRuleContext BEFORE execution —
 // the pending call is context.FunctionCallContent (tool name + arguments) —
 // and return true to auto-approve, false to require a human.
-// Here: small refunds (<= $50) are auto-approved; anything larger escalates.
-// This is least-privilege + argument validation in one hook.
-const decimal AutoApproveRefundLimit = 50m;
-
+// Here: small positive refunds (more than $0, at most $50) are auto-approved;
+// anything else escalates — including zero, negative and unreadable amounts.
+// This is least-privilege + argument validation in one hook. (RefundRule, at
+// the bottom of the file, holds the rule so it can be tested without a model.)
 var approvalOptions = new ToolApprovalAgentOptions
 {
     AutoApprovalRules =
@@ -78,12 +84,11 @@ var approvalOptions = new ToolApprovalAgentOptions
         {
             if (context.FunctionCallContent.Name == "issue_refund"
                 && context.FunctionCallContent.Arguments is { } args
-                && args.TryGetValue("amount", out object? raw)
-                && decimal.TryParse(raw?.ToString(), out decimal amount))
+                && args.TryGetValue("amount", out object? raw))
             {
-                bool auto = amount <= AutoApproveRefundLimit;
+                bool auto = RefundRule.ShouldAutoApprove(raw, out string shown);
                 Console.WriteLine(
-                    $"   [rule] issue_refund ${amount} -> {(auto ? "auto-approved" : "needs human approval")}");
+                    $"   [rule] issue_refund {shown} -> {(auto ? "auto-approved" : "needs human approval")}");
                 return new ValueTask<bool>(auto);
             }
 
@@ -136,6 +141,7 @@ await DriveWithDecision(agent, s3, "Refund $20 to customer C-1001.",
 Console.WriteLine();
 
 Console.WriteLine("=== Done ===");
+return 0;
 
 // ----------------------------------------------------------------------------
 // Drives one prompt through the approval loop: run, inspect for approval
@@ -170,4 +176,72 @@ static async Task DriveWithDecision(
     }
 
     Console.WriteLine($"<< {response.Text}");
+}
+
+// ── The refund rule ─────────────────────────────────────────────────
+internal static class RefundRule
+{
+    public const decimal AutoApproveLimit = 50m;
+
+    /// <summary>
+    /// Auto-approve only a refund that is more than zero and at most the limit.
+    /// The amount is read the same way on every machine (invariant culture);
+    /// anything that is not a plain number — "1,5", "abc", null — escalates.
+    /// </summary>
+    public static bool ShouldAutoApprove(object? raw, out string shown)
+    {
+        if (!TryReadAmount(raw, out decimal amount))
+        {
+            shown = $"'{raw}' (unreadable amount)";
+            return false;
+        }
+        shown = "$" + amount.ToString(CultureInfo.InvariantCulture);
+        return amount > 0m && amount <= AutoApproveLimit;
+    }
+
+    static bool TryReadAmount(object? raw, out decimal amount)
+    {
+        const NumberStyles plain = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign;
+        switch (raw)
+        {
+            case JsonElement { ValueKind: JsonValueKind.Number } n:
+                return n.TryGetDecimal(out amount);
+            case JsonElement { ValueKind: JsonValueKind.String } t:
+                return decimal.TryParse(t.GetString(), plain, CultureInfo.InvariantCulture, out amount);
+            case string text:
+                return decimal.TryParse(text, plain, CultureInfo.InvariantCulture, out amount);
+            case decimal d:
+                amount = d; return true;
+            case int or long or double or float:
+                amount = Convert.ToDecimal(raw, CultureInfo.InvariantCulture); return true;
+            default:
+                amount = 0m; return false;
+        }
+    }
+
+    /// <summary>Offline check: dotnet run -- --self-test (runs under de-DE on purpose).</summary>
+    public static int SelfTest()
+    {
+        CultureInfo.CurrentCulture = new CultureInfo("de-DE");   // "1,5" would be 1.5 here
+        (object? Raw, bool Auto)[] cases =
+        [
+            (0.01m, true), (50m, true), (20, true),
+            (JsonDocument.Parse("20").RootElement, true),
+            (JsonDocument.Parse("\"1.5\"").RootElement, true),
+            ("1.5", true),
+            (-10m, false), (0m, false), (50.01m, false), (5000, false),
+            (JsonDocument.Parse("-10").RootElement, false),
+            ("1,5", false), ("abc", false), ("", false), (null, false),
+        ];
+        int passed = 0;
+        foreach ((object? raw, bool expected) in cases)
+        {
+            bool actual = ShouldAutoApprove(raw, out string shown);
+            bool ok = actual == expected;
+            passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {shown,-28} -> {(actual ? "auto-approved" : "needs human approval")}");
+        }
+        Console.WriteLine($"RESULT {passed}/{cases.Length}");
+        return passed == cases.Length ? 0 : 1;
+    }
 }
