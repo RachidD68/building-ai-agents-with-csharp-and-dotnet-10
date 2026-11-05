@@ -8,12 +8,16 @@
 //   - StreamingRun: enables interaction with a running workflow.
 //   - RequestInfoEvent: signals that the workflow needs human input.
 //   - ExternalRequest.CreateResponse(): sends human decisions back.
-//   - Revision loop: rejected drafts loop back for improvement.
+//   - Revision loop: drafts sent back for revision loop for improvement.
+//   - Fail closed: only an explicit "approve" reaches the finalizer.
 //
 // The workflow:
 //   Topic → Drafter → Validator → [RequestPort: Human Approval]
-//     ↳ Approved → Finalizer → Output
-//     ↳ Rejected → Revision → Drafter (with feedback) → Validator → ...
+//     ↳ approve → Finalizer → Output
+//     ↳ revise  → Revision → Drafter (with feedback) → Validator → ...
+//     ↳ reject, or no valid decision → stop; nothing is finalized
+//
+// Offline check of the decision parser: dotnet run -- --self-test
 // ============================================================================
 
 using Microsoft.Agents.AI;
@@ -22,6 +26,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return ReviewDecisions.SelfTest();
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
 hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
@@ -115,6 +121,7 @@ StreamingRun stream = await InProcessExecution.RunStreamingAsync(
     approvalWorkflow, topic, sessionId: Guid.NewGuid().ToString(), cts.Token);
 
 // Process streaming events and handle human input requests.
+string? stoppedReason = null;
 await foreach (WorkflowEvent evt in stream.WatchStreamAsync(cts.Token))
 {
     switch (evt)
@@ -131,19 +138,26 @@ await foreach (WorkflowEvent evt in stream.WatchStreamAsync(cts.Token))
                 Console.WriteLine($"\nDraft:\n{validationData.Draft}");
                 Console.WriteLine($"\nValidation:\n{validationData.Assessment}");
                 Console.WriteLine();
-                Console.WriteLine("Enter 'approve' to accept or 'revise' to request changes:");
-                Console.Write("> ");
 
-                string? decision = Console.ReadLine()?.Trim().ToLowerInvariant();
-                if (string.IsNullOrEmpty(decision) || (decision != "approve" && decision != "revise"))
+                // Only an explicit decision moves the workflow. An empty line, a
+                // typo or the end of input leaves the review pending: a review
+                // gate must fail closed, so nothing is finalized unless a person
+                // actually typed "approve".
+                ReviewDecision? decision = ReadDecision();
+                if (decision is null)
                 {
-                    decision = "approve"; // Default to approve.
-                    Console.WriteLine("  (Defaulting to 'approve')");
+                    stoppedReason = "Review left pending — nothing was finalized.";
+                    break;
+                }
+                if (decision == ReviewDecision.Reject)
+                {
+                    stoppedReason = "Draft rejected — nothing was finalized.";
+                    break;
                 }
 
                 // On approve, send the draft itself downstream to the finalizer;
                 // on revise, send "revise" so the workflow loops back.
-                string reply = decision == "revise" ? "revise" : validationData.Draft;
+                string reply = decision == ReviewDecision.Revise ? "revise" : validationData.Draft;
                 ExternalResponse response = request.CreateResponse(reply);
                 await stream.SendResponseAsync(response);
                 Console.WriteLine($"  Decision sent: {decision}\n");
@@ -161,9 +175,33 @@ await foreach (WorkflowEvent evt in stream.WatchStreamAsync(cts.Token))
             Console.WriteLine($"\n  [ERROR] {error.Data}");
             break;
     }
+
+    if (stoppedReason is not null) break;   // leave the event loop, not just the switch
+}
+
+if (stoppedReason is not null)
+{
+    Console.WriteLine($"\n  {stoppedReason}");
+    return 2;
 }
 
 Console.WriteLine("\n=== Approval Workflow demo complete! ===");
+return 0;
+
+// Asks up to three times; returns null on end of input or repeated invalid entries.
+static ReviewDecision? ReadDecision()
+{
+    for (int attempt = 0; attempt < 3; attempt++)
+    {
+        Console.WriteLine("Enter 'approve', 'revise' or 'reject':");
+        Console.Write("> ");
+        string? line = Console.ReadLine();
+        if (line is null) return null;                       // end of input
+        if (ReviewDecisions.TryParse(line, out ReviewDecision parsed)) return parsed;
+        Console.WriteLine($"  '{line.Trim()}' is not a decision.");
+    }
+    return null;
+}
 
 // ---------------------------------------------------------------
 // Executors
@@ -241,3 +279,48 @@ internal sealed class RevisionExecutor() : Executor<string, string>("revision")
 /// <param name="Draft">The document draft text.</param>
 /// <param name="Assessment">The validator's quality assessment.</param>
 internal sealed record ValidationResult(string Draft, string Assessment);
+
+/// <summary>The only three outcomes a reviewer can choose.</summary>
+internal enum ReviewDecision { Approve, Revise, Reject }
+
+internal static class ReviewDecisions
+{
+    /// <summary>
+    /// Accepts exactly "approve", "revise" or "reject" (case and surrounding
+    /// spaces ignored). Everything else — empty input, typos, "approved",
+    /// "yes" — is not a decision.
+    /// </summary>
+    public static bool TryParse(string? input, out ReviewDecision decision)
+    {
+        switch (input?.Trim().ToLowerInvariant())
+        {
+            case "approve": decision = ReviewDecision.Approve; return true;
+            case "revise": decision = ReviewDecision.Revise; return true;
+            case "reject": decision = ReviewDecision.Reject; return true;
+            default: decision = default; return false;
+        }
+    }
+
+    /// <summary>Offline check of the parser: dotnet run -- --self-test</summary>
+    public static int SelfTest()
+    {
+        (string? Input, ReviewDecision? Expected)[] cases =
+        [
+            ("approve", ReviewDecision.Approve), ("  APPROVE ", ReviewDecision.Approve),
+            ("revise", ReviewDecision.Revise), ("reject", ReviewDecision.Reject),
+            ("", null), ("   ", null), ("aprove", null), ("approved", null),
+            ("yes", null), (null, null),
+        ];
+        int passed = 0;
+        foreach ((string? input, ReviewDecision? expected) in cases)
+        {
+            ReviewDecision? actual = TryParse(input, out ReviewDecision d) ? d : null;
+            bool ok = actual == expected;
+            passed += ok ? 1 : 0;
+            string shown = input is null ? "<end of input>" : $"\"{input}\"";
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {shown,-16} -> {actual?.ToString() ?? "pending"}");
+        }
+        Console.WriteLine($"RESULT {passed}/{cases.Length}");
+        return passed == cases.Length ? 0 : 1;
+    }
+}
