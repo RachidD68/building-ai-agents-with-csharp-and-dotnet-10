@@ -8,10 +8,13 @@
 // system state — and dangerous — the same delegate gives an attacker the keys
 // to the host if you misconfigure it. The safety pattern in this sample:
 //
-//   1. Pin the working directory: every command runs in a scratch sandbox.
-//   2. Allow-list the executable: only `dotnet`, `ls`, `dir`, `cat`, `type`,
-//      `wc`, `find`, `where` are permitted; everything else (rm, sudo, curl,
-//      ...) is rejected before a process is ever started.
+//   1. Allow-list read-only viewers: `ls`, `dir`, `cat`, `type`, `wc`. `dotnet`
+//      is allowed only for --version/--info/--list-sdks/--list-runtimes:
+//      `dotnet run` or `dotnet exec` would run arbitrary code, and `find`
+//      (dropped) can execute commands with -exec.
+//   2. Confine every path argument to a scratch folder: rooted paths, `..`
+//      escapes, UNC and drive-relative paths are refused, and flags must be
+//      plain letters (`-l`, `-la`), so a path cannot hide inside a flag.
 //   3. Take structured arguments: the tool accepts an executable name plus a
 //      string[] of arguments and hands them to ProcessStartInfo.ArgumentList,
 //      so each argument is passed verbatim to the program. There is no shell
@@ -22,8 +25,11 @@
 //
 // The real guards are #1, #2, and the combination of UseShellExecute = false +
 // ArgumentList in #3 — together they mean the model can only launch a
-// known-good program with arguments that never reach a shell. (We never invoke
-// a shell, so shell metacharacters in an argument are just literal bytes.)
+// read-only program, on files inside the scratch folder, with arguments that
+// never reach a shell. This is NOT a sandbox: the program still runs with your
+// account's rights. Real isolation needs an OS boundary (a container or VM).
+//
+// Offline check of the policy: dotnet run -- --self-test
 //
 // In production, a shell tool should NEVER be exposed on a public endpoint
 // without the safety pipeline from Chapter 16 (input sanitisation + critic
@@ -42,6 +48,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
+if (args.Contains("--self-test")) return ShellPolicy.SelfTest();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
 
@@ -51,34 +59,23 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ── Allow-list for the shell tool ──────────────────────────────────
-// Executables that are SAFE to expose to an LLM. Adjust per deployment;
-// never expose anything that can mutate state, escalate privileges, or
-// reach the network. This allow-list is the primary gate: a name that is
-// not on it never reaches a process, no matter what arguments accompany it.
-//
-// Deliberately ABSENT: pwsh, powershell, bash, sh, cmd. A shell or script
-// host on the allow-list defeats every other guard in this file — the model
-// could pass `-Command "Remove-Item ..."` and the "no shell is involved"
-// guarantee below would be a lie. If you ever think you need one, what you
-// actually need is a purpose-built tool for that one operation.
-HashSet<string> allowedCommands = new(StringComparer.OrdinalIgnoreCase)
-{
-    "dotnet", "ls", "dir", "cat", "type", "wc", "find", "where",
-};
-
-string sandboxDir = Path.Combine(
+// ── The policy every call goes through (ShellPolicy, at the bottom) ──
+// Deliberately ABSENT from the allow-list: pwsh, powershell, bash, sh, cmd.
+// A shell or script host defeats every other guard in this file — the model
+// could pass `-Command "Remove-Item ..."`. If you ever think you need one,
+// what you actually need is a purpose-built tool for that one operation.
+string scratchDir = Path.Combine(
     Path.GetTempPath(),
     $"ch08-shelltool-{Guid.NewGuid():N}");
-Directory.CreateDirectory(sandboxDir);
+Directory.CreateDirectory(scratchDir);
 
-// Seed the sandbox with a couple of files for the agent to discover.
-File.WriteAllText(Path.Combine(sandboxDir, "README.md"),
-    "# Sandbox\nThis directory was created for the Ch08 shell-tool demo.\n");
-File.WriteAllText(Path.Combine(sandboxDir, "data.txt"),
+// Seed the scratch folder with a couple of files for the agent to discover.
+File.WriteAllText(Path.Combine(scratchDir, "README.md"),
+    "# Scratch folder\nThis directory was created for the Ch08 shell-tool demo.\n");
+File.WriteAllText(Path.Combine(scratchDir, "data.txt"),
     string.Join("\n", Enumerable.Range(1, 50).Select(i => $"line {i}")));
 
-Console.WriteLine($"Sandbox: {sandboxDir}");
+Console.WriteLine($"Scratch folder: {scratchDir}");
 Console.WriteLine();
 
 // ── The shell tool: an AIFunction the model can call ───────────────
@@ -87,11 +84,11 @@ Console.WriteLine();
 // arguments straight to ProcessStartInfo.ArgumentList — never to a shell,
 // never re-parsed. That removes a whole class of quoting and injection bugs.
 [Description("""
-    Executes a single safe program in the sandbox directory and returns its
-    stdout. The program must be on the allow-list (dotnet, ls, dir, cat, type,
-    wc, find, where). Arguments are passed verbatim to the program — no shell
-    is involved, so pipelines, redirects, and command chaining are impossible.
-    Output is truncated at 4 KB.
+    Runs one read-only program in the scratch folder and returns its stdout.
+    Allowed: ls, dir, cat, type, wc on files inside the scratch folder, and
+    dotnet --version / --info / --list-sdks / --list-runtimes. Arguments are
+    passed verbatim to the program — no shell is involved, so pipelines,
+    redirects, and command chaining are impossible. Output is truncated at 4 KB.
 """)]
 async Task<string> RunShellAsync(
     [Description("The program to run, e.g. \"dotnet\", \"ls\", or \"cat\". Must be on the allow-list.")]
@@ -99,23 +96,19 @@ async Task<string> RunShellAsync(
     [Description("The arguments to pass to the program, each as a separate array element, e.g. [\"--version\"] or [\"-la\"] or [\"README.md\"]. Pass an empty array for no arguments.")]
     string[]? arguments)
 {
-    if (string.IsNullOrWhiteSpace(executable))
+    // The policy is the gate: a refused call never reaches a process. Because
+    // we never launch a shell (UseShellExecute = false below) and pass
+    // arguments through ArgumentList, they cannot smuggle in a second command.
+    string? refusal = ShellPolicy.Check(executable, arguments ?? [], scratchDir);
+    if (refusal is not null)
     {
-        return "Error: no executable specified.";
-    }
-
-    // The allow-list is the gate. Because we never launch a shell (see
-    // UseShellExecute = false below) and pass arguments through ArgumentList,
-    // the arguments cannot smuggle in a second command — they are just data.
-    if (!allowedCommands.Contains(executable))
-    {
-        return $"Error: program '{executable}' is not on the allow-list.";
+        return $"Error: {refusal}";
     }
 
     ProcessStartInfo startInfo = new()
     {
         FileName = executable,
-        WorkingDirectory = sandboxDir,
+        WorkingDirectory = scratchDir,
         UseShellExecute = false,
         RedirectStandardOutput = true,
         RedirectStandardError = true,
@@ -171,14 +164,14 @@ async Task<string> RunShellAsync(
 AIFunction shellTool = AIFunctionFactory.Create(
     (Delegate)RunShellAsync,
     name: "run_shell",
-    description: "Run a safe, allow-listed program (with structured arguments) in the sandbox directory.");
+    description: "Run a read-only, allow-listed program (with structured arguments) in the scratch folder.");
 
 ChatClientAgent agent = new(
     chatClient,
     instructions: """
         You are a careful systems-engineer assistant with access to a shell
-        tool. The tool runs a single allow-listed program in a sandbox
-        directory; call it with the program name and an array of arguments
+        tool. The tool runs a single read-only program in a scratch
+        folder; call it with the program name and an array of arguments
         (for example, executable "ls" with arguments ["-la"]). Use it to
         answer questions about the directory's contents. Prefer fewer, more
         targeted commands over many small ones. Cite the actual output you
@@ -214,4 +207,94 @@ Console.WriteLine();
 Console.WriteLine("=== Done ===");
 
 // Cleanup
-try { Directory.Delete(sandboxDir, recursive: true); } catch { }
+try { Directory.Delete(scratchDir, recursive: true); } catch { }
+return 0;
+
+// ── The policy ─────────────────────────────────────────────────────
+internal static class ShellPolicy
+{
+    static readonly HashSet<string> FileViewers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ls", "dir", "cat", "type", "wc",
+    };
+
+    static readonly HashSet<string> DotnetInfoFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "--version", "--info", "--list-sdks", "--list-runtimes",
+    };
+
+    /// <summary>Returns null when the call is allowed, otherwise why it is refused.</summary>
+    public static string? Check(string? executable, IReadOnlyList<string> arguments, string scratchDir)
+    {
+        if (string.IsNullOrWhiteSpace(executable)) return "no executable specified.";
+
+        if (executable.Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            return arguments.Count == 1 && DotnetInfoFlags.Contains(arguments[0])
+                ? null
+                : "dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.";
+        }
+
+        if (!FileViewers.Contains(executable))
+            return $"program '{executable}' is not on the allow-list.";
+
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scratchDir)) + Path.DirectorySeparatorChar;
+        foreach (string arg in arguments)
+        {
+            if (arg.StartsWith('-'))
+            {
+                // Flags must be plain letters (-l, -la, --all): no '=', no path inside a flag.
+                if (!System.Text.RegularExpressions.Regex.IsMatch(arg, "^--?[A-Za-z]+$"))
+                    return $"flag '{arg}' is not allowed.";
+                continue;
+            }
+            // Rooted (C:\x, \x, /x), UNC (\\server\share) and drive-relative (D:x) paths are refused.
+            if (Path.IsPathRooted(arg) || arg.Contains(':'))
+                return $"'{arg}' is outside the scratch folder.";
+            string full = Path.GetFullPath(Path.Combine(root, arg));
+            if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                return $"'{arg}' is outside the scratch folder.";
+        }
+        return null;
+    }
+
+    /// <summary>Offline check: dotnet run -- --self-test</summary>
+    public static int SelfTest()
+    {
+        string scratch = Path.Combine(Path.GetTempPath(), "ch08-policy-selftest");
+        (string Exe, string[] Args, bool Allowed)[] cases =
+        [
+            ("ls", [], true),
+            ("ls", ["-la"], true),
+            ("wc", ["-l", "data.txt"], true),
+            ("cat", ["README.md"], true),
+            ("cat", ["notes/today.txt"], true),
+            ("dotnet", ["--version"], true),
+            ("cat", [@"C:\Windows\win.ini"], false),
+            ("cat", ["/etc/passwd"], false),
+            ("cat", [@"..\..\secrets.txt"], false),
+            ("cat", ["../outside.txt"], false),
+            ("cat", [@"\\server\share\file"], false),
+            ("cat", ["D:file.txt"], false),
+            ("cat", ["--file=../x"], false),
+            ("dotnet", ["run"], false),
+            ("dotnet", ["exec", "a.dll"], false),
+            ("dotnet", ["--version", "extra"], false),
+            ("find", [".", "-exec", "rm", "{}", ";"], false),
+            ("where", ["cmd"], false),
+            ("pwsh", ["-Command", "Get-ChildItem"], false),
+            ("", [], false),
+        ];
+        int passed = 0;
+        foreach ((string exe, string[] a, bool allowed) in cases)
+        {
+            string? refusal = Check(exe, a, scratch);
+            bool ok = (refusal is null) == allowed;
+            passed += ok ? 1 : 0;
+            string call = $"{exe} {string.Join(' ', a)}".Trim();
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {call,-34} -> {(refusal is null ? "allowed" : "refused: " + refusal)}");
+        }
+        Console.WriteLine($"RESULT {passed}/{cases.Length}");
+        return passed == cases.Length ? 0 : 1;
+    }
+}
