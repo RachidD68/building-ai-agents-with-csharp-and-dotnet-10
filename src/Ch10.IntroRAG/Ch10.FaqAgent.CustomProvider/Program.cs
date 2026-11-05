@@ -104,7 +104,7 @@ GeneratedEmbeddings<Embedding<float>> embeddings = await embeddingGenerator.Gene
 
 for (int i = 0; i < allChunks.Count; i++)
 {
-    allChunks[i].Embedding = embeddings[i].Vector;
+    allChunks[i].Embedding = FaqChunk.CheckDimensions(embeddings[i].Vector);
     await collection.UpsertAsync(allChunks[i], cts.Token);
 }
 

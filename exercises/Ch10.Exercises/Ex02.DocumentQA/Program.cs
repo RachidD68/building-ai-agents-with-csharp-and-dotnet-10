@@ -61,7 +61,7 @@ foreach (((string id, string content), Embedding<float> embedding) in documents.
     {
         Id = id,
         Content = content,
-        Vector = embedding.Vector
+        Vector = DocumentChunk.CheckDimensions(embedding.Vector)
     }, cancellationToken: cts.Token);
 
     Console.WriteLine($"  Embedded: {id} ({content.Length} chars)");
@@ -192,6 +192,23 @@ sealed class DocumentChunk
     public string Content { get; set; } = string.Empty;
 
     /// <summary>The embedding vector.</summary>
-    [VectorStoreVector(1536)]
+    /// <summary>
+    /// Vector size, part of the collection schema. 768 matches nomic-embed-text,
+    /// the local default; text-embedding-3-small (OpenAI/Azure) produces 1536.
+    /// The in-memory store does not check this, but a real vector database
+    /// rejects vectors of the wrong size, so the sample checks it at startup.
+    /// </summary>
+    public const int Dimensions = 768;
+
+    /// <summary>Returns the vector, or fails with a clear message if its size does not match <see cref="Dimensions"/>.</summary>
+    public static ReadOnlyMemory<float> CheckDimensions(ReadOnlyMemory<float> vector) =>
+        vector.Length == Dimensions
+            ? vector
+            : throw new InvalidOperationException(
+                $"The embedding model returned {vector.Length} dimensions, but DocumentChunk declares {Dimensions}. " +
+                "nomic-embed-text (the local default) produces 768; text-embedding-3-small produces 1536. " +
+                $"Set DocumentChunk.Dimensions in Program.cs to match your embedding model.");
+
+    [VectorStoreVector(Dimensions)]
     public ReadOnlyMemory<float> Vector { get; set; }
 }

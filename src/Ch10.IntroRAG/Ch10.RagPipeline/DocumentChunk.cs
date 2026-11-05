@@ -33,9 +33,26 @@ public sealed class DocumentChunk
     public int ChunkIndex { get; set; }
 
     /// <summary>
-    /// The embedding vector for this chunk's content.
-    /// Dimensions must match the embedding model (e.g., 1536 for text-embedding-3-small).
+    /// Vector size, part of the collection schema. 768 matches nomic-embed-text,
+    /// the local default; text-embedding-3-small (OpenAI/Azure) produces 1536.
+    /// The in-memory store does not check this, but a real vector database
+    /// rejects vectors of the wrong size, so the sample checks it at startup.
     /// </summary>
-    [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity)]
+    public const int Dimensions = 768;
+
+    /// <summary>Returns the vector, or fails with a clear message if its size does not match <see cref="Dimensions"/>.</summary>
+    public static ReadOnlyMemory<float> CheckDimensions(ReadOnlyMemory<float> vector) =>
+        vector.Length == Dimensions
+            ? vector
+            : throw new InvalidOperationException(
+                $"The embedding model returned {vector.Length} dimensions, but DocumentChunk declares {Dimensions}. " +
+                "nomic-embed-text (the local default) produces 768; text-embedding-3-small produces 1536. " +
+                $"Set DocumentChunk.Dimensions in DocumentChunk.cs to match your embedding model.");
+
+    /// <summary>
+    /// The embedding vector for this chunk's content.
+    /// Dimensions must match the embedding model: see <see cref="Dimensions"/>.
+    /// </summary>
+    [VectorStoreVector(Dimensions, DistanceFunction = DistanceFunction.CosineSimilarity)]
     public ReadOnlyMemory<float> Embedding { get; set; }
 }

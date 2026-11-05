@@ -128,7 +128,7 @@ GeneratedEmbeddings<Embedding<float>> embeddings = await embeddingGenerator.Gene
 
 for (int i = 0; i < allChunks.Count; i++)
 {
-    allChunks[i].Embedding = embeddings[i].Vector;
+    allChunks[i].Embedding = DocumentChunk.CheckDimensions(embeddings[i].Vector);
 }
 
 Console.WriteLine($"Generated {embeddings.Count} embeddings.\n");
