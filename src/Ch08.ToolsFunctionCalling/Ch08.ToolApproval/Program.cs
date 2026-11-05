@@ -22,6 +22,12 @@
 // the function-invoking client converts ALL the tool calls in that response
 // into approval requests. We set ChatOptions.AllowMultipleToolCalls = false so
 // the model emits one call at a time and each approval decision is isolated.
+//
+// Approval is not idempotency. An approved call can still run twice — a retry
+// after a timeout, a resumed session, a double-clicked button. So the refund
+// tool is idempotent on its business key (the order id): refunding the same
+// order again returns the original confirmation and issues no second credit.
+// Offline check of that ledger: dotnet run -- --self-test
 // ============================================================================
 
 using System.ComponentModel;
@@ -31,6 +37,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return RefundLedger.SelfTest();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -119,6 +127,7 @@ AgentResponse autoResponse = await autoAgent.RunAsync(
 Console.WriteLine($"Agent: {autoResponse.Text}\n");
 
 Console.WriteLine("=== Tool approval demo complete! ===");
+return 0;
 
 // ----------------------------------------------------------------------------
 // Drives one approve/reject loop against an agent that has a gated tool.
@@ -186,17 +195,74 @@ static string FormatArgs(FunctionCallContent? call)
 // Tools
 // ----------------------------------------------------------------------------
 
-[Description("Refunds the specified order in full and returns a confirmation. This is a sensitive write operation.")]
+[Description("Refunds the specified order in full and returns a confirmation. This is a sensitive write operation. Idempotent per order: refunding the same order again returns the original confirmation and issues no second credit.")]
 static string RefundOrder(
     [Description("The order identifier to refund, e.g. 'ORD-1001'.")] string orderId)
-{
-    // In a real system this would call the payments service.
-    return $"Refund processed for {orderId}. A credit of $129.00 was issued to the original payment method.";
-}
+    => RefundLedger.Refund(orderId);
 
 [Description("Gets the current status of an order. Read-only and safe to call without approval.")]
 static string GetOrderStatus(
     [Description("The order identifier to look up, e.g. 'ORD-3003'.")] string orderId)
 {
     return $"Order {orderId}: shipped on 2026-04-12, expected delivery 2026-04-16.";
+}
+
+// ----------------------------------------------------------------------------
+// The refund ledger: one credit per order, however many times the call runs.
+// In a real system this is a UNIQUE constraint on the order id in the payments
+// database (and the payment provider's own idempotency key), not a dictionary.
+// ----------------------------------------------------------------------------
+internal static class RefundLedger
+{
+    static readonly object Gate = new();
+    static readonly Dictionary<string, string> Confirmations = new(StringComparer.OrdinalIgnoreCase);
+    static int creditsIssued;
+
+    public static int CreditsIssued => creditsIssued;
+
+    public static string Refund(string orderId)
+    {
+        string key = orderId.Trim();
+        // The check and the credit happen under one lock, so two concurrent
+        // calls for the same order can never both issue a credit.
+        lock (Gate)
+        {
+            if (Confirmations.TryGetValue(key, out string? earlier))
+                return $"{earlier} (Already refunded earlier; no second credit was issued.)";
+
+            // In a real system this would call the payments service.
+            string confirmation = $"Refund processed for {key}. A credit of $129.00 was issued to the original payment method.";
+            creditsIssued++;
+            Confirmations[key] = confirmation;
+            return confirmation;
+        }
+    }
+
+    /// <summary>Offline check: dotnet run -- --self-test</summary>
+    public static int SelfTest()
+    {
+        int passed = 0, total = 0;
+        void Check(string name, bool ok)
+        {
+            total++; passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+        }
+
+        string first = Refund("ORD-1001");
+        string again = Refund("ORD-1001");
+        string sameIdOtherCase = Refund(" ord-1001 ");
+        Check("first refund issues a credit", first.StartsWith("Refund processed") && !first.Contains("Already"));
+        Check("second refund of the same order issues no credit", again.Contains("no second credit"));
+        Check("order id is matched case-insensitively and trimmed", sameIdOtherCase.Contains("no second credit"));
+        Check("exactly one credit for ORD-1001", CreditsIssued == 1);
+
+        Parallel.For(0, 50, _ => Refund("ORD-2002"));
+        Check("50 concurrent refunds of ORD-2002 issue one credit", CreditsIssued == 2);
+
+        Refund("ORD-3003");
+        Check("a different order gets its own credit", CreditsIssued == 3);
+
+        Console.WriteLine($"RESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
+    }
 }
