@@ -77,7 +77,11 @@ public static class ServiceCollectionExtensions
                         new ApiKeyCredential(settings.OpenAI.ApiKey),
                         new OpenAI.OpenAIClientOptions
                         {
-                            Transport = new HttpClientPipelineTransport(http)
+                            Transport = new HttpClientPipelineTransport(http),
+                            // One retry owner: the resilience handler on the "llm"
+                            // HttpClient. Left on, the SDK's own retries would
+                            // multiply with it (4 x 4 = 16 sends for one call).
+                            RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
                         })
                     .GetChatClient(settings.OpenAI.Model)
                     .AsIChatClient(),
@@ -102,7 +106,12 @@ public static class ServiceCollectionExtensions
     // through DefaultAzureCredential (run `az login` once for local dev).
     private static AzureOpenAIClient CreateAzureOpenAIClient(HttpClient http, AzureOpenAISettings azure)
     {
-        AzureOpenAIClientOptions options = new() { Transport = new HttpClientPipelineTransport(http) };
+        AzureOpenAIClientOptions options = new()
+        {
+            Transport = new HttpClientPipelineTransport(http),
+            // One retry owner: the resilience handler on the "llm" HttpClient.
+            RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
+        };
         Uri endpoint = new(azure.Endpoint);
 
         if (!string.IsNullOrWhiteSpace(azure.ApiKey))
