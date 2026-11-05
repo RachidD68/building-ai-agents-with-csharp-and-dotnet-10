@@ -6,15 +6,18 @@
 //   - SSE streaming from a keyed agent  (TypedResults.ServerSentEvents)
 //   - JWT bearer authentication          (RequireAuthorization)
 //   - Per-user rate limiting             (AddRateLimiter / RequireRateLimiting)
-//   - Built-in OpenAPI document          (AddOpenApi / MapOpenApi)
 //
 // Key concepts:
 //   - AddAIAgent():                register agents with DI via MAF Hosting
-//   - WithInMemorySessionStore():  automatic session management per agent
+//   - WithInMemorySessionStore():  registers a session store with the agent
 //   - Keyed services:              resolve specific agents by name
 //   - Minimal API endpoints:       expose agents as HTTP services
 //
-// Endpoints (all agent endpoints require a bearer token):
+// Endpoints (all agent endpoints require a bearer token). Each POST is
+// SINGLE-TURN: it creates a fresh AgentSession per request, so the agent does
+// not remember earlier requests. A conversational endpoint would load the
+// caller's session by a conversation id, run, and save it back.
+//
 //   POST /chat            → assistant agent  (JSON)
 //   POST /chat/stream     → assistant agent  (Server-Sent Events)
 //   POST /summarize       → summarizer agent (JSON)
@@ -32,6 +35,8 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Extensions.AI;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return RateLimitKeys.SelfTest();
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -80,17 +85,15 @@ builder.Services.AddAuthorization();
 // ---------------------------------------------------------------
 // Step 4: Rate limiting — a per-user partition, 20 requests / 10s
 // ---------------------------------------------------------------
-// The partition key is the authenticated subject; unauthenticated callers
-// fall back to the remote IP so a single client cannot exhaust the quota.
+// The partition key is the authenticated subject (see RateLimitKeys at the
+// bottom); unauthenticated callers fall back to the remote IP so a single
+// client cannot exhaust the quota.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("per-user", httpContext =>
     {
-        string partitionKey =
-            httpContext.User.FindFirst("sub")?.Value
-            ?? httpContext.Connection.RemoteIpAddress?.ToString()
-            ?? "anonymous";
+        string partitionKey = RateLimitKeys.PartitionKey(httpContext);
 
         return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
             new FixedWindowRateLimiterOptions
@@ -224,6 +227,7 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.Run();
+return 0;
 
 // ---------------------------------------------------------------
 // DTOs
@@ -247,3 +251,55 @@ internal sealed record AgentResponseDto(
     string Message,
     int? InputTokens,
     int? OutputTokens);
+
+// ---------------------------------------------------------------
+// Rate-limit partition key
+// ---------------------------------------------------------------
+// AddJwtBearer maps inbound claims by default (MapInboundClaims = true), so a
+// token's "sub" arrives as ClaimTypes.NameIdentifier. Looking only for "sub"
+// found nothing and put every user in their IP's partition — so two users
+// behind one NAT shared a quota, and one user could not be limited alone.
+internal static class RateLimitKeys
+{
+    public static string PartitionKey(HttpContext httpContext) =>
+        httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+        ?? httpContext.User.FindFirst("sub")?.Value
+        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+        ?? "anonymous";
+
+    /// <summary>Offline check: dotnet run -- --self-test</summary>
+    public static int SelfTest()
+    {
+        static HttpContext Context(string? ip, params (string Type, string Value)[] claims)
+        {
+            DefaultHttpContext context = new();
+            if (claims.Length > 0)
+            {
+                context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                    claims.Select(c => new System.Security.Claims.Claim(c.Type, c.Value)), "test"));
+            }
+            if (ip is not null) context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(ip);
+            return context;
+        }
+
+        string nameId = System.Security.Claims.ClaimTypes.NameIdentifier;
+        (string Name, HttpContext Context, string Expected)[] cases =
+        [
+            ("mapped subject (the default JWT handling)", Context("10.0.0.1", (nameId, "alice")), "alice"),
+            ("unmapped \"sub\" claim", Context("10.0.0.1", ("sub", "bob")), "bob"),
+            ("two users behind one IP stay apart", Context("10.0.0.1", (nameId, "carol")), "carol"),
+            ("anonymous caller falls back to the IP", Context("10.0.0.9"), "10.0.0.9"),
+            ("no identity and no IP", Context(null), "anonymous"),
+        ];
+        int passed = 0;
+        foreach ((string name, HttpContext context, string expected) in cases)
+        {
+            string actual = PartitionKey(context);
+            bool ok = actual == expected;
+            passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name,-44} -> {actual}");
+        }
+        Console.WriteLine($"RESULT {passed}/{cases.Length}");
+        return passed == cases.Length ? 0 : 1;
+    }
+}

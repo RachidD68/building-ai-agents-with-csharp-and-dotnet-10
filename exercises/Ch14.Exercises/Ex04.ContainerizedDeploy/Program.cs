@@ -28,6 +28,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
+if (args.Contains("--self-test")) return RateLimitKeys.SelfTest();
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // ---------------------------------------------------------------
@@ -62,10 +64,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("per-user", httpContext =>
     {
-        string partitionKey =
-            httpContext.User.FindFirst("sub")?.Value
-            ?? httpContext.Connection.RemoteIpAddress?.ToString()
-            ?? "anonymous";
+        string partitionKey = RateLimitKeys.PartitionKey(httpContext);
 
         return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
             new FixedWindowRateLimiterOptions
@@ -152,6 +151,7 @@ Console.WriteLine("=== Exercise 04: Containerize, Secure, Deploy ===");
 Console.WriteLine("Endpoints: POST /chat (auth), POST /chat/stream (auth, SSE), GET /health");
 
 app.Run();
+return 0;
 
 // ---------------------------------------------------------------
 // Provider factory
@@ -184,3 +184,55 @@ record ChatRequest(string Message);
 /// <param name="Agent">The responding agent's name.</param>
 /// <param name="Message">The agent's response text.</param>
 record ChatReply(string Agent, string Message);
+
+// ---------------------------------------------------------------
+// Rate-limit partition key
+// ---------------------------------------------------------------
+// AddJwtBearer maps inbound claims by default (MapInboundClaims = true), so a
+// token's "sub" arrives as ClaimTypes.NameIdentifier. Looking only for "sub"
+// found nothing and put every user in their IP's partition — so two users
+// behind one NAT shared a quota, and one user could not be limited alone.
+internal static class RateLimitKeys
+{
+    public static string PartitionKey(HttpContext httpContext) =>
+        httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+        ?? httpContext.User.FindFirst("sub")?.Value
+        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+        ?? "anonymous";
+
+    /// <summary>Offline check: dotnet run -- --self-test</summary>
+    public static int SelfTest()
+    {
+        static HttpContext Context(string? ip, params (string Type, string Value)[] claims)
+        {
+            DefaultHttpContext context = new();
+            if (claims.Length > 0)
+            {
+                context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                    claims.Select(c => new System.Security.Claims.Claim(c.Type, c.Value)), "test"));
+            }
+            if (ip is not null) context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(ip);
+            return context;
+        }
+
+        string nameId = System.Security.Claims.ClaimTypes.NameIdentifier;
+        (string Name, HttpContext Context, string Expected)[] cases =
+        [
+            ("mapped subject (the default JWT handling)", Context("10.0.0.1", (nameId, "alice")), "alice"),
+            ("unmapped \"sub\" claim", Context("10.0.0.1", ("sub", "bob")), "bob"),
+            ("two users behind one IP stay apart", Context("10.0.0.1", (nameId, "carol")), "carol"),
+            ("anonymous caller falls back to the IP", Context("10.0.0.9"), "10.0.0.9"),
+            ("no identity and no IP", Context(null), "anonymous"),
+        ];
+        int passed = 0;
+        foreach ((string name, HttpContext context, string expected) in cases)
+        {
+            string actual = PartitionKey(context);
+            bool ok = actual == expected;
+            passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name,-44} -> {actual}");
+        }
+        Console.WriteLine($"RESULT {passed}/{cases.Length}");
+        return passed == cases.Length ? 0 : 1;
+    }
+}
