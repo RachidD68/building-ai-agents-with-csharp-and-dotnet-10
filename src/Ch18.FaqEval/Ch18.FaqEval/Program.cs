@@ -22,7 +22,7 @@
 //      with a printed note, so the suite stays runnable with zero cloud setup.
 //
 // Exit code 0 when every local grounding check passes; 1 otherwise — so this
-// drops into CI as the "rag.groundedness" gate Chapter 14 points at.
+// drops into CI as the "rag.groundedness" gate Chapter 15 points at.
 // ============================================================================
 
 using Azure.AI.OpenAI;
@@ -169,14 +169,14 @@ string[] queries = golden.Select(g => g.Question).ToArray();
 string[] expectedOutputs = golden.Select(g => g.GroundTruth).ToArray();
 
 // ── Step 3: the LocalEvaluator (grounding checks, always on) ──────
-// "grounded_answer" is the load-bearing check: the response must contain the
+// "expected_value" is the load-bearing check: the response must contain the
 // exact policy value for this question. Because EvaluateAsync aligns the
 // expectedOutput array with the queries positionally, the (response,
 // expectedOutput) overload sees the ground-truth value for each item.
 LocalEvaluator local = new(
-    FunctionEvaluator.Create("grounded_answer",
+    FunctionEvaluator.Create("expected_value",
         (string response, string? expectedOutput) =>
-            expectedOutput is not null && response.Contains(expectedOutput, StringComparison.OrdinalIgnoreCase)),
+            expectedOutput is not null && TextMatch.ContainsWhole(response, expectedOutput)),
     FunctionEvaluator.Create("no_idk_leak",
         (string response) =>
             !response.Contains("don't have information", StringComparison.OrdinalIgnoreCase)));
@@ -263,3 +263,15 @@ return localResults.Passed == localResults.Total ? 0 : 1;
 
 // ──────────────────────────────────────────────────────────────────
 internal readonly record struct GoldenItem(string Question, string GroundTruth);
+
+// The expected value must appear as a whole token: "15" matches "15 PTO days"
+// but not "115 days". This is still a lexical signal (a value check), not a
+// faithfulness score — that is what the LLM judge in step 4 measures.
+internal static class TextMatch
+{
+    public static bool ContainsWhole(string response, string expected) =>
+        System.Text.RegularExpressions.Regex.IsMatch(
+            response,
+            @"(?<![\w])" + System.Text.RegularExpressions.Regex.Escape(expected) + @"(?![\w])",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+}

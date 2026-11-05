@@ -15,11 +15,18 @@
 // needs. The same shape moves to xUnit unchanged — turn each block into a
 // [Fact] and let AssertAllPassed throw.
 //
-// Two cases:
+// Cases:
 //   1. Golden responses that SHOULD pass  -> AssertAllPassed() succeeds.
-//   2. A known-bad response (the confabulated PTO answer from the chapter's
-//      opening anecdote) -> the evaluator catches it; we assert that it fails.
+//   2. Known-bad responses -> the evaluator catches them; we assert they fail.
+//      The confabulated PTO answer from the chapter's opening anecdote, plus
+//      two answers that merely CONTAIN "15" ("115 days", "Not 15 days ... 20").
 //      This is the red half of red-green for agents: prove the check bites.
+//
+// What this check is — and is not: it is a VALUE check (does the answer state
+// the policy number, and no other number of days?). It is a lexical signal,
+// not proof that the answer is faithful to the source; a reworded correct
+// answer can fail it and a wrong answer can be built to pass it. Faithfulness
+// needs a judge or human labels — the chapter's groundedness section.
 //
 // Exit code 0 when every assertion holds; 1 otherwise.
 // ============================================================================
@@ -38,20 +45,28 @@ Console.WriteLine();
 // suite is deterministic.
 ChatClientAgent agent = new(new UninvokedChatClient(), name: "FaqAgentUnderTest");
 
-// The grounding check: a PTO answer is correct only if it contains "15".
-LocalEvaluator groundingCheck = new(
-    FunctionEvaluator.Create("pto_grounded",
-        (string response) => response.Contains("15")));
+// The value check: every "<n> days" / "<n> PTO days" in the answer must be 15,
+// and there must be at least one. A bare Contains("15") would accept
+// "115 days" and "Not 15 days; employees get 20".
+LocalEvaluator valueCheck = new(
+    FunctionEvaluator.Create("pto_value_check",
+        (string response) => PtoValue.StatesOnly(response, days: 15)));
 
 string[] ptoQuery = ["How many PTO days do new employees get?"];
 
-// ── Case 1: the golden (grounded) answer passes ───────────────────
-await Case("grounded PTO answer passes", expectPass: true,
+// ── Case 1: the golden answer passes ───────────────────────────────
+await Case("correct PTO answer passes", expectPass: true,
     response: "New employees (0-2 years of service) receive 15 PTO days per year.");
 
 // ── Case 2: the confabulated answer is caught (the opening incident) ──
 await Case("confabulated PTO answer is caught", expectPass: false,
     response: "New employees get 20 PTO days per year.");
+
+// ── Cases 3-4: answers that only CONTAIN "15" are caught too ────────
+await Case("'115 days' is caught", expectPass: false,
+    response: "Employees get 115 days of PTO.");
+await Case("'Not 15 days ... 20' is caught", expectPass: false,
+    response: "Not 15 days; employees get 20 days.");
 
 Console.WriteLine();
 if (failures == 0)
@@ -65,7 +80,7 @@ return 1;
 
 // ──────────────────────────────────────────────────────────────────
 // One case: evaluate a single pre-built response and assert whether the
-// grounding check passed or failed, the way a [Fact] would.
+// value check passed or failed, the way a [Fact] would.
 async Task Case(string name, bool expectPass, string response)
 {
     AgentResponse[] responses = [new AgentResponse(new ChatMessage(ChatRole.Assistant, response))];
@@ -73,7 +88,7 @@ async Task Case(string name, bool expectPass, string response)
     AgentEvaluationResults results = await agent.EvaluateAsync(
         responses,
         ptoQuery,
-        groundingCheck);
+        valueCheck);
 
     bool actuallyPassed = results.AllPassed;
 
@@ -106,4 +121,19 @@ internal sealed class UninvokedChatClient : IChatClient
 
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
     public void Dispose() { }
+}
+
+/// <summary>Whole-number check of the day counts an answer states.</summary>
+internal static class PtoValue
+{
+    static readonly System.Text.RegularExpressions.Regex DayCount =
+        new(@"(?<!\d)(\d+)\s*(?:PTO\s+)?days?\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>True when the answer states at least one day count and every one equals <paramref name="days"/>.</summary>
+    public static bool StatesOnly(string response, int days)
+    {
+        var counts = DayCount.Matches(response).Select(m => int.Parse(m.Groups[1].Value)).ToList();
+        return counts.Count > 0 && counts.All(n => n == days);
+    }
 }

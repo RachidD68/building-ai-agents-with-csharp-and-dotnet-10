@@ -1,7 +1,7 @@
-# Chapter 17 -- Evaluating a RAG agent (FaqEval)
+# Chapter 18 -- Evaluating a RAG agent (FaqEval)
 
 Grounds the Chapter 10 Contoso FAQ agent against a **golden set**. This is the
-`rag.groundedness` gate Chapter 14 points at, and the payoff for the chapter's
+`rag.groundedness` gate Chapter 15 points at, and the payoff for the chapter's
 opening PTO-confabulation anecdote: the failure becomes a test that fails loudly
 whenever an answer drifts off the source.
 
