@@ -18,7 +18,8 @@
 // executor state — not just framework plumbing — survives the restart.
 //
 // Modes:
-//   dotnet run                       in-memory demo: both runs in one process
+//   dotnet run                       in-memory demo: both runs in one process;
+//                                    the approval is SIMULATED (a fixed decision)
 //   dotnet run -- prepare            run to the approval point, persist the
 //                                    checkpoints to disk, print the session id
 //   dotnet run -- resume <session> <approve|reject>
@@ -28,12 +29,14 @@
 //                                    processes, plus fail-closed cases (offline)
 // prepare and resume persist with FileSystemJsonCheckpointStore; --store <folder>
 // picks the folder (default: a folder under %TEMP%). --offline swaps the model
-// for a scripted IChatClient, so any mode runs without a provider.
+// for a scripted IChatClient, so any mode runs without a provider. Every mode
+// fails closed: an empty draft is never approved.
 //
 // Runs against Ollama (llama3.2) by default; see appsettings.json.
 // ============================================================================
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
@@ -51,7 +54,10 @@ string? mode = positional.FirstOrDefault() is "prepare" or "resume" ? positional
 bool offline = args.Contains("--offline");
 
 using IHost? host = offline ? null : BuildHost();
-IChatClient chatClient = host?.Services.GetRequiredService<IChatClient>() ?? new ScriptedChatClient();
+// --empty-draft (offline only) makes the scripted model return nothing, to
+// show that an empty draft is never approved.
+IChatClient chatClient = host?.Services.GetRequiredService<IChatClient>()
+    ?? new ScriptedChatClient(args.Contains("--empty-draft") ? "" : ScriptedChatClient.Draft);
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -70,7 +76,7 @@ RequestPort approvalPort = RequestPort.Create<string, string>("human-approval");
 
 // The approval response is the approved draft text, except for this one word,
 // which routes to the rejection handler instead of the finalizer.
-const string RejectDecision = "reject";
+const string RejectDecision = ApprovalDecisions.RejectReply;
 
 Workflow BuildApprovalWorkflow()
 {
@@ -91,7 +97,8 @@ Workflow BuildApprovalWorkflow()
     return new WorkflowBuilder(draftNode)
         .AddEdge(draftNode, trackerNode)
         .AddEdge(trackerNode, portNode)
-        .AddEdge<string>(portNode, finalNode, reply => reply is not null && reply != RejectDecision)
+        // An empty reply matches neither edge, so it can never reach the finalizer.
+        .AddEdge<string>(portNode, finalNode, reply => !string.IsNullOrWhiteSpace(reply) && reply != RejectDecision)
         .AddEdge<string>(portNode, rejectNode, reply => reply == RejectDecision)
         .WithOutputFrom(finalNode, rejectNode)
         .WithName("CheckpointedApproval")
@@ -153,16 +160,29 @@ await foreach (WorkflowEvent evt in firstRun.WatchStreamAsync(cts.Token))
     }
 }
 
+if (pauseCheckpoint is null)
+{
+    Console.Error.WriteLine("DEMO FAILED: no checkpoint was captured at the approval point. Nothing was finalized.");
+    return 1;
+}
+
 // ---------------------------------------------------------------
 // Run 2: a brand-new workflow instance resumes from the checkpoint.
 // The runtime replays state, re-emits the approval request, and we
 // answer it this time. The RevisionTracker's counter is restored.
+//
+// Nobody is at the keyboard in this demo, so the decision is
+// SIMULATED: a fixed, typed ApprovalDecision, printed as such. The
+// prepare/resume modes take a real decision from the command line.
 // ---------------------------------------------------------------
-Console.WriteLine("--- Run 2: restart, resume from checkpoint, approve ---\n");
+const ApprovalDecision SimulatedDecision = ApprovalDecision.Approve;
+
+Console.WriteLine("--- Run 2: restart, resume from checkpoint, decide ---\n");
 
 StreamingRun resumedRun = await InProcessExecution.ResumeStreamingAsync(
-    BuildApprovalWorkflow(), pauseCheckpoint!, checkpoints, cts.Token);
+    BuildApprovalWorkflow(), pauseCheckpoint, checkpoints, cts.Token);
 
+string? pendingReason = null;
 await foreach (WorkflowEvent evt in resumedRun.WatchStreamAsync(cts.Token))
 {
     switch (evt)
@@ -170,15 +190,30 @@ await foreach (WorkflowEvent evt in resumedRun.WatchStreamAsync(cts.Token))
         case RequestInfoEvent request
             when request.Request.TryGetDataAs<string>(out string? draft):
             Console.WriteLine("Approval request re-emitted after restart.");
-            Console.WriteLine("Human approves the draft.\n");
-            ExternalResponse response = request.Request.CreateResponse(draft ?? "");
-            await resumedRun.SendResponseAsync(response);
+            Console.WriteLine($"SIMULATED human decision: {SimulatedDecision.ToString().ToLowerInvariant()} " +
+                              "(no reviewer in this demo; use prepare/resume to decide yourself).\n");
+
+            // Fail closed: an approval needs a non-empty draft to approve.
+            if (!ApprovalDecisions.TryCreateReply(SimulatedDecision, draft, out string? reply))
+            {
+                pendingReason = "the draft is empty, so there is nothing to approve.";
+                break;
+            }
+            await resumedRun.SendResponseAsync(request.Request.CreateResponse(reply));
             break;
 
         case WorkflowOutputEvent output:
             Console.WriteLine(output.Data);
             break;
     }
+
+    if (pendingReason is not null) break;   // leave the event loop, not just the switch
+}
+
+if (pendingReason is not null)
+{
+    Console.Error.WriteLine($"DEMO STOPPED: {pendingReason} Review left pending; nothing was finalized.");
+    return 2;
 }
 
 Console.WriteLine("\n=== Checkpointed approval demo complete! ===");
@@ -244,8 +279,7 @@ async Task<int> ResumeAsync(string session, string decision)
 {
     Console.WriteLine("=== Chapter 13: Checkpointed Approval — resume ===\n");
 
-    bool approve = decision.Trim().Equals("approve", StringComparison.OrdinalIgnoreCase);
-    if (!approve && !decision.Trim().Equals(RejectDecision, StringComparison.OrdinalIgnoreCase))
+    if (!ApprovalDecisions.TryParse(decision, out ApprovalDecision choice))
         return Fail($"unknown decision \"{decision}\" (use approve or reject).", 2);
 
     if (!Directory.Exists(storePath))
@@ -269,6 +303,7 @@ async Task<int> ResumeAsync(string session, string decision)
         watchdog.CancelAfter(TimeSpan.FromSeconds(30));
 
         bool answered = false;
+        bool emptyDraft = false;
         string? result = null;
         string? error = null;
         try
@@ -284,8 +319,12 @@ async Task<int> ResumeAsync(string session, string decision)
                         watchdog.CancelAfter(Timeout.InfiniteTimeSpan);
                         answered = true;
                         Console.WriteLine("Approval request re-emitted in a new process.");
-                        Console.WriteLine($"Human decision: {(approve ? "approve" : "reject")}\n");
-                        string reply = approve ? draft ?? "" : RejectDecision;
+                        Console.WriteLine($"Human decision: {choice.ToString().ToLowerInvariant()}\n");
+                        if (!ApprovalDecisions.TryCreateReply(choice, draft, out string? reply))
+                        {
+                            emptyDraft = true;   // fail closed: never approve an empty draft
+                            break;
+                        }
                         await run.SendResponseAsync(request.Request.CreateResponse(reply));
                         break;
 
@@ -298,6 +337,8 @@ async Task<int> ResumeAsync(string session, string decision)
                         error = failure.Data?.ToString();
                         break;
                 }
+
+                if (emptyDraft) break;   // leave the event loop, not just the switch
             }
         }
         catch (OperationCanceledException) when (!cts.IsCancellationRequested)
@@ -307,6 +348,8 @@ async Task<int> ResumeAsync(string session, string decision)
 
         if (!answered)
             return Fail($"session {session} has no pending approval at checkpoint {latest.CheckpointId} (already decided?).");
+        if (emptyDraft)
+            return Fail($"session {session} has an empty draft, so there is nothing to approve.");
         if (error is not null)
             return Fail($"checkpoint {latest.CheckpointId} could not be resumed: {error}");
         return result is null
@@ -354,6 +397,50 @@ IHost BuildHost()
     HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(configArgs);
     hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
     return hostBuilder.Build();
+}
+
+// ---------------------------------------------------------------
+// The decision, typed. Same pattern as Ch13.ApprovalWorkflow's
+// ReviewDecision, minus "revise" (this workflow has no revision loop).
+// ---------------------------------------------------------------
+
+/// <summary>The only two outcomes a reviewer can choose here.</summary>
+internal enum ApprovalDecision { Approve, Reject }
+
+internal static class ApprovalDecisions
+{
+    /// <summary>The reply that routes to the rejection handler.</summary>
+    public const string RejectReply = "reject";
+
+    /// <summary>
+    /// Accepts exactly "approve" or "reject" (case and surrounding spaces
+    /// ignored). Everything else, including empty input, is not a decision.
+    /// </summary>
+    public static bool TryParse(string? input, out ApprovalDecision decision)
+    {
+        switch (input?.Trim().ToLowerInvariant())
+        {
+            case "approve": decision = ApprovalDecision.Approve; return true;
+            case "reject": decision = ApprovalDecision.Reject; return true;
+            default: decision = default; return false;
+        }
+    }
+
+    /// <summary>
+    /// Builds the RequestPort reply for a decision: the draft itself on approve,
+    /// the reject word on reject. Fails closed: approving a null, empty or
+    /// whitespace draft returns false and no reply, so nothing is approved by default.
+    /// </summary>
+    public static bool TryCreateReply(ApprovalDecision decision, string? draft, [NotNullWhen(true)] out string? reply)
+    {
+        reply = decision switch
+        {
+            ApprovalDecision.Reject => RejectReply,
+            ApprovalDecision.Approve when !string.IsNullOrWhiteSpace(draft) => draft,
+            _ => null,
+        };
+        return reply is not null;
+    }
 }
 
 // ---------------------------------------------------------------
@@ -412,9 +499,10 @@ internal sealed class Rejection() : Executor<string>("rejection")
 
 /// <summary>
 /// A fake IChatClient for --offline and --self-test: it returns one fixed
-/// paragraph, so the workflow runs deterministically without a model.
+/// reply (normally <see cref="Draft"/>), so the workflow runs deterministically
+/// without a model.
 /// </summary>
-internal sealed class ScriptedChatClient : IChatClient
+internal sealed class ScriptedChatClient(string reply) : IChatClient
 {
     public const string Draft =
         "Code review catches defects while they are still cheap to fix. It spreads " +
@@ -424,13 +512,13 @@ internal sealed class ScriptedChatClient : IChatClient
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, Draft)));
+        => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply)));
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        yield return new ChatResponseUpdate(ChatRole.Assistant, Draft);
+        yield return new ChatResponseUpdate(ChatRole.Assistant, reply);
         await Task.CompletedTask;
     }
 
@@ -457,6 +545,31 @@ internal static class CrossProcessSelfTest
 
         try
         {
+            // 0. The typed decision and the reply it produces (in process).
+            Check("only \"approve\" and \"reject\" parse as decisions",
+                ApprovalDecisions.TryParse(" APPROVE ", out ApprovalDecision a) && a == ApprovalDecision.Approve &&
+                ApprovalDecisions.TryParse("reject", out ApprovalDecision r) && r == ApprovalDecision.Reject &&
+                !ApprovalDecisions.TryParse("", out _) && !ApprovalDecisions.TryParse(null, out _) &&
+                !ApprovalDecisions.TryParse("approved", out _) && !ApprovalDecisions.TryParse("yes", out _));
+            Check("approve + empty or null draft -> no reply (fail closed)",
+                !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "", out _) &&
+                !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "   ", out _) &&
+                !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, null, out _));
+            Check("approve + draft -> the draft; reject -> the reject word",
+                ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "text", out string? yes) && yes == "text" &&
+                ApprovalDecisions.TryCreateReply(ApprovalDecision.Reject, null, out string? no) &&
+                no == ApprovalDecisions.RejectReply);
+
+            // The no-argument demo says its decision is simulated, and refuses an empty draft.
+            Child demo = RunChild();
+            Check("demo mode labels the approval as SIMULATED and completes",
+                demo.ExitCode == 0 && demo.Output.Contains("SIMULATED human decision: approve") &&
+                demo.Output.Contains("[APPROVED]") && demo.Output.Contains(ScriptedChatClient.Draft));
+            Child emptyDemo = RunChild("--empty-draft");
+            Check("demo mode with an empty draft approves nothing",
+                emptyDemo.ExitCode != 0 && emptyDemo.Output.Contains("DEMO STOPPED") &&
+                !emptyDemo.Output.Contains("[APPROVED]"));
+
             // 1. prepare (process A), then resume + approve (process B).
             string approveStore = Path.Combine(root, "approve");
             Child prepare = RunChild("prepare", "--store", approveStore);
@@ -491,6 +604,11 @@ internal static class CrossProcessSelfTest
                 reject.ExitCode == 0 && reject.Output.Contains("[REJECTED]") && !reject.Output.Contains("[APPROVED]"));
 
             // 3. Failure cases fail closed: non-zero exit, a clear message, no result.
+            string emptyStore = Path.Combine(root, "empty-draft");
+            Child prepare3 = RunChild("prepare", "--store", emptyStore, "--empty-draft");
+            Child emptyResume = RunChild("resume", ValueFrom(prepare3, "Session:") ?? "none", "approve", "--store", emptyStore);
+            Check("resume + approve of an empty draft fails closed", FailedClosed(emptyResume, "empty draft"));
+
             Child unknown = RunChild("resume", Guid.NewGuid().ToString("N"), "approve", "--store", approveStore);
             Check("unknown session fails closed", FailedClosed(unknown, "no checkpoint for session"));
 
