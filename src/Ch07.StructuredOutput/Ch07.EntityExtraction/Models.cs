@@ -78,7 +78,14 @@ public sealed record FeedbackAnalysis
     [JsonPropertyName("summary")]
     public string Summary { get; init; } = string.Empty;
 
-    /// <summary>Confidence score from 0.0 to 1.0 for the extraction.</summary>
+    /// <summary>
+    /// The model's SELF-REPORTED confidence, expected in 0.0..1.0. It is the
+    /// model's opinion of its own answer, not a calibrated probability: null when
+    /// the model omits it, rejected by the parser when it is a string or NaN, and
+    /// range-checked by <see cref="ConfidenceCheck"/> before any use. It is never
+    /// a gate on its own; see <see cref="FeedbackValidation.Validate"/>.
+    /// </summary>
     [JsonPropertyName("confidence")]
-    public double Confidence { get; init; }
+    [JsonNumberHandling(JsonNumberHandling.Strict)]
+    public double? SelfReportedConfidence { get; init; }
 }
