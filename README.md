@@ -16,9 +16,9 @@
 
 ## What's in this book
 
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built on **Microsoft Agent Framework 1.27.0** and **.NET 10 / C# 14**.
+The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built on **Microsoft Agent Framework 1.28.0** and **.NET 10 / C# 14**.
 
-Across twenty chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.27.0**. The core packages are generally available; where a chapter uses an API Microsoft still marks experimental, or a package published only as a preview, the book says so and the project opts in explicitly (Appendix A lists every package and its status).
+Across twenty chapters in five parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.28.0**. The core packages are generally available; where a chapter uses an API Microsoft still marks experimental, or a package published only as a preview, the book says so and the project opts in explicitly (Appendix A lists every package and its status).
 
 By the final chapter you will have built the Contoso FAQ agent — a small but real production system — and developed the intuition to design, build, and ship your own.
 
@@ -64,7 +64,7 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.27.0** (the first paperback printing was verified against 1.20.0; every listing it prints builds and runs unchanged on 1.27.0)
+- **Microsoft Agent Framework 1.28.0** (the first paperback printing was verified against 1.20.0; every listing it prints builds and runs unchanged on 1.28.0)
 - **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
@@ -173,4 +173,4 @@ For general feedback, questions about the companion code, or suggestions, use [t
 
 ---
 
-<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.27.0 · Last updated 2026</sub></p>
+<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.28.0 · Last updated 2026</sub></p>

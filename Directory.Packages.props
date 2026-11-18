@@ -3,20 +3,20 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Microsoft Agent Framework — 1.27.0 (dotnet-1.27.0, 2026-10-30) -->
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.27.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.27.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.27.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.27.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Harness" Version="1.27.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.27.0-preview.261030.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.27.0-preview.261030.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.27.0-preview.261030.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.27.0-preview.261030.1" />
+    <!-- Microsoft Agent Framework — 1.28.0 (dotnet-1.28.0, 2026-11-06) -->
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Harness" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.28.0-preview.261106.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.28.0-preview.261106.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.28.0-preview.261106.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.28.0-preview.261106.1" />
     <!-- New provider packages (1.10) — referenced from Phase 2 chapters (Ch04/Ch18) -->
-    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.27.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.28.0" />
     <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...).
-         3.0.0-beta.5 = the floor Microsoft.Agents.AI.Foundry 1.27.0-preview requires (major bump from 2.x). -->
+         3.0.0-beta.5 = the floor Microsoft.Agents.AI.Foundry 1.28.0-preview requires (major bump from 2.x). -->
     <PackageVersion Include="Azure.AI.Projects" Version="3.0.0-beta.5" />
     <!-- AI Abstractions & Providers -->
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
@@ -34,9 +34,9 @@
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
     <!-- MCP -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
-    <PackageVersion Include="ModelContextProtocol.Core" Version="2.3.1" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.4.0" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.4.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     <!-- Vector Data / RAG -->
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.10.0" />
     <PackageVersion Include="CommunityToolkit.VectorData.InMemory" Version="1.0.1" />
