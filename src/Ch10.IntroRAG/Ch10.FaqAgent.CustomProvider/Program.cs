@@ -9,9 +9,14 @@
 // Reach for a custom provider when you need control the built-in doesn't offer:
 // custom reranking, blending multiple retrieval sources, structured context.
 //
-// The one wart this version carries: the base AIContextProvider.InvokingContext
-// doesn't expose the user's message, so the caller sets CurrentQuery before each
-// RunAsync. TextSearchProvider avoids that — which is why it's the default.
+// The query comes from the invocation itself: AIContextProvider.InvokingContext
+// carries the AIContext being built, and its Messages already hold this call's
+// request messages. The provider reads the latest user message from there, keeps
+// no per-call state, and is safe to share as a singleton across concurrent calls.
+// TextSearchProvider is still the default — it adds multi-turn search input and
+// citations for free — but there is no CurrentQuery setter to manage here.
+//
+// Offline check of the provider wiring: dotnet run -- --self-test
 // ============================================================================
 
 using Azure.AI.OpenAI;
@@ -24,6 +29,8 @@ using Microsoft.Extensions.Hosting;
 using CommunityToolkit.VectorData.InMemory;
 using AgenticAI.Common.Extensions;
 using Ch10.FaqAgent.CustomProvider;
+
+if (args.Contains("--self-test")) return await RagSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -67,7 +74,7 @@ string docsPath = Path.Combine(AppContext.BaseDirectory, "docs");
 if (!Directory.Exists(docsPath))
 {
     Console.WriteLine("Docs directory not found. Ensure FAQ .md files are in the docs/ folder.");
-    return;
+    return 1;
 }
 
 string[] mdFiles = Directory.GetFiles(docsPath, "*.md");
@@ -147,10 +154,8 @@ foreach (string question in questions)
 {
     Console.WriteLine($"You: {question}");
 
-    // The wart: tell the provider what to retrieve for, since InvokingContext
-    // doesn't expose the user's message to a plain AIContextProvider.
-    ragProvider.CurrentQuery = question;
-
+    // No setup per call: the provider reads the question from this RunAsync's
+    // request messages (InvokingContext.AIContext.Messages).
     AgentResponse response = await agent.RunAsync(question, session, cancellationToken: cts.Token);
 
     Console.WriteLine($"Agent: {response.Text}");
@@ -158,3 +163,4 @@ foreach (string question in questions)
 }
 
 Console.WriteLine("\n=== Custom-provider demo complete! ===");
+return 0;

@@ -14,13 +14,17 @@ you need:
 - Blending several retrieval sources into one context.
 - Structured or dynamically-shaped context the prompt-based formatter can't express.
 
-## The wart (and why the built-in is the default)
+## Where the query comes from
 
-A plain `AIContextProvider.InvokingContext` exposes the agent and session, but
-**not the user's message**. So the caller has to set `CurrentQuery` before each
-`RunAsync`. `TextSearchProvider` derives from `MessageAIContextProvider`, which
-*does* see the request messages — so it has no such coupling. That's the main
-reason the capstone leads with it.
+`ProvideAIContextAsync` receives an `InvokingContext` whose `AIContext` is the
+context being built for this call, and its `Messages` already hold the caller's
+request messages (by default only external input, so injected history is left
+out). The provider takes the last user message from there. It keeps no state
+between calls, so a single instance can be a DI singleton shared by concurrent
+requests, which is how Chapters 14 and 16 register it.
+
+The built-in `TextSearchProvider` is still the default in the capstone: it adds
+multi-turn search input (`RecentMessageMemoryLimit`) and citations for free.
 
 ## Running
 
@@ -28,6 +32,11 @@ reason the capstone leads with it.
 # Uses Ollama by default (nomic-embed-text for embeddings, llama3.2 for chat).
 # Pull the embedding model once: ollama pull nomic-embed-text
 dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent.CustomProvider
+
+# Offline check, no LLM or embedding model needed: the query comes from the
+# request message, two concurrent calls each retrieve their own chunks, and a
+# blank question retrieves nothing. Prints RESULT n/n, exits non-zero on failure.
+dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent.CustomProvider -- --self-test
 ```
 
 > Note: this project pins `Microsoft.Extensions.VectorData.Abstractions` to
