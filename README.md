@@ -92,6 +92,8 @@ dotnet build AgenticAI.slnx
 
 Open `AgenticAI.slnx` once and every chapter's projects load together.
 
+Every project except the Aspire AppHost commits a `packages.lock.json`. `dotnet restore AgenticAI.slnx --locked-mode` restores exactly those versions and fails if the dependency graph has drifted; after changing a version in `Directory.Packages.props`, a plain `dotnet restore AgenticAI.slnx` refreshes the lock files. The [build workflow](.github/workflows/build.yml) does the same on Windows and Ubuntu, builds with warnings as errors, runs every offline `--self-test` and the console test harnesses, and fails on any vulnerable package. It also runs weekly, because a new NuGet advisory can break a build that nobody touched.
+
 ### Run a sample
 
 ```bash

@@ -1,0 +1,150 @@
+name: build
+
+# Builds the whole solution, runs every offline check, and fails on any
+# vulnerable package. Nothing here calls an LLM: the --self-test modes and the
+# *Tests harnesses use fake chat clients or pure logic.
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly, Monday 06:00 UTC: a new NuGet advisory can break a build that
+    # nobody has touched, so check even when no commit lands.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  SOLUTION: AgenticAI.slnx
+  CONFIGURATION: Release
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # The projects target net10.0. global.json asks for 10.0.100 with
+      # rollForward latestMajor, so a newer SDK already on the runner image
+      # (for example .NET 11) may be the one that builds; "dotnet --info"
+      # below records which.
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - name: Show SDK
+        run: dotnet --info
+
+      # Every project except the Aspire AppHost has a packages.lock.json, and
+      # locked mode fails if the graph drifts from it. The AppHost has no lock
+      # file (its SDK pulls per-OS packages), so it restores normally in the
+      # same command.
+      - name: Restore (locked mode)
+        run: dotnet restore "$SOLUTION" --locked-mode
+
+      - name: Build (warnings as errors)
+        run: >
+          dotnet build "$SOLUTION"
+          --configuration "$CONFIGURATION"
+          --no-restore
+          -warnaserror
+          -p:TreatWarningsAsErrors=true
+
+      # Found by search, so a new project that adds a --self-test mode is
+      # picked up without editing this file.
+      - name: Run --self-test projects
+        run: |
+          set -uo pipefail
+          mapfile -t files < <(grep -rl --include='*.cs' 'args.Contains("--self-test")' src exercises | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No --self-test projects found."
+            exit 1
+          fi
+          projects=()
+          for f in "${files[@]}"; do
+            dir=$(dirname "$f")
+            while [ "$dir" != "." ] && ! ls "$dir"/*.csproj >/dev/null 2>&1; do
+              dir=$(dirname "$dir")
+            done
+            if [ "$dir" = "." ]; then
+              echo "::error file=$f::No project file above $f."
+              exit 1
+            fi
+            projects+=("$(ls "$dir"/*.csproj)")
+          done
+          mapfile -t projects < <(printf '%s\n' "${projects[@]}" | sort -u)
+          failed=0
+          for p in "${projects[@]}"; do
+            echo "::group::$p --self-test"
+            if dotnet run --project "$p" --configuration "$CONFIGURATION" --no-build -- --self-test; then
+              echo "::endgroup::"
+            else
+              code=$?
+              echo "::endgroup::"
+              echo "::error::$p --self-test exited with $code"
+              failed=$((failed + 1))
+            fi
+          done
+          echo "${#projects[@]} --self-test project(s) run, $failed failed."
+          [ "$failed" -eq 0 ]
+
+      - name: Run test harnesses
+        run: |
+          set -uo pipefail
+          failed=0
+          for p in \
+            src/Ch11.Multimodal/Ch11.Multimodal.Tests/Ch11.Multimodal.Tests.csproj \
+            src/Ch12.MultiAgent/Ch12.MultiAgent.Tests/Ch12.MultiAgent.Tests.csproj \
+            src/Ch13.Workflows/Ch13.WorkflowTests/Ch13.WorkflowTests.csproj \
+            src/Ch18.EvalTests/Ch18.EvalTests/Ch18.EvalTests.csproj
+          do
+            echo "::group::$p"
+            if dotnet run --project "$p" --configuration "$CONFIGURATION" --no-build; then
+              echo "::endgroup::"
+            else
+              code=$?
+              echo "::endgroup::"
+              echo "::error::$p exited with $code"
+              failed=$((failed + 1))
+            fi
+          done
+          echo "4 harness(es) run, $failed failed."
+          [ "$failed" -eq 0 ]
+
+      # "dotnet list package" exits 0 even when it finds something, so the
+      # step reads its report and fails on any vulnerable package.
+      - name: Check for vulnerable packages
+        run: |
+          set -uo pipefail
+          dotnet list "$SOLUTION" package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error::dotnet list package exited with $status"
+            exit "$status"
+          fi
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Vulnerable packages found (see the report above)."
+            exit 1
+          fi
+          echo "No vulnerable packages."
