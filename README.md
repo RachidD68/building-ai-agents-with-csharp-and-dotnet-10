@@ -86,7 +86,7 @@ Plus five appendices — a themed package reference, a Semantic Kernel and AutoG
 
 ## Companion code
 
-**125 runnable projects** across 127 in total: 82 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries. Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+**127 projects** in `AgenticAI.slnx`: **125 runnable projects**, that is 80 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries under `src/` (`AgenticAI.Common` and the Aspire `ServiceDefaults`). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
 
 ### Target stack
 
