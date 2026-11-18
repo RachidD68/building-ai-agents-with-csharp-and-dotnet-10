@@ -58,9 +58,14 @@ public sealed record InvoiceExtraction
     [JsonPropertyName("lineItems")]
     public IReadOnlyList<string> LineItems { get; init; } = [];
 
-    [Description("Extraction confidence from 0.0 to 1.0.")]
+    // SELF-REPORTED by the model, not calibrated. Nullable so a missing field
+    // reads as "unknown" instead of a silent 0; Strict so "0.9" or "NaN" as a
+    // string is rejected even though JsonSerializerOptions.Web reads numbers
+    // from strings. ConfidenceCheck range-checks it; it never gates on its own.
+    [Description("Your own estimate of how sure you are of this extraction, a number from 0.0 to 1.0.")]
     [JsonPropertyName("confidence")]
-    public double Confidence { get; init; }
+    [JsonNumberHandling(JsonNumberHandling.Strict)]
+    public double? SelfReportedConfidence { get; init; }
 }
 
 // ----------------------------------------------------------------------------

@@ -15,6 +15,17 @@ The production counterpart to the happy path. Three ideas, together:
 3. **Soft validation.** Confidence thresholds and cross-field invariants flag
    suspect extractions for review. They never silently "fix" the model's output.
 
+## Self-reported confidence is not a probability
+
+`InvoiceExtraction.SelfReportedConfidence` is the model's own opinion of its
+answer, not a calibrated score, and the console labels it that way. It is
+`double?` so a missing field reads as unknown rather than a silent `0`, and it
+carries `[JsonNumberHandling(Strict)]` so a string such as `"0.9"` or `"NaN"` is
+rejected even though `JsonSerializerOptions.Web` reads other numbers from
+strings. `ConfidenceCheck` flags anything outside 0.0..1.0 (including `95` on a
+percent scale) and never trusts it. Confidence can only *add* a review warning:
+a 95% on a half-empty extraction still routes to manual review.
+
 ## What You'll Learn
 
 - Build-independent schema hints with `[Description]`
@@ -26,6 +37,7 @@ The production counterpart to the happy path. Three ideas, together:
 
 ```bash
 dotnet run
+dotnet run -- --self-test   # offline: JSON parsing only, no LLM
 ```
 
 ## A note on the captured output

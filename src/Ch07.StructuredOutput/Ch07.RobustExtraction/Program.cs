@@ -6,6 +6,12 @@
 //      retry and an untyped fallback, returning a Success<T>/Failure<T> result.
 //   3. Soft validation (confidence + cross-field invariants) flags suspect
 //      extractions for review — it never silently "fixes" the model's output.
+//
+// The "confidence" field is SELF-REPORTED by the model, not calibrated. It is
+// range-checked (0.0..1.0; missing, NaN or string values are flagged or
+// rejected) and never gates on its own: an extraction is auto-processed only
+// when every soft-validation rule passes.
+// Offline check of that logic (JSON parsing only, no LLM): dotnet run -- --self-test
 // ============================================================================
 
 using System.Text.Json;
@@ -17,6 +23,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using AgenticAI.Common.Extensions;
 using Ch07.RobustExtraction;
+
+if (args.Contains("--self-test")) return InvoiceValidation.SelfTest();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -30,10 +38,8 @@ Console.WriteLine("=== Chapter 7: Structured Output — Robust Extraction ===\n"
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-JsonSerializerOptions jsonOptions = new(JsonSerializerOptions.Web)
-{
-    WriteIndented = true
-};
+// Shared with the self-test, so the offline checks parse exactly as the run does.
+JsonSerializerOptions jsonOptions = InvoiceValidation.JsonOptions;
 
 ChatClientAgent agent = new(
     chatClient,
@@ -41,7 +47,7 @@ ChatClientAgent agent = new(
         You are an invoice data extraction engine.
         Extract structured data from billing notes and invoices.
         Respond with valid JSON matching the InvoiceExtraction schema and nothing else.
-        Set confidence between 0.0 and 1.0 to reflect how sure you are.
+        Set confidence to a JSON number (not a string) from 0.0 to 1.0 for how sure you are.
         """,
     name: "InvoiceExtractor");
 
@@ -82,7 +88,7 @@ try
                 Console.WriteLine($"  Invoice #  : {inv.InvoiceNumber}");
                 Console.WriteLine($"  Amount Due : {inv.AmountDue:N2} {inv.Currency}");
                 Console.WriteLine($"  Priority   : {inv.Priority}");
-                Console.WriteLine($"  Confidence : {inv.Confidence:P0}");
+                Console.WriteLine($"  Confidence : {ConfidenceCheck.Describe(inv.SelfReportedConfidence)}");
                 if (inv.LineItems.Count > 0)
                 {
                     Console.WriteLine("  Line Items :");
@@ -92,8 +98,12 @@ try
                     }
                 }
 
-                // Soft validation — flag, never auto-correct.
-                foreach (string warning in Validate(inv))
+                // Soft validation — flag, never auto-correct. A high self-reported
+                // confidence never clears a warning; only a clean pass on every
+                // rule routes the extraction automatically.
+                List<string> warnings = [.. InvoiceValidation.Validate(inv)];
+                Console.WriteLine($"  Route      : {(warnings.Count == 0 ? "auto-process (no soft-validation warnings)" : "manual review")}");
+                foreach (string warning in warnings)
                 {
                     Console.WriteLine($"    ! {warning}");
                 }
@@ -118,28 +128,4 @@ catch (OperationCanceledException)
 }
 
 Console.WriteLine("=== Robust Extraction demo complete! ===");
-
-// Cross-field and threshold checks. Returns human-readable warnings; the caller
-// decides whether to route for review, log, or retry.
-static IEnumerable<string> Validate(InvoiceExtraction inv)
-{
-    if (inv.Confidence < 0.5)
-    {
-        yield return $"Low confidence ({inv.Confidence:P0}) — manual review recommended.";
-    }
-
-    if (inv.AmountDue <= 0)
-    {
-        yield return "Amount due is zero or negative — verify extraction.";
-    }
-
-    if (inv.Priority == PaymentPriority.Urgent && inv.AmountDue == 0)
-    {
-        yield return "Urgent priority with no amount due — inconsistent.";
-    }
-
-    if (string.IsNullOrWhiteSpace(inv.Currency))
-    {
-        yield return "No currency identified — may need manual categorization.";
-    }
-}
+return 0;

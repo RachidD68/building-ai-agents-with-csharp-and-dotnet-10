@@ -6,10 +6,15 @@
 //
 // The agent reads raw customer feedback and produces a FeedbackAnalysis
 // record with sentiment, urgency, categories, issues, and suggested actions.
+//
+// The "confidence" field is SELF-REPORTED by the model, not calibrated. It is
+// range-checked (0.0..1.0; missing, NaN or string values are flagged or
+// rejected) and never gates on its own: an extraction is auto-processed only
+// when every soft-validation rule passes.
+// Offline check of that logic (JSON parsing only, no LLM): dotnet run -- --self-test
 // ============================================================================
 
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +22,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 using Ch07.EntityExtraction;
+
+if (args.Contains("--self-test")) return FeedbackValidation.SelfTest();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -29,12 +36,8 @@ Console.WriteLine("=== Chapter 7: Entity Extraction from Customer Feedback ===\n
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-JsonSerializerOptions jsonOptions = new()
-{
-    WriteIndented = true,
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-};
+// Shared with the self-test, so the offline checks parse exactly as the run does.
+JsonSerializerOptions jsonOptions = FeedbackValidation.JsonOptions;
 
 // Create the extraction agent with detailed instructions
 ChatClientAgent agent = new(
@@ -48,7 +51,7 @@ ChatClientAgent agent = new(
         - sentiment: must be "Positive", "Neutral", or "Negative"
         - urgency: must be "Low", "Medium", "High", or "Critical"
         - If the customer name is not mentioned, use "Unknown"
-        - confidence: a float between 0.0 and 1.0 indicating extraction confidence
+        - confidence: a JSON number (not a string) from 0.0 to 1.0 for how sure you are
         - Always provide at least one suggested action
         - Be specific in issue extraction — quote relevant phrases when possible
         - Do not include any text outside the JSON object
@@ -115,7 +118,7 @@ try
         Console.WriteLine($"  Urgency    : {analysis.Urgency}");
         Console.WriteLine($"  Category   : {analysis.Category}");
         Console.WriteLine($"  Product    : {analysis.Product}");
-        Console.WriteLine($"  Confidence : {analysis.Confidence:P0}");
+        Console.WriteLine($"  Confidence : {ConfidenceCheck.Describe(analysis.SelfReportedConfidence)}");
         Console.WriteLine($"  Summary    : {analysis.Summary}");
 
         if (analysis.Issues.Count > 0)
@@ -143,29 +146,12 @@ try
         }
 
         // ---------------------------------------------------------------
-        // Validation: check for edge cases
+        // Validation: confidence range check + cross-field invariants.
+        // A high self-reported confidence never clears a warning; only a
+        // clean pass on every rule routes the extraction automatically.
         // ---------------------------------------------------------------
-        List<string> warnings = [];
-
-        if (analysis.Confidence < 0.5)
-        {
-            warnings.Add($"Low confidence ({analysis.Confidence:P0}) — manual review recommended");
-        }
-
-        if (analysis.Urgency == Urgency.Critical && analysis.Sentiment != Sentiment.Negative)
-        {
-            warnings.Add("Critical urgency with non-negative sentiment — verify classification");
-        }
-
-        if (analysis.Issues.Count == 0 && analysis.Sentiment == Sentiment.Negative)
-        {
-            warnings.Add("Negative sentiment but no issues extracted — extraction may be incomplete");
-        }
-
-        if (string.IsNullOrWhiteSpace(analysis.Product))
-        {
-            warnings.Add("No product identified — may need manual categorization");
-        }
+        List<string> warnings = FeedbackValidation.Validate(analysis);
+        Console.WriteLine($"  Route      : {(warnings.Count == 0 ? "auto-process (no soft-validation warnings)" : "manual review")}");
 
         if (warnings.Count > 0)
         {
@@ -190,3 +176,4 @@ catch (JsonException ex)
 }
 
 Console.WriteLine("=== Entity Extraction demo complete! ===");
+return 0;
