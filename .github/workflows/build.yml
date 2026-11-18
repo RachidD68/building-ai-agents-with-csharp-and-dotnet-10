@@ -137,13 +137,14 @@ jobs:
       - name: Check for vulnerable packages
         run: |
           set -uo pipefail
-          dotnet list "$SOLUTION" package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          report="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/vulnerable.txt"
+          dotnet list "$SOLUTION" package --vulnerable --include-transitive 2>&1 | tee "$report"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             echo "::error::dotnet list package exited with $status"
             exit "$status"
           fi
-          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+          if grep -q "has the following vulnerable packages" "$report"; then
             echo "::error::Vulnerable packages found (see the report above)."
             exit 1
           fi
