@@ -18,11 +18,10 @@ namespace Ch10.FaqAgent.CustomProvider;
 /// blending several retrieval sources, or shaping structured/dynamic context.
 /// </para>
 /// <para>
-/// Note the wart: the base <see cref="AIContextProvider.InvokingContext"/> exposes
-/// the agent and session, but not the user's message — so the caller has to set
-/// <see cref="CurrentQuery"/> before each <c>RunAsync</c>. <see cref="TextSearchProvider"/>
-/// avoids this by deriving from <c>MessageAIContextProvider</c>, which does see the
-/// request messages. That coupling is the main reason to prefer the built-in.
+/// The query comes from the invocation itself: <see cref="AIContextProvider.InvokingContext.AIContext"/>
+/// already carries the caller's request messages (filtered by default to external
+/// input, so injected history is left out). The provider keeps no per-call state,
+/// so one instance can be a DI singleton shared by concurrent requests.
 /// </para>
 /// </remarks>
 public sealed class RagContextProvider : AIContextProvider
@@ -31,12 +30,6 @@ public sealed class RagContextProvider : AIContextProvider
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly int _topK;
     private readonly float _scoreThreshold;
-
-    /// <summary>
-    /// Gets or sets the current user query. Set this before each <c>RunAsync</c>
-    /// call so the provider can embed it and search the vector store.
-    /// </summary>
-    public string? CurrentQuery { get; set; }
 
     /// <summary>
     /// Initializes a new instance with the vector store and embedding generator.
@@ -55,19 +48,24 @@ public sealed class RagContextProvider : AIContextProvider
 
     /// <summary>
     /// Called before each agent invocation. Retrieves relevant FAQ chunks for the
-    /// current query and returns them as additional context.
+    /// latest user message of this invocation and returns them as additional context.
     /// </summary>
     protected override async ValueTask<AIContext> ProvideAIContextAsync(
         InvokingContext context,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(CurrentQuery))
+        // The user's question for THIS call: the last user message in the request.
+        string? query = context.AIContext.Messages?
+            .LastOrDefault(m => m.Role == ChatRole.User)?
+            .Text;
+
+        if (string.IsNullOrWhiteSpace(query))
         {
             return new AIContext();
         }
 
         Embedding<float> queryEmbedding = await _embeddingGenerator.GenerateAsync(
-            CurrentQuery,
+            query,
             cancellationToken: cancellationToken);
 
         List<string> retrievedChunks = [];
