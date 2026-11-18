@@ -13,4 +13,13 @@
          still runs it in its own folder, so its appsettings.json is the one that loads. -->
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
+  <!-- Reproducible restores: every project commits a packages.lock.json, and CI
+       restores with locked mode so a changed dependency graph fails the build.
+       Refresh after a version change with: dotnet restore AgenticAI.slnx
+       The Aspire AppHost is excluded: its SDK pulls OS-specific packages
+       (dashboard and orchestration binaries per platform), so one lock file
+       cannot serve Windows, Linux and macOS. -->
+  <PropertyGroup Condition="!$(MSBuildProjectName.EndsWith('.AppHost'))">
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
 </Project>
