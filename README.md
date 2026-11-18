@@ -72,7 +72,7 @@ Every package version is pinned centrally in `Directory.Packages.props` (Central
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later. The code targets **.NET 10** (LTS); any .NET 10 or later SDK builds it, including .NET 11 — `global.json` rolls forward to the newest SDK you have installed.
 - A model provider. The samples default to **Ollama** running locally — zero cost, no API key — using **llama3.2**. They also support Azure OpenAI, OpenAI, Anthropic, and Microsoft Foundry. Chapter 4 walks through each one.
 - For the **multimodal** samples (Chapter 11), a vision-capable model — `ollama pull llava` locally, or a cloud GPT-5.6-class model.
 
