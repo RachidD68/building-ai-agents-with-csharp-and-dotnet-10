@@ -2,11 +2,15 @@
 
 Takes Exercise 02's review pipeline and makes it **durable**. The workflow runs an analyzer and a security scanner, then pauses on a `RequestPort` for a human sign-off. It captures a checkpoint at that pause, simulates a process crash, then resumes from the checkpoint in a second run and completes. FULLY STANDALONE (no model provider).
 
+The `prepare` and `resume` modes make the restart real: two separate processes that share nothing but a checkpoint folder written by `FileSystemJsonCheckpointStore`.
+
 ## Key Concepts
 
 | Concept | Description |
 |---------|-------------|
-| `CheckpointManager.CreateInMemory()` | In-memory checkpoint store |
+| `CheckpointManager.CreateInMemory()` | In-memory checkpoint store (single-process demo) |
+| `FileSystemJsonCheckpointStore` + `CheckpointManager.CreateJson(store)` | Durable checkpoints on disk (namespace `Microsoft.Agents.AI.Workflows.Checkpointing`) |
+| `CheckpointManager.GetLatestCheckpointAsync(sessionId)` | Find the session's newest checkpoint in a new process |
 | `InProcessExecution.RunStreamingAsync(wf, input, checkpointManager, sessionId, ct)` | Run with checkpointing |
 | `SuperStepCompletedEvent.CompletionInfo.Checkpoint` | The `CheckpointInfo` captured at a superstep boundary |
 | `InProcessExecution.ResumeStreamingAsync(wf, checkpointInfo, checkpointManager, ct)` | Resume from a checkpoint |
@@ -14,7 +18,17 @@ Takes Exercise 02's review pipeline and makes it **durable**. The workflow runs 
 ## Running
 
 ```bash
-dotnet run --project exercises/Ch12.Exercises/Ex04.ResumableReview
+# Single-process demo
+dotnet run --project exercises/Ch13.Exercises/Ex04.ResumableReview
+
+# Real restart across two processes
+dotnet run --project exercises/Ch13.Exercises/Ex04.ResumableReview -- prepare
+dotnet run --project exercises/Ch13.Exercises/Ex04.ResumableReview -- resume <session-id> approve
+
+# Offline cross-process self-test (prints RESULT n/n)
+dotnet run --project exercises/Ch13.Exercises/Ex04.ResumableReview -- --self-test
 ```
+
+Both modes take `--store <folder>` (default: `AgenticAI/Ex04.ResumableReview` under the temp folder). A missing, unknown, corrupted or already signed-off checkpoint fails closed: `resume` prints `RESUME FAILED`, signs nothing off and exits non-zero.
 
 The worked solution is in Appendix E.
