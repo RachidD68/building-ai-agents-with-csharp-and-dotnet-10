@@ -65,11 +65,11 @@
     <PackageVersion Include="MessagePack" Version="2.5.307" />
     <PackageVersion Include="Grpc.Tools" Version="2.78.0" />
     <!-- Common -->
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-preview.3.26207.106" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.3.26207.106" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0-preview.3.26207.106" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.3.26207.106" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0-preview.3.26207.106" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0" />
     <!-- ── Phase 2 chapter packages (1.10) ──────────────────────────── -->
     <!-- Ch15 — Azure AI Content Safety (input/output moderation) -->
     <PackageVersion Include="Azure.AI.ContentSafety" Version="1.0.0" />
