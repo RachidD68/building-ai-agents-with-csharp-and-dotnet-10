@@ -1,9 +1,10 @@
-﻿<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+﻿<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- Opt out of CPM for implicit Aspire packages. Keep the SDK and
-         Aspire.Hosting on the same version (Chapter 14: Aspire 13.5). -->
+         Aspire.Hosting on the same version (Chapter 14 is written against
+         Aspire 13.5; 13.6.5 is the patched 13.x release). -->
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <!-- ASPIRE010 (13.5+): an advisory about the optional Aspire CLI bundle,
          which this sample does not use. -->
@@ -11,11 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting" Version="13.5.3" />
+    <PackageReference Include="Aspire.Hosting" Version="13.6.5" />
     <!-- Security fixes: promote transitive vulnerable dependencies to explicit versions -->
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.14" />
     <PackageReference Include="MessagePack" Version="3.1.12" />
-    <PackageReference Include="Grpc.Tools" Version="2.81.1">
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

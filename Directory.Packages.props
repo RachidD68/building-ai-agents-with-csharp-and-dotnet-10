@@ -49,8 +49,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
     <!-- Hosting -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
     <!-- Resilience -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.7.0" />
