@@ -72,7 +72,8 @@ Console.WriteLine();
 //
 // FoundryAITool was [Experimental("OPENAI001")] through MAF 1.6; as of 1.7+
 // the experimental flag was removed (the Foundry "responses" surface stabilised),
-// so no suppression is needed in 1.8.0.
+// so no suppression is needed. In 1.28 only CreateComputerTool is still
+// [Experimental("OPENAI001")]; CreateFileSearchTool is not.
 AITool fileSearch = FoundryAITool.CreateFileSearchTool(
     vectorStoreIds: [vectorStoreId]);
 

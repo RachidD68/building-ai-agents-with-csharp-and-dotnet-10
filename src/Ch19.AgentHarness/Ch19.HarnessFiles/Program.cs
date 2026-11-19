@@ -14,7 +14,7 @@
 //       file tools at all. Pair it with FileAccessProvider's
 //       ReadOnlyToolsAutoApprovalRule so reads flow and writes stop for a human.
 //
-// Both properties are [Experimental("MAAI001")] as of 1.27; the csproj scopes the
+// Both properties are [Experimental("MAAI001")] as of 1.28; the csproj scopes the
 // suppression to this project.
 // ============================================================================
 

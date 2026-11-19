@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.16)
+// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.28)
 // ----------------------------------------------------------------------------
 // Magentic is a multi-agent orchestrator from Microsoft Research that uses a
 // stateful "ledger" — a structured record of facts, plans, and observations —
@@ -88,7 +88,10 @@ ChatClientAgent manager = new(
 // The manager runs the ledger (facts, plan, observations) and decides who
 // works next; MagenticWorkflowBuilder.Build() produces a Workflow we run
 // through the same in-process execution environment as any other workflow.
-// The orchestration is stable as of MAF 1.9 — no diagnostic to suppress.
+// The orchestration is stable (since MAF 1.9), so nothing used here needs a
+// suppression. In 1.28 only the prompt-customisation extras are
+// [Experimental("MAAI001")]: WithPromptOverrides, WithResponseLanguage,
+// MagenticPromptOverrides and MagenticDefaultPrompts.
 // RequirePlanSignoff is TRUE by default: the manager would pause and emit a
 // plan-review request for a human to approve before any work starts. This demo
 // runs unattended, so we turn signoff off and let the manager proceed on its

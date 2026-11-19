@@ -39,6 +39,7 @@ dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent.CustomProvider
 dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent.CustomProvider -- --self-test
 ```
 
-> Note: this project pins `Microsoft.Extensions.VectorData.Abstractions` to
-> `10.1.0` via `VersionOverride`, matching the in-memory connector. See the
-> capstone project's README for the details.
+> Note: like `Ch10.FaqAgent`, this project uses `CommunityToolkit.VectorData.InMemory`
+> and takes `Microsoft.Extensions.VectorData.Abstractions` from
+> `Directory.Packages.props`; there is no `VersionOverride`. See the capstone
+> project's README for the details.

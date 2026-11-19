@@ -25,9 +25,9 @@ Human-in-the-loop on the **tool itself**, the MAF-native way. Backs Chapter 15's
 
 ## API note
 
-`ToolApprovalAgent` / `ToolApprovalAgentOptions` are `[Experimental("MAAI001")]`
-in MAF 1.10 — suppressed with `<NoWarn>$(NoWarn);MAAI001</NoWarn>` in the
-`.csproj`. The `ApprovalRequiredAIFunction` / `ToolApprovalRequestContent` /
+`ToolApprovalAgent` / `ToolApprovalAgentOptions` were `[Experimental("MAAI001")]`
+through MAF 1.13 and are stable in 1.28, so the `.csproj` has no `<NoWarn>`
+for them. The `ApprovalRequiredAIFunction` / `ToolApprovalRequestContent` /
 `ToolApprovalResponseContent` types in Microsoft.Extensions.AI are stable.
 
 Chapter 8 covers the per-function mechanics; this project is the **safety**

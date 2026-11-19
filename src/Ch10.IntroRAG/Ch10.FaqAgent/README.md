@@ -44,10 +44,10 @@ security policy.
 dotnet run --project src/Ch10.IntroRAG/Ch10.FaqAgent
 ```
 
-> Note: this project pins `Microsoft.Extensions.VectorData.Abstractions` to
-> `10.1.0` via `VersionOverride`. The in-memory connector references a type
-> (`VectorSearchFilter`) that was removed in 10.5.0, so `SearchAsync` throws a
-> `TypeLoadException` against the higher pin. 10.1.0 has everything the chapter
-> and `TextSearchProvider` need. A frontier chat model (gpt-5.6-luna via the
+> Note: the in-memory vector store is `CommunityToolkit.VectorData.InMemory`,
+> which is built against the current `Microsoft.Extensions.VectorData.Abstractions`,
+> so the project takes both versions from `Directory.Packages.props` with no
+> `VersionOverride`. (Earlier builds used the Semantic Kernel InMemory connector,
+> which needed `VectorData.Abstractions` held at `10.1.0`.) A frontier chat model (gpt-5.6-luna via the
 > `openai`/`azure` providers) gives crisper grounded answers than a
 > small local model.

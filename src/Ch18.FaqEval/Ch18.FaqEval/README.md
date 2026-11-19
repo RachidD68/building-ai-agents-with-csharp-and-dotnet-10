@@ -39,6 +39,6 @@ Set `LlmProvider:Judge:Enabled` to `true` in `appsettings.json`. A 3B local
 model is a poor judge (expect "Inconclusive" on some items) — point
 `ChatConfiguration` at a frontier model for trustworthy scores.
 
-> Note: pins `Microsoft.Extensions.VectorData.Abstractions` to `10.1.0` via
-> `VersionOverride`, same as `Ch10.FaqAgent` (the in-memory connector needs a
-> type removed in 10.5.0).
+> Note: like `Ch10.FaqAgent`, this project uses `CommunityToolkit.VectorData.InMemory`
+> and takes `Microsoft.Extensions.VectorData.Abstractions` from
+> `Directory.Packages.props`; there is no `VersionOverride`.
