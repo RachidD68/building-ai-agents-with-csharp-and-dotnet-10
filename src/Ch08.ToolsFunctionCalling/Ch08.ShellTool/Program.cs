@@ -15,21 +15,32 @@
 //   2. Confine every path argument to a scratch folder: rooted paths, `..`
 //      escapes, UNC and drive-relative paths are refused, and flags must be
 //      plain letters (`-l`, `-la`), so a path cannot hide inside a flag.
+//      Shell metacharacters (& | < > ^ % ; , = ! ( ) quotes, backtick,
+//      control characters) are refused in every argument.
 //   3. Take structured arguments: the tool accepts an executable name plus a
 //      string[] of arguments and hands them to ProcessStartInfo.ArgumentList,
 //      so each argument is passed verbatim to the program. There is no shell
 //      to interpret metacharacters and no fragile Split(' ') that would mangle
-//      a quoted path such as `cat "my notes.txt"`.
+//      a quoted path such as `cat "my notes.txt"`. One exception: on Windows,
+//      `dir` and `type` are cmd built-ins, not programs, so those two run as
+//      `cmd.exe /d /c dir|type <args>`. That is why rule 2 refuses the
+//      metacharacters: cmd has nothing left to interpret.
 //   4. Cap execution time: 5 seconds per call.
 //   5. Cap output size: 4 KB per call (truncate the rest).
+//
+// A program that is not installed (on stock Windows: `ls`, `cat`, `wc`) comes
+// back as an explicit "not found" tool result, so the model can say so instead
+// of inventing an answer. Each call is logged to the console with its status
+// and the first line of what the tool returned.
 //
 // The real guards are #1, #2, and the combination of UseShellExecute = false +
 // ArgumentList in #3 — together they mean the model can only launch a
 // read-only program, on files inside the scratch folder, with arguments that
-// never reach a shell. This is NOT a sandbox: the program still runs with your
-// account's rights. Real isolation needs an OS boundary (a container or VM).
+// cannot chain or redirect a command. This is NOT a sandbox: the program still
+// runs with your account's rights. Real isolation needs an OS boundary (a
+// container or VM).
 //
-// Offline check of the policy: dotnet run -- --self-test
+// Offline check of the policy and the runner: dotnet run -- --self-test
 //
 // In production, a shell tool should NEVER be exposed on a public endpoint
 // without the safety pipeline from Chapter 16 (input sanitisation + critic
@@ -48,7 +59,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
-if (args.Contains("--self-test")) return ShellPolicy.SelfTest();
+if (args.Contains("--self-test")) return await ShellPolicy.SelfTestAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -81,14 +92,15 @@ Console.WriteLine();
 // ── The shell tool: an AIFunction the model can call ───────────────
 // The signature is deliberately structured: an executable name plus a
 // separate array of arguments. The model fills both, and we pass the
-// arguments straight to ProcessStartInfo.ArgumentList — never to a shell,
-// never re-parsed. That removes a whole class of quoting and injection bugs.
+// arguments straight to ProcessStartInfo.ArgumentList — never re-parsed.
+// That removes a whole class of quoting and injection bugs.
 [Description("""
     Runs one read-only program in the scratch folder and returns its stdout.
     Allowed: ls, dir, cat, type, wc on files inside the scratch folder, and
     dotnet --version / --info / --list-sdks / --list-runtimes. Arguments are
-    passed verbatim to the program — no shell is involved, so pipelines,
-    redirects, and command chaining are impossible. Output is truncated at 4 KB.
+    passed as a structured list and may not contain shell metacharacters, so
+    pipelines, redirects, and command chaining are impossible. If the program
+    is not installed on this machine, the result says so. Output is truncated at 4 KB.
 """)]
 async Task<string> RunShellAsync(
     [Description("The program to run, e.g. \"dotnet\", \"ls\", or \"cat\". Must be on the allow-list.")]
@@ -96,69 +108,25 @@ async Task<string> RunShellAsync(
     [Description("The arguments to pass to the program, each as a separate array element, e.g. [\"--version\"] or [\"-la\"] or [\"README.md\"]. Pass an empty array for no arguments.")]
     string[]? arguments)
 {
-    // The policy is the gate: a refused call never reaches a process. Because
-    // we never launch a shell (UseShellExecute = false below) and pass
-    // arguments through ArgumentList, they cannot smuggle in a second command.
-    string? refusal = ShellPolicy.Check(executable, arguments ?? [], scratchDir);
+    string[] argv = arguments ?? [];
+
+    // The policy is the gate: a refused call never reaches a process.
+    string? refusal = ShellPolicy.Check(executable, argv, scratchDir);
     if (refusal is not null)
     {
-        return $"Error: {refusal}";
+        return ShellRunner.Log(executable, argv, "refused", $"Error: {refusal}");
     }
 
-    ProcessStartInfo startInfo = new()
-    {
-        FileName = executable,
-        WorkingDirectory = scratchDir,
-        UseShellExecute = false,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        CreateNoWindow = true,
-    };
+    // UseShellExecute = false and ArgumentList, always. On Windows, dir and
+    // type are cmd built-ins, so those two run as cmd.exe /d /c with the same
+    // checked arguments; everything else starts directly.
+    ProcessStartInfo startInfo = ShellRunner.BuildStartInfo(
+        executable, argv, scratchDir, OperatingSystem.IsWindows());
 
-    // Add each argument individually. ArgumentList quotes and escapes each
-    // element for us, so `cat "my notes.txt"` arrives as one argument — the
-    // bug that command.Split(' ') would have introduced never happens.
-    foreach (string arg in arguments ?? Array.Empty<string>())
-    {
-        startInfo.ArgumentList.Add(arg);
-    }
-
-    using Process proc = new() { StartInfo = startInfo };
-
-    StringBuilder stdout = new();
-    StringBuilder stderr = new();
-    proc.OutputDataReceived += (_, e) =>
-    {
-        if (e.Data is not null && stdout.Length < 4096) stdout.AppendLine(e.Data);
-    };
-    proc.ErrorDataReceived += (_, e) =>
-    {
-        if (e.Data is not null && stderr.Length < 4096) stderr.AppendLine(e.Data);
-    };
-
-    try
-    {
-        proc.Start();
-        proc.BeginOutputReadLine();
-        proc.BeginErrorReadLine();
-
-        using CancellationTokenSource toolCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
-        toolCts.CancelAfter(TimeSpan.FromSeconds(5));
-        await proc.WaitForExitAsync(toolCts.Token);
-    }
-    catch (OperationCanceledException)
-    {
-        try { proc.Kill(); } catch { }
-        return "Error: command timed out after 5 seconds.";
-    }
-
-    string result = stdout.ToString();
-    if (result.Length > 4096) result = result[..4096] + "\n[truncated at 4 KB]";
-    if (proc.ExitCode != 0 && stderr.Length > 0)
-    {
-        result += $"\n[stderr] {stderr}";
-    }
-    return result.Trim();
+    // Starts the process with a 5 s timeout and a 4 KB output cap. A program
+    // that is not installed comes back as an explicit "not found" error.
+    ShellResult result = await ShellRunner.RunAsync(startInfo, executable, cts.Token);
+    return ShellRunner.Log(executable, argv, result.Status, result.Text);
 }
 
 AIFunction shellTool = AIFunctionFactory.Create(
@@ -210,6 +178,125 @@ Console.WriteLine("=== Done ===");
 try { Directory.Delete(scratchDir, recursive: true); } catch { }
 return 0;
 
+// ── Running an allowed call ────────────────────────────────────────
+
+/// <summary>What one tool call returned: a short status for the log, and the text for the model.</summary>
+internal sealed record ShellResult(string Status, string Text);
+
+internal static class ShellRunner
+{
+    private const int MaxOutput = 4096;
+
+    // On Windows these are commands inside cmd.exe, not programs on disk.
+    private static readonly HashSet<string> CmdBuiltIns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "dir", "type",
+    };
+
+    /// <summary>
+    /// Builds the ProcessStartInfo for a call the policy already allowed. On
+    /// Windows, dir and type become cmd.exe /d /c dir|type followed by the same
+    /// arguments (/d skips AutoRun commands); every other program starts directly.
+    /// </summary>
+    public static ProcessStartInfo BuildStartInfo(
+        string executable, IReadOnlyList<string> arguments, string workingDirectory, bool isWindows)
+    {
+        bool cmdBuiltIn = isWindows && CmdBuiltIns.Contains(executable);
+
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = cmdBuiltIn ? Path.Combine(Environment.SystemDirectory, "cmd.exe") : executable,
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,          // never go through the OS shell
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+
+        if (cmdBuiltIn)
+        {
+            startInfo.ArgumentList.Add("/d");
+            startInfo.ArgumentList.Add("/c");
+            startInfo.ArgumentList.Add(executable.ToLowerInvariant());
+        }
+
+        // ArgumentList passes each element verbatim and quotes it correctly,
+        // so `cat "my notes.txt"` arrives as one argument — no Split(' ') bug.
+        foreach (string arg in arguments)
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+        return startInfo;
+    }
+
+    /// <summary>Starts the process, waits at most 5 seconds and keeps at most 4 KB of output.</summary>
+    public static async Task<ShellResult> RunAsync(
+        ProcessStartInfo startInfo, string executable, CancellationToken ct)
+    {
+        using Process proc = new() { StartInfo = startInfo };
+
+        StringBuilder stdout = new();
+        StringBuilder stderr = new();
+        proc.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is not null && stdout.Length < MaxOutput) stdout.AppendLine(e.Data);
+        };
+        proc.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is not null && stderr.Length < MaxOutput) stderr.AppendLine(e.Data);
+        };
+
+        try
+        {
+            proc.Start();
+        }
+        catch (Exception ex) when (ex is Win32Exception or FileNotFoundException)
+        {
+            // On stock Windows, ls, cat and wc are not installed. Say so plainly,
+            // so the model reports the gap instead of inventing a result.
+            bool notFound = ex is FileNotFoundException || ex is Win32Exception { NativeErrorCode: 2 };
+            return new ShellResult("not started", notFound
+                ? $"Error: program '{executable}' was not found on this machine."
+                : $"Error: program '{executable}' could not be started ({ex.Message}).");
+        }
+
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
+
+        try
+        {
+            using CancellationTokenSource toolCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            toolCts.CancelAfter(TimeSpan.FromSeconds(5));
+            await proc.WaitForExitAsync(toolCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { proc.Kill(); } catch { }
+            return new ShellResult("timed out", "Error: command timed out after 5 seconds.");
+        }
+
+        string result = stdout.ToString();
+        if (result.Length > MaxOutput) result = result[..MaxOutput] + "\n[truncated at 4 KB]";
+        if (proc.ExitCode != 0 && stderr.Length > 0)
+        {
+            result += $"\n[stderr] {stderr}";
+        }
+        result = result.Trim();
+        if (result.Length == 0) result = $"(no output; exit code {proc.ExitCode})";
+        return new ShellResult($"exit {proc.ExitCode}", result);
+    }
+
+    /// <summary>Logs one line per tool call (status + first line of the result) and returns the result.</summary>
+    public static string Log(string executable, IReadOnlyList<string> arguments, string status, string text)
+    {
+        string call = $"{executable} {string.Join(' ', arguments)}".Trim();
+        string firstLine = text.Split('\n', 2)[0].Trim();
+        if (firstLine.Length > 100) firstLine = firstLine[..100] + "...";
+        Console.WriteLine($"  [run_shell] {call} -> {status}: {firstLine}");
+        return text;
+    }
+}
+
 // ── The policy ─────────────────────────────────────────────────────
 internal static class ShellPolicy
 {
@@ -222,6 +309,12 @@ internal static class ShellPolicy
     {
         "--version", "--info", "--list-sdks", "--list-runtimes",
     };
+
+    // Characters a shell would act on. cmd.exe runs dir and type on Windows, so
+    // none of them may reach it: & | < > chain or redirect, ^ escapes, % expands
+    // variables, ! expands with delayed expansion, ; , = separate arguments,
+    // ( ) group, and quotes or a backtick change how the line is split.
+    static readonly char[] ShellMetacharacters = ['&', '|', '<', '>', '^', '%', '!', ';', ',', '=', '(', ')', '"', '\'', '`'];
 
     /// <summary>Returns null when the call is allowed, otherwise why it is refused.</summary>
     public static string? Check(string? executable, IReadOnlyList<string> arguments, string scratchDir)
@@ -241,6 +334,8 @@ internal static class ShellPolicy
         string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scratchDir)) + Path.DirectorySeparatorChar;
         foreach (string arg in arguments)
         {
+            if (arg.IndexOfAny(ShellMetacharacters) >= 0 || arg.Any(char.IsControl))
+                return $"argument '{arg}' contains a shell metacharacter or control character.";
             if (arg.StartsWith('-'))
             {
                 // Flags must be plain letters (-l, -la, --all): no '=', no path inside a flag.
@@ -259,9 +354,10 @@ internal static class ShellPolicy
     }
 
     /// <summary>Offline check: dotnet run -- --self-test</summary>
-    public static int SelfTest()
+    public static async Task<int> SelfTestAsync()
     {
-        string scratch = Path.Combine(Path.GetTempPath(), "ch08-policy-selftest");
+        string scratch = Path.Combine(Path.GetTempPath(), $"ch08-policy-selftest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(scratch);
         (string Exe, string[] Args, bool Allowed)[] cases =
         [
             ("ls", [], true),
@@ -269,6 +365,7 @@ internal static class ShellPolicy
             ("wc", ["-l", "data.txt"], true),
             ("cat", ["README.md"], true),
             ("cat", ["notes/today.txt"], true),
+            ("cat", ["my notes.txt"], true),
             ("dotnet", ["--version"], true),
             ("cat", [@"C:\Windows\win.ini"], false),
             ("cat", ["/etc/passwd"], false),
@@ -284,17 +381,79 @@ internal static class ShellPolicy
             ("where", ["cmd"], false),
             ("pwsh", ["-Command", "Get-ChildItem"], false),
             ("", [], false),
+            // Shell metacharacters: refused in every argument, for every program.
+            ("type", ["a.txt&del", "x"], false),
+            ("type", ["a.txt|more"], false),
+            ("type", ["a.txt>out.txt"], false),
+            ("cat", ["<in.txt"], false),
+            ("type", ["a^.txt"], false),
+            ("type", ["%USERPROFILE%"], false),
+            ("type", ["\"a.txt\""], false),
+            ("cat", ["'a.txt'"], false),
+            ("type", [@"a.txt,..\..\x"], false),
+            ("cat", ["a.txt;b"], false),
+            ("dir", ["a.txt\r\ndel x"], false),
         ];
         int passed = 0;
+        int total = 0;
+        void Report(bool ok, string name)
+        {
+            total++;
+            passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+        }
+
         foreach ((string exe, string[] a, bool allowed) in cases)
         {
             string? refusal = Check(exe, a, scratch);
-            bool ok = (refusal is null) == allowed;
-            passed += ok ? 1 : 0;
-            string call = $"{exe} {string.Join(' ', a)}".Trim();
-            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {call,-34} -> {(refusal is null ? "allowed" : "refused: " + refusal)}");
+            string call = $"{exe} {string.Join(' ', a)}".Trim().ReplaceLineEndings(" ");
+            Report((refusal is null) == allowed,
+                $"{call,-34} -> {(refusal is null ? "allowed" : "refused: " + refusal.ReplaceLineEndings(" "))}");
         }
-        Console.WriteLine($"RESULT {passed}/{cases.Length}");
-        return passed == cases.Length ? 0 : 1;
+
+        try
+        {
+            // The runner: a missing program is an explicit tool result, not an exception.
+            const string Missing = "ch08-no-such-program";
+            ShellResult missing = await ShellRunner.RunAsync(
+                ShellRunner.BuildStartInfo(Missing, [], scratch, OperatingSystem.IsWindows()), Missing, CancellationToken.None);
+            Report(missing.Text == $"Error: program '{Missing}' was not found on this machine.",
+                $"missing program -> {missing.Text}");
+
+            // On Windows, dir and type run as cmd.exe /d /c with the same arguments.
+            ProcessStartInfo dir = ShellRunner.BuildStartInfo("dir", [], scratch, isWindows: true);
+            Report(IsCmd(dir) && dir.ArgumentList.SequenceEqual(["/d", "/c", "dir"]) && !dir.UseShellExecute,
+                $"Windows: dir -> {Describe(dir)}");
+            ProcessStartInfo type = ShellRunner.BuildStartInfo("type", ["README.md"], scratch, isWindows: true);
+            Report(IsCmd(type) && type.ArgumentList.SequenceEqual(["/d", "/c", "type", "README.md"]) && !type.UseShellExecute,
+                $"Windows: type README.md -> {Describe(type)}");
+
+            // Everything else starts directly, and nothing changes off Windows.
+            ProcessStartInfo ls = ShellRunner.BuildStartInfo("ls", ["-la"], scratch, isWindows: true);
+            Report(ls.FileName == "ls" && ls.ArgumentList.SequenceEqual(["-la"]), $"Windows: ls -la -> {Describe(ls)}");
+            ProcessStartInfo unixDir = ShellRunner.BuildStartInfo("dir", ["-l"], scratch, isWindows: false);
+            Report(unixDir.FileName == "dir" && unixDir.ArgumentList.SequenceEqual(["-l"]), $"Linux: dir -l -> {Describe(unixDir)}");
+
+            // A real read of a scratch file with this OS's built-in viewer.
+            File.WriteAllText(Path.Combine(scratch, "README.md"), "hello from the scratch folder\n");
+            string viewer = OperatingSystem.IsWindows() ? "type" : "cat";
+            ShellResult read = await ShellRunner.RunAsync(
+                ShellRunner.BuildStartInfo(viewer, ["README.md"], scratch, OperatingSystem.IsWindows()), viewer, CancellationToken.None);
+            Report(read.Status == "exit 0" && read.Text == "hello from the scratch folder",
+                $"{viewer} README.md -> {read.Status}: {read.Text}");
+        }
+        finally
+        {
+            try { Directory.Delete(scratch, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+
+        Console.WriteLine($"RESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
     }
+
+    private static bool IsCmd(ProcessStartInfo psi) =>
+        Path.GetFileName(psi.FileName).Equals("cmd.exe", StringComparison.OrdinalIgnoreCase);
+
+    private static string Describe(ProcessStartInfo psi) =>
+        $"{Path.GetFileName(psi.FileName)} [{string.Join(", ", psi.ArgumentList)}]";
 }
