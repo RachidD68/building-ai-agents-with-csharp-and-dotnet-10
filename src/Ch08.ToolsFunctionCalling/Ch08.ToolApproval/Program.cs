@@ -3,14 +3,14 @@
 // ----------------------------------------------------------------------------
 // Some tools are too dangerous to fire on the model's say-so alone. Refunding
 // an order, deleting a record, sending money — you want a human (or a policy)
-// to approve the call before it runs. MAF 1.16 gives you two layers for this:
+// to approve the call before it runs. MAF 1.28 gives you two layers for this:
 //
 //   1. ApprovalRequiredAIFunction (Microsoft.Extensions.AI) — wrap any
 //      AIFunction so that, instead of executing, the run PAUSES and returns a
 //      ToolApprovalRequestContent. You inspect the requested call, decide, and
 //      RESUME the run by sending back a ToolApprovalResponseContent.
 //
-//   2. ToolApprovalAgent (Microsoft.Agents.AI, new in 1.10) — a delegating
+//   2. ToolApprovalAgent (Microsoft.Agents.AI, stable in 1.28) — a delegating
 //      agent that sits in front of your agent and applies "don't ask again"
 //      rules plus auto-approval heuristics, so trusted calls flow through
 //      without a prompt while sensitive ones still pause.

@@ -2,9 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- ToolApprovalAgent + ToolApprovalAgentOptions are experimental in MAF 1.10
-         (diagnostic MAAI001/MAAIW001). The per-function ApprovalRequiredAIFunction
-         path is stable; only the agent-level auto-approval middleware is gated. -->
+    <!-- No NoWarn needed. In Microsoft.Agents.AI 1.28.0, ToolApprovalAgent,
+         ToolApprovalAgentOptions, ToolAutoApprovalRuleContext and UseToolApproval
+         carry no [Experimental] attribute (they were MAAI001 in earlier 1.x
+         releases), and ApprovalRequiredAIFunction / ToolApprovalRequestContent in
+         Microsoft.Extensions.AI.Abstractions are stable. The only experimental
+         member nearby is ToolApprovalRequestContent.RequiresConfirmation
+         (MEAI001), which this sample does not use. -->
 
   </PropertyGroup>
 
