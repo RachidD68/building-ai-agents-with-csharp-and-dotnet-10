@@ -14,14 +14,16 @@
 //        ─► human replies; reply travels back through A2A
 //     ◄─ workflow resumes with the response
 //
-// This program demonstrates the workflow side. It uses the same RequestPort
-// pattern from Ch13.ApprovalWorkflow but configures the workflow to surface
-// the request over A2A rather than via local Console.ReadLine. The remote
-// A2A server lives in Ch14.A2APreview; you wire that one separately.
+// This program shows the workflow side only, in a single process. It uses the
+// same RequestPort pattern as Ch13.ApprovalWorkflow and prints the request
+// that would be surfaced over A2A, but nothing here sends it over A2A, and it
+// does not read Console.ReadLine either. The remote A2A server lives in
+// Ch14.A2APreview; you wire that one separately.
 //
-// Nobody answers over A2A in this single-process demo, so the decision is
-// SIMULATED: a fixed, typed ApprovalDecision, printed as such. It fails
-// closed: an empty draft is never approved (the demo stops with DEMO STOPPED).
+// Because nobody answers over A2A here, the decision is SIMULATED: a fixed,
+// typed ApprovalDecision, printed as such. Over A2A, the caller's reply would
+// decide. It fails closed: an empty draft is never approved (the demo stops
+// with DEMO STOPPED).
 //
 // Offline check (approve, reject, empty draft): dotnet run -- --self-test
 // ============================================================================
