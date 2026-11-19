@@ -43,6 +43,7 @@
     <Project Path="src/Ch08.AuthorizedActions/Ch08.ApprovalRules/Ch08.ApprovalRules.csproj" />
     <Project Path="src/Ch08.AuthorizedActions/Ch08.IdempotentCommit/Ch08.IdempotentCommit.csproj" />
     <Project Path="src/Ch08.AuthorizedActions/Ch08.ToolApproval/Ch08.ToolApproval.csproj" />
+    <Project Path="src/Ch08.AuthorizedActions/Ch08.UncertainOutcome/Ch08.UncertainOutcome.csproj" />
   </Folder>
   <Folder Name="/src/Ch09.MCP/">
     <Project Path="src/Ch09.MCP/Ch09.KnowledgeBaseMcp/Ch09.KnowledgeBaseMcp.csproj" />

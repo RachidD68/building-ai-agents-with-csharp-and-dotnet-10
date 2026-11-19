@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- One uncertain external call, reconciled instead of retried blindly:
+       a fake payment provider with its own journal, a delivery worker that
+       records OutcomeUnknown, and a resume in a second process. No model. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+</Project>
