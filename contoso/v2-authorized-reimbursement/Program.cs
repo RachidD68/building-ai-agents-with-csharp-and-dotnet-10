@@ -9,9 +9,11 @@
 //         -> IdempotentCommit (unique operation id, version recheck, outbox)
 //         -> payment provider -> OutcomeUnknown -> reconciliation
 //
-// Then three things go wrong on purpose: the employee double-clicks Submit,
-// the reviewer edits the amount, and the payment provider's response is lost.
-// One reimbursement, one simulated payment, one operation id.
+// Then things go wrong on purpose: the employee double-clicks Submit and tries
+// to approve her own claim at a higher amount, the reviewer's edited approval
+// arrives twice at once, the payment provider's response is lost, and a right
+// is revoked while a claim waits. One reimbursement, one simulated payment,
+// one operation id.
 //
 //   dotnet run                    against the configured model (Ollama llama3.2)
 //   dotnet run -- --self-test     a scripted model, no network; RESULT n/n
@@ -60,7 +62,6 @@ finally
 internal static class Scenario
 {
     const string Tenant = "contoso";
-    static readonly HashSet<string> Employee = [Permissions.SubmitReimbursement];
     static int s_passed, s_total;
     static bool s_assert;
 
@@ -70,15 +71,21 @@ internal static class Scenario
         string appDb = Path.Combine(root, "app.db"), journal = Path.Combine(root, "provider.db");
         CancellationToken ct = CancellationToken.None;
 
+        // Identities as the host's authentication would produce them. Alice also
+        // holds the finance-reviewer role, which is what makes step 2 interesting.
+        var directory = new PermissionDirectory();
+        directory.Grant(Tenant, "E-1001", Permissions.SubmitReimbursement, Roles.FinanceReviewer);
+        directory.Grant(Tenant, "E-2002", Permissions.SubmitReimbursement);
+        directory.Grant(Tenant, "rita", Roles.FinanceReviewer);
+        Caller alice = directory.Authenticate(Tenant, "E-1001");
+        Caller bob = directory.Authenticate(Tenant, "E-2002");
+        Caller rita = directory.Authenticate(Tenant, "rita");
+
         // The provider will accept the first payment and lose the response.
-        var desk = new ReimbursementDesk(model, appDb, new FakePaymentProvider(journal, ProviderFault.AcceptThenTimeout));
+        var desk = new ReimbursementDesk(model, appDb,
+            new FakePaymentProvider(journal, ProviderFault.AcceptThenTimeout), directory);
         desk.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
         desk.Store.SeedAccount(new EmployeeAccount(Tenant, "E-2002", "EUR", 300m, 3));
-
-        // Identities as the host's authentication would produce them.
-        var alice = new Caller(Tenant, "E-1001", Employee);
-        var bob = new Caller(Tenant, "E-2002", Employee);
-        var rita = new Caller(Tenant, "rita", new HashSet<string>());
 
         var taxi = new ExpenseClaim(Guid.Parse("4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e"), "E-1001",
             "Taxi from the airport to the Fabrikam office on 12 November, receipt attached: 64.80 EUR.");
@@ -97,16 +104,19 @@ internal static class Scenario
             return 0;
         }
 
-        Console.WriteLine("\n-- 2. Alice tries to approve her own claim --");
-        ClaimStatus self = await desk.ReviewAsync(alice, Roles.FinanceReviewer, Tenant, taxi.SubmissionId, true, null, ct);
+        decimal? proposed = desk.AmountOfRecord(Tenant, taxi.SubmissionId);
+        Console.WriteLine("\n-- 2. Alice, a finance reviewer too, raises her own claim to 450.00 and approves it --");
+        ClaimStatus self = await desk.ReviewAsync(alice, Tenant, taxi.SubmissionId, true, 450.00m, ct);
         Show(self);
         Expect("refused: separation of duties, still awaiting review",
             self is { State: ClaimState.AwaitingReview, Reason: "separation_of_duties" });
+        Expect("the refused edit stored nothing: the amount of record is unchanged",
+            desk.AmountOfRecord(Tenant, taxi.SubmissionId) == proposed);
 
-        Console.WriteLine("\n-- 3. Rita edits the amount to 60.00 and approves; the provider's response is lost --");
-        await Task.WhenAll(
-            desk.ReviewAsync(rita, Roles.FinanceReviewer, Tenant, taxi.SubmissionId, true, 60.00m, ct),
-            desk.ReviewAsync(rita, Roles.FinanceReviewer, Tenant, taxi.SubmissionId, true, 60.00m, ct));
+        Console.WriteLine("\n-- 3. Rita edits the amount to 60.00 and approves, twice at once; the provider's response is lost --");
+        ClaimStatus[] reviews = await Task.WhenAll(
+            Task.Run(() => desk.ReviewAsync(rita, Tenant, taxi.SubmissionId, true, 60.00m, ct)),
+            Task.Run(() => desk.ReviewAsync(rita, Tenant, taxi.SubmissionId, true, 60.00m, ct)));
         ClaimStatus afterReview = desk.Status(Tenant, taxi.SubmissionId);
         Show(afterReview);
         EmployeeAccount? account = desk.Store.LoadAccount(Tenant, "E-1001");
@@ -115,6 +125,8 @@ internal static class Scenario
             account is { ReimbursableBalance: 440m, Version: 8 } && desk.Store.Count("operations") == 1);
         Expect("the payment outcome is unknown, not failed and not retried",
             afterReview.State == ClaimState.OutcomeUnknown && Effects(journal) == 1);
+        Expect("neither concurrent approval saw the claim as Rejected",
+            reviews.All(r => r.State != ClaimState.Rejected));
 
         Console.WriteLine("\n-- 4. Alice submits the same claim again --");
         ClaimStatus again = await desk.SubmitAsync(alice, taxi, ct);
@@ -123,7 +135,7 @@ internal static class Scenario
             again.State == ClaimState.OutcomeUnknown && desk.Store.Count("operations") == 1);
 
         Console.WriteLine("\n-- 5. The process restarts and reconciles --");
-        var restarted = new ReimbursementDesk(model, appDb, new FakePaymentProvider(journal));
+        var restarted = new ReimbursementDesk(model, appDb, new FakePaymentProvider(journal), directory);
         foreach (ReconcileResult r in await restarted.ResumeAsync(ct))
             Console.WriteLine($"   reconcile {r.OperationId}: {r.Status} ({r.How})");
         ClaimStatus settled = restarted.Status(Tenant, taxi.SubmissionId);
@@ -147,6 +159,19 @@ internal static class Scenario
         if (assert)
             Expect("the proposal names another employee: denied (resource_scope), nothing paid",
                 injectedStatus is { State: ClaimState.Rejected, Reason: "resource_scope" } && Effects(journal) == 2);
+
+        Console.WriteLine("\n-- 8. Bob's hotel claim waits for review; his right is revoked before Rita approves --");
+        var hotel = new ExpenseClaim(Guid.Parse("5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a"), "E-2002",
+            "Hotel in Lyon for the Fabrikam workshop, one night on 14 November: 180.00 EUR.");
+        ClaimStatus hotelStatus = await restarted.SubmitAsync(bob, hotel, ct);
+        Show(hotelStatus);
+        directory.Revoke(Tenant, "E-2002", Permissions.SubmitReimbursement);
+        ClaimStatus revoked = await restarted.ReviewAsync(rita, Tenant, hotel.SubmissionId, true, null, ct);
+        Show(revoked);
+        if (assert)
+            Expect("the commit reloads Bob's rights: denied (missing_permission), nothing paid",
+                hotelStatus.State == ClaimState.AwaitingReview &&
+                revoked is { State: ClaimState.Rejected, Reason: "missing_permission" } && Effects(journal) == 2);
 
         Console.WriteLine($"\nSimulated payments in the provider journal: {Effects(journal)}");
         if (!assert) return 0;
@@ -185,6 +210,8 @@ internal sealed class ScriptedProposalClient : IChatClient
                 """{"employeeId":"E-1001","amount":64.80,"currency":"EUR","explanation":"Airport taxi with a receipt."}""",
             _ when claim.Contains("lunch") =>
                 """{"employeeId":"E-2002","amount":18.50,"currency":"eur","explanation":"Customer lunch."}""",
+            _ when claim.Contains("Hotel") =>
+                """{"employeeId":"E-2002","amount":180.00,"currency":"EUR","explanation":"One hotel night."}""",
             _ when claim.Contains("SYSTEM NOTE") =>
                 """{"employeeId":"E-1001","amount":12.00,"currency":"EUR","explanation":"Parking, as the note asks."}""",
             _ => """{"employeeId":"","amount":0,"currency":"","explanation":"Unreadable claim."}""",

@@ -28,6 +28,40 @@ public enum ClaimState { Submitted, AwaitingReview, Rejected, Committed, Deliver
 public sealed record ClaimStatus(Guid OperationId, ClaimState State, string Reason, string? Detail = null);
 
 /// <summary>
+/// Who holds which rights, as the host's identity system would answer. A
+/// Caller is built from it at the moment it is needed, so a right revoked
+/// after a claim was submitted is missing when the claim is committed.
+/// </summary>
+public sealed class PermissionDirectory
+{
+    private readonly Dictionary<(string Tenant, string Subject), HashSet<string>> _rights = [];
+    private readonly Lock _gate = new();
+
+    public void Grant(string tenant, string subject, params string[] rights)
+    {
+        lock (_gate)
+        {
+            if (!_rights.TryGetValue((tenant, subject), out HashSet<string>? set))
+                _rights[(tenant, subject)] = set = [];
+            set.UnionWith(rights);
+        }
+    }
+
+    public void Revoke(string tenant, string subject, string right)
+    {
+        lock (_gate) _rights.GetValueOrDefault((tenant, subject))?.Remove(right);
+    }
+
+    /// <summary>The caller as authentication would produce it now (a copy of the current rights).</summary>
+    public Caller Authenticate(string tenant, string subject)
+    {
+        lock (_gate)
+            return new Caller(tenant, subject,
+                new HashSet<string>(_rights.GetValueOrDefault((tenant, subject)) ?? []));
+    }
+}
+
+/// <summary>
 /// The Contoso reimbursement path, end to end:
 ///   claim -> model proposal -> ActionPolicy -> (review) -> IdempotentCommit
 ///   -> outbox -> payment provider -> OutcomeUnknown -> reconciliation.
@@ -64,13 +98,15 @@ public sealed class ReimbursementDesk
 
     private readonly IChatClient _model;
     private readonly string _databasePath;
+    private readonly PermissionDirectory _directory;
     private readonly Func<DateTimeOffset> _clock;
 
     public ReimbursementDesk(IChatClient model, string databasePath, IPaymentProvider provider,
-        Func<DateTimeOffset>? clock = null)
+        PermissionDirectory directory, Func<DateTimeOffset>? clock = null)
     {
         _model = model;
         _databasePath = databasePath;
+        _directory = directory;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         Store = new OperationStore(databasePath);
         Store.Initialize();
@@ -108,35 +144,42 @@ public sealed class ReimbursementDesk
     }
 
     /// <summary>
-    /// A reviewer decides, optionally with an edited amount. The decision is
-    /// stored server-side for the exact values reviewed, then the policy runs
-    /// again before anything is committed.
+    /// A reviewer decides, optionally with an edited amount. The reviewer's role
+    /// comes from the authenticated caller, the checks run before anything is
+    /// stored, and an edit is stored only together with a valid decision.
     /// </summary>
-    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, string reviewerRole, string tenant,
-        Guid operationId, bool approve, decimal? editedAmount, CancellationToken ct)
+    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, string tenant, Guid operationId,
+        bool approve, decimal? editedAmount, CancellationToken ct)
     {
         (Caller requester, ReimbursementProposal proposal)? pending = LoadProposal(tenant, operationId);
         if (pending is null || Status(tenant, operationId).State != ClaimState.AwaitingReview)
             return Status(tenant, operationId);
         (Caller requester, ReimbursementProposal proposal) = pending.Value;
-        if (editedAmount is { } amount)
-        {
-            proposal = proposal with { Amount = amount };     // the reviewed version is the one of record
-            SaveProposal(requester, proposal, $"amount edited by {reviewer.SubjectId}");
-        }
+        if (editedAmount is { } amount) proposal = proposal with { Amount = amount };   // not stored yet
 
+        string role = reviewer.Permissions.Contains(Roles.FinanceReviewer) ? Roles.FinanceReviewer : "";
         var approval = new ApprovalRecord(
             ReimbursementPolicy.Digest(requester.TenantId, requester.SubjectId, proposal),
-            requester.TenantId, requester.SubjectId, reviewer.SubjectId, reviewerRole,
+            requester.TenantId, requester.SubjectId, reviewer.SubjectId, role,
             ReimbursementPolicy.Version, _clock().AddHours(24), approve);
+        // Who may decide is checked for a rejection too, so evaluate as if approving.
         PolicyResult check = ReimbursementPolicy.Evaluate(requester,
-            Store.LoadAccount(requester.TenantId, requester.SubjectId)!, proposal, approval, _clock());
+            Store.LoadAccount(requester.TenantId, requester.SubjectId)!, proposal,
+            approval with { Approved = true }, _clock());
         if (check.Reason is "separation_of_duties" or "reviewer_not_authorized")
-            return Status(tenant, operationId) with { Reason = check.Reason };   // not a valid review: still waiting
-        SaveApproval(approval, operationId);
+            return Status(tenant, operationId) with { Reason = check.Reason };   // nothing stored: still waiting
+
+        // One decision per claim: the first valid review claims the approval row
+        // and stores the reviewed amount in the same transaction. A second
+        // reviewer, or the same click twice, gets the claim's state instead.
+        if (!RecordReview(approval, proposal, editedAmount is null ? null : $"amount edited by {reviewer.SubjectId}"))
+            return Status(tenant, operationId);
         if (!approve) return Finish(requester, operationId, ClaimState.Rejected, "approval_rejected");
         return await CommitAsync(requester, proposal, approval, ct);
     }
+
+    /// <summary>The amount currently on record for a claim, or null when there is no proposal.</summary>
+    public decimal? AmountOfRecord(string tenant, Guid operationId) => LoadProposal(tenant, operationId)?.Item2.Amount;
 
     /// <summary>After a restart: settle every payment whose outcome is unknown.</summary>
     public async Task<IReadOnlyList<ReconcileResult>> ResumeAsync(CancellationToken ct)
@@ -147,15 +190,22 @@ public sealed class ReimbursementDesk
 
     public ClaimStatus Status(string tenant, Guid operationId)
     {
-        using SqliteConnection db = Open();
-        using SqliteCommand cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT state, reason FROM claims WHERE tenant = $tenant AND operation_id = $op";
-        cmd.Parameters.AddWithValue("$tenant", tenant);
-        cmd.Parameters.AddWithValue("$op", operationId.ToString("D"));
-        using SqliteDataReader r = cmd.ExecuteReader();
-        if (!r.Read()) return new(operationId, ClaimState.Submitted, "unknown_claim");
-        var state = Enum.Parse<ClaimState>(r.GetString(0));
-        string reason = r.GetString(1);
+        ClaimState state;
+        string reason;
+        // Read the claim and close the connection BEFORE asking the delivery
+        // worker: an open reader holds a shared lock, and a committing writer on
+        // another thread would wait for it while this thread waits for the writer.
+        using (SqliteConnection db = Open())
+        using (SqliteCommand cmd = db.CreateCommand())
+        {
+            cmd.CommandText = "SELECT state, reason FROM claims WHERE tenant = $tenant AND operation_id = $op";
+            cmd.Parameters.AddWithValue("$tenant", tenant);
+            cmd.Parameters.AddWithValue("$op", operationId.ToString("D"));
+            using SqliteDataReader r = cmd.ExecuteReader();
+            if (!r.Read()) return new(operationId, ClaimState.Submitted, "unknown_claim");
+            state = Enum.Parse<ClaimState>(r.GetString(0));
+            reason = r.GetString(1);
+        }
         if (state == ClaimState.Committed && Worker.Load(tenant, operationId) is { } delivery)
         {
             state = delivery.Status switch
@@ -244,32 +294,68 @@ public sealed class ReimbursementDesk
         cmd.Parameters.AddWithValue("$op", operationId.ToString("D"));
         using SqliteDataReader r = cmd.ExecuteReader();
         if (!r.Read()) return null;
-        // The requester's permissions are reloaded from the directory; here, the claim's own right.
-        var requester = new Caller(tenant, r.GetString(0), new HashSet<string> { Permissions.SubmitReimbursement });
+        // The requester's permissions are reloaded from the directory, so a revoked right is refused at commit.
+        Caller requester = _directory.Authenticate(tenant, r.GetString(0));
         return (requester, new ReimbursementProposal(operationId, r.GetString(1),
             decimal.Parse(r.GetString(2), CultureInfo.InvariantCulture), r.GetString(3), r.GetInt64(4)));
     }
 
-    private void SaveApproval(ApprovalRecord a, Guid operationId) => Execute("""
-        INSERT OR REPLACE INTO approvals (tenant, operation_id, digest, requester, reviewer, reviewer_role,
-                                          policy_version, expires_at, approved)
-        VALUES ($tenant, $op, $digest, $requester, $reviewer, $role, $policy, $expires, $approved)
-        """, ("$tenant", a.TenantId), ("$op", operationId.ToString("D")), ("$digest", a.Digest),
-        ("$requester", a.RequesterId), ("$reviewer", a.ReviewerId), ("$role", a.ReviewerRole),
-        ("$policy", a.PolicyVersion), ("$expires", a.ExpiresAtUtc.ToString("O")), ("$approved", a.Approved ? 1 : 0));
+    /// <summary>
+    /// Stores one review: the approval row (first writer wins) and, in the same
+    /// transaction, the reviewed amount. Returns false when a decision already exists.
+    /// </summary>
+    private bool RecordReview(ApprovalRecord a, ReimbursementProposal p, string? editNote)
+    {
+        using SqliteConnection db = Open();
+        using SqliteTransaction tx = db.BeginTransaction(deferred: false);
+        int claimed = Execute(db, tx, """
+            INSERT INTO approvals (tenant, operation_id, digest, requester, reviewer, reviewer_role,
+                                   policy_version, expires_at, approved)
+            VALUES ($tenant, $op, $digest, $requester, $reviewer, $role, $policy, $expires, $approved)
+            ON CONFLICT (tenant, operation_id) DO NOTHING
+            """, ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")), ("$digest", a.Digest),
+            ("$requester", a.RequesterId), ("$reviewer", a.ReviewerId), ("$role", a.ReviewerRole),
+            ("$policy", a.PolicyVersion), ("$expires", a.ExpiresAtUtc.ToString("O")), ("$approved", a.Approved ? 1 : 0));
+        if (claimed == 0)
+        {
+            tx.Rollback();
+            return false;
+        }
+        Execute(db, tx, """
+            UPDATE claims SET amount = $amount, explanation = COALESCE($note, explanation)
+            WHERE tenant = $tenant AND operation_id = $op
+            """, ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)), ("$note", (object?)editNote ?? DBNull.Value),
+            ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")));
+        tx.Commit();
+        return true;
+    }
 
+    /// <summary>
+    /// Moves a claim forward. Only a claim that is still Submitted or
+    /// AwaitingReview changes, so a late or duplicate caller can never turn a
+    /// Committed claim into Rejected. Returns the state as stored.
+    /// </summary>
     private ClaimStatus Finish(Caller requester, Guid operationId, ClaimState state, string reason)
     {
-        Execute("UPDATE claims SET state = $state, reason = $reason WHERE tenant = $tenant AND operation_id = $op",
-            ("$state", state.ToString()), ("$reason", reason), ("$tenant", requester.TenantId),
+        Execute("""
+            UPDATE claims SET state = $state, reason = $reason
+            WHERE tenant = $tenant AND operation_id = $op AND state IN ('Submitted', 'AwaitingReview')
+            """, ("$state", state.ToString()), ("$reason", reason), ("$tenant", requester.TenantId),
             ("$op", operationId.ToString("D")));
-        return new(operationId, state, reason);
+        return Status(requester.TenantId, operationId);
     }
 
     private int Execute(string sql, params (string Name, object Value)[] parameters)
     {
         using SqliteConnection db = Open();
+        return Execute(db, null, sql, parameters);
+    }
+
+    private static int Execute(SqliteConnection db, SqliteTransaction? tx, string sql,
+        params (string Name, object Value)[] parameters)
+    {
         using SqliteCommand cmd = db.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = sql;
         foreach ((string name, object value) in parameters) cmd.Parameters.AddWithValue(name, value);
         return cmd.ExecuteNonQuery();

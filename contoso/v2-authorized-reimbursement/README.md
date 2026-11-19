@@ -11,7 +11,9 @@ claim -> model proposal (structured output) -> ActionPolicy
 
 `ReimbursementDesk` composes the chapter's three projects as they are: `Ch08.ActionPolicy`, `Ch08.IdempotentCommit` and `Ch08.UncertainOutcome`. Identity comes from the caller the host authenticated, never from the model. The claim's submission id, created once when the form opens, is the operation id from start to end.
 
-The scenario: Alice's taxi claim (64.80 EUR) needs review, and she double-clicks Submit; she tries to approve it herself; Rita edits the amount to 60.00 and approves (twice, concurrently); the provider accepts the payment and the response is lost; the process restarts and reconciles. Then a low-value claim goes straight through, and a claim whose text asks to pay another employee is denied.
+The scenario: Alice's taxi claim (64.80 EUR) needs review, and she double-clicks Submit; Alice, who also holds the finance-reviewer role, raises it to 450.00 and tries to approve it herself, which is refused and stores nothing; Rita edits the amount to 60.00 and approves, and the approval arrives twice at the same moment (two threads); the provider accepts the payment and the response is lost; the process restarts and reconciles. Then a low-value claim goes straight through, a claim whose text asks to pay another employee is denied, and a claim whose requester loses the right to submit while it waits for review is denied at commit.
+
+The reviewer's role comes from the authenticated caller (`PermissionDirectory` stands in for the host's identity system), never from a parameter the client sets. A review is checked before anything is stored; the first valid decision claims the approval row and stores the reviewed amount in the same transaction; a claim's state only moves forward, so a duplicate approval can never mark a paid claim Rejected.
 
 Claim states: `Submitted`, `AwaitingReview`, `Rejected`, `Committed`, `Delivered`, `OutcomeUnknown`, `Reconciled`.
 
