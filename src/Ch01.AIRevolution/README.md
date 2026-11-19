@@ -1,6 +1,6 @@
 # Chapter 1 -- The AI Revolution in .NET
 
-This is a **theory chapter** with no companion code project. Use the checklist below as a study guide while reading.
+This chapter is mostly theory; its one sample is `src/Ch01.FirstGlimpse`. Use the checklist below as a study guide while reading.
 
 ## Study Checklist
 
@@ -30,9 +30,8 @@ This is a **theory chapter** with no companion code project. Use the checklist b
 
 ### What You Will Build in This Book
 - [ ] **Ch 2-4 (Foundations)** -- C# essentials, LLM mental model, first API call
-- [ ] **Ch 5-8 (Core Agent Skills)** -- agents, conversations, structured output, tool calling
-- [ ] **Ch 9-10 (Knowledge)** -- MCP integration, RAG pipelines
-- [ ] **Ch 11 (Multimodal)** -- agents that read images
+- [ ] **Ch 5-7 (Your First Agents)** -- agents, conversations, structured output
+- [ ] **Ch 8-11 (Giving Agents Superpowers)** -- tool calling, MCP integration, RAG pipelines, agents that read images
 - [ ] **Ch 12-13 (Multi-Agent & Workflows)** -- orchestration, sequential and conditional pipelines
 - [ ] **Ch 14-19 (Production)** -- hosting, observability, safety guardrails, agent skills, evaluation, the agent harness
 - [ ] **Ch 20 (Next Steps)** -- where to go after the book
@@ -41,4 +40,4 @@ This is a **theory chapter** with no companion code project. Use the checklist b
 1. Agentic AI is not a fad -- it is a fundamental shift in how software is designed.
 2. Microsoft has consolidated its AI frameworks into a single, coherent stack.
 3. .NET developers are uniquely positioned because the entire stack (abstractions, agents, hosting) is first-party.
-4. Every chapter after this one has runnable code. This chapter gives you the mental map to navigate them.
+4. Chapters 2-19 have runnable code (Chapter 20 is a reading list). This chapter gives you the mental map to navigate them.

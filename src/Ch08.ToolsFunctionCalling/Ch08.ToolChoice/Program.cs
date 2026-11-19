@@ -15,7 +15,7 @@
 //                                       RequiredFunctionName is the tool name.
 //
 // (A fourth mode, ChatToolMode.RequireAny, forces the model to call *some*
-//  tool but lets it pick which — shown in the console summary for completeness.)
+//  tool but lets it pick which. This demo does not run it.)
 //
 // We pass ToolMode through ChatClientAgentRunOptions on each RunAsync call, so
 // the same agent instance answers under three different policies. After each
