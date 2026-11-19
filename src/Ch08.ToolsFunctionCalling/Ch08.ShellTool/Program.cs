@@ -358,6 +358,10 @@ internal static class ShellPolicy
     {
         string scratch = Path.Combine(Path.GetTempPath(), $"ch08-policy-selftest-{Guid.NewGuid():N}");
         Directory.CreateDirectory(scratch);
+        // A backslash separates paths only on Windows. On Linux and macOS it is an
+        // ordinary filename character, so ..\..\secrets.txt is one file name that
+        // stays inside the scratch folder: allowed there, and checked to be confined.
+        bool windows = OperatingSystem.IsWindows();
         (string Exe, string[] Args, bool Allowed)[] cases =
         [
             ("ls", [], true),
@@ -369,9 +373,11 @@ internal static class ShellPolicy
             ("dotnet", ["--version"], true),
             ("cat", [@"C:\Windows\win.ini"], false),
             ("cat", ["/etc/passwd"], false),
-            ("cat", [@"..\..\secrets.txt"], false),
+            ("cat", [@"..\..\secrets.txt"], !windows),
+            ("cat", ["../../secrets.txt"], false),
             ("cat", ["../outside.txt"], false),
-            ("cat", [@"\\server\share\file"], false),
+            ("cat", [@"\\server\share\file"], !windows),
+            ("cat", ["//server/share/file"], false),
             ("cat", ["D:file.txt"], false),
             ("cat", ["--file=../x"], false),
             ("dotnet", ["run"], false),
@@ -403,12 +409,18 @@ internal static class ShellPolicy
             Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
         }
 
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scratch)) + Path.DirectorySeparatorChar;
         foreach ((string exe, string[] a, bool allowed) in cases)
         {
             string? refusal = Check(exe, a, scratch);
+            // An allowed path must also resolve inside the scratch folder.
+            bool confined = refusal is not null || a.All(arg => arg.StartsWith('-')
+                || Path.GetFullPath(Path.Combine(root, arg)).StartsWith(root, StringComparison.OrdinalIgnoreCase));
             string call = $"{exe} {string.Join(' ', a)}".Trim().ReplaceLineEndings(" ");
-            Report((refusal is null) == allowed,
-                $"{call,-34} -> {(refusal is null ? "allowed" : "refused: " + refusal.ReplaceLineEndings(" "))}");
+            string verdict = refusal is not null ? "refused: " + refusal.ReplaceLineEndings(" ")
+                : a.Any(arg => arg.Contains('\\')) ? @"allowed: '\' is a filename character here, so it stays inside the scratch folder"
+                : "allowed";
+            Report((refusal is null) == allowed && confined, $"{call,-34} -> {verdict}");
         }
 
         try
