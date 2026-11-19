@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch07.LoopControl": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

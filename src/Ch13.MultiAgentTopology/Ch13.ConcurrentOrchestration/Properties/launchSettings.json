@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch13.ConcurrentOrchestration": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

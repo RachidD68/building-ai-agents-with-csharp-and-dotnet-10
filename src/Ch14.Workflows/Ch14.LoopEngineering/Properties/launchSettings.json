@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch14.LoopEngineering": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

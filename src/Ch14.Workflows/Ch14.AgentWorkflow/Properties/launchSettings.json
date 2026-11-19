@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch14.AgentWorkflow": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

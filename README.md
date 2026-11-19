@@ -21,10 +21,10 @@ Corrections in the companion code, with what to change in the printed listings, 
 | Area / chapter | Severity | What was wrong | Fix | Fixed in |
 |---|---|---|---|---|
 | Ch10, Ch14, Ch16 · RAG provider (B1) | A | `RagContextProvider` needed a mutable `CurrentQuery`: Chapter 14 never set it (no retrieval), Chapter 16 set it on a shared singleton (requests could swap context) | Reads the question from the call's `InvokingContext`; `CurrentQuery` removed | v1.1.0 (companion code) |
-| Ch08 · `Ch08.ShellTool` (R02) | A | Allow-list let `dotnet` and `find` run arbitrary code; "sandbox" wording; on Windows every viewer failed to start and the model invented results | Read-only viewers in a scratch folder; not called a sandbox; a missing program is reported, `dir`/`type` run through cmd with metacharacters refused | v1.1.0 (companion code) |
-| Ch13 · `Ch13.ApprovalWorkflow` (R03) | A | Empty input, typos or end of input approved the document | Only `approve`, `revise` or `reject`; anything else stays pending | v1.1.0 (companion code) |
+| Ch08 · `Ch07.ShellTool` (R02) | A | Allow-list let `dotnet` and `find` run arbitrary code; "sandbox" wording; on Windows every viewer failed to start and the model invented results | Read-only viewers in a scratch folder; not called a sandbox; a missing program is reported, `dir`/`type` run through cmd with metacharacters refused | v1.1.0 (companion code) |
+| Ch13 · `Ch14.ApprovalWorkflow` (R03) | A | Empty input, typos or end of input approved the document | Only `approve`, `revise` or `reject`; anything else stays pending | v1.1.0 (companion code) |
 | Ch08 · `Ch08.ToolApproval` (R04) | A | An approved refund could run twice | Idempotent per order | v1.1.0 (companion code) |
-| Ch16 · `Ch16.ToolApproval` (R05) | A | Refunds of -10 and 0 were auto-approved; culture-dependent parsing | Only `0 < amount <= 50`, invariant parsing | v1.1.0 (companion code) |
+| Ch16 · `Ch08.ApprovalRules` (R05) | A | Refunds of -10 and 0 were auto-approved; culture-dependent parsing | Only `0 < amount <= 50`, invariant parsing | v1.1.0 (companion code) |
 | Ch04 · configuration (R06) | B | User secrets, Azure key, `ANTHROPIC_API_KEY` and README keys did not work as described | Working recipe and `--config-check` | v1.1.0 (companion code) |
 | Ch18 · evals (R07) | A | `Contains("15")` passed "115 days" and was called a grounding check | Exact value check with counterexamples | v1.1.0 (companion code) |
 | Ch13 · checkpoint resume (R08) | B | "Restart" ran in one process with in-memory checkpoints; demos approved implicitly, even an empty draft | `prepare`/`resume` across two processes on a file store; simulated decisions labelled, empty drafts never approved | v1.1.0 (companion code) |
@@ -96,7 +96,7 @@ Plus five appendices — a NuGet package reference, a Semantic Kernel to MAF mig
 - **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
-Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The one exception is the Aspire AppHost (`src/Ch14.Hosting/Ch14.AspireOrchestration/…AppHost`), which opts out because the Aspire SDK adds its own package references; it pins Aspire 13.6.5 and a few patched transitive packages itself. The full, themed package list is **Appendix A** of the book.
+Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The one exception is the Aspire AppHost (`src/Ch17.HostingIdentity/Ch17.AspireOrchestration/…AppHost`), which opts out because the Aspire SDK adds its own package references; it pins Aspire 13.6.5 and a few patched transitive packages itself. The full, themed package list is **Appendix A** of the book.
 
 ### Prerequisites
 
@@ -127,7 +127,7 @@ Every project except the Aspire AppHost commits a `packages.lock.json`. `dotnet 
 ### Run a sample
 
 ```bash
-dotnet run --project src/Ch05.HelloAgent/Ch05.BasicAgent
+dotnet run --project src/Ch04.FirstAgent/Ch04.BasicAgent
 ```
 
 ### Configuration
@@ -135,7 +135,7 @@ dotnet run --project src/Ch05.HelloAgent/Ch05.BasicAgent
 Provider settings live in each project's `appsettings.json`, under `LlmProvider`. Keys belong in [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables — never in source control. Every sample shares one user-secrets store, so a value you set once works in every chapter, and no `dotnet user-secrets init` is needed. Run these from any project folder:
 
 ```bash
-cd src/Ch04.DevEnvironment/Ch04.FirstLlmCall
+cd src/Ch03.DevEnvironment/Ch03.FirstLlmCall
 dotnet user-secrets set "LlmProvider:Provider" "openai"
 dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "YOUR-KEY"
 ```
@@ -178,25 +178,25 @@ Not sure which settings a sample will use? `dotnet run -- --config-check` lists 
 |--------|---------|-------|
 | `src/Common/` | — | Shared configuration, DI, provider wiring, resilience: a GA-only core plus the Azure, Foundry and Anthropic add-ons |
 | `src/Ch01.*` | 1 | The AI Revolution in .NET (concept + a first code glimpse) |
-| `src/Ch02.CSharpEssentials/` | 2 | C# Essentials for AI Development |
-| `src/Ch03.HowLLMsWork/` | 3 | How LLMs Work |
-| `src/Ch04.DevEnvironment/` | 4 | Setting Up Your Dev Environment |
-| `src/Ch05.HelloAgent/` | 5 | Hello, Agent! |
+| `src/AppA.CSharpEssentials/` | 2 | C# Essentials for AI Development |
+| `src/Ch02.ModelsContext/` | 3 | How LLMs Work |
+| `src/Ch03.DevEnvironment/` | 4 | Setting Up Your Dev Environment |
+| `src/Ch04.FirstAgent/` | 5 | Hello, Agent! |
 | `src/Ch06.ConversationsMemory/` | 6 | Conversations and Memory |
-| `src/Ch07.StructuredOutput/` | 7 | Structured Output and Typed Responses |
+| `src/Ch05.TypedResponses/` | 7 | Structured Output and Typed Responses |
 | `src/Ch08.ToolsFunctionCalling/` | 8 | Tools and Function Calling (incl. `FileAccessProvider`) |
 | `src/Ch09.MCP/` | 9 | The Model Context Protocol |
-| `src/Ch10.IntroRAG/` | 10 | Introduction to RAG |
-| `src/Ch11.Multimodal/` | 11 | Multimodal Agents — vision, image-to-typed-data |
-| `src/Ch12.MultiAgent/` | 12 | Multi-Agent Systems |
-| `src/Ch13.Workflows/` | 13 | Introduction to Workflows |
-| `src/Ch14.Hosting/` | 14 | Hosting and Deployment |
-| `src/Ch15.Observability/` | 15 | Observability and Debugging |
+| `src/Ch10.RAGBaseline/` | 10 | Introduction to RAG |
+| `src/Ch12.MultimodalDocuments/` | 11 | Multimodal Agents — vision, image-to-typed-data |
+| `src/Ch13.MultiAgentTopology/` | 12 | Multi-Agent Systems |
+| `src/Ch14.Workflows/` | 13 | Introduction to Workflows |
+| `src/Ch17.HostingIdentity/` | 14 | Hosting and Deployment |
+| `src/Ch19.Observability/` | 15 | Observability and Debugging |
 | `src/Ch16.SafetyGuardrails/` | 16 | Safety and Guardrails |
-| `src/Ch17.AgentSkills/` | 17 | Agent Skills |
-| `src/Ch18.EvalSuite/`, `Ch18.FaqEval/`, `Ch18.EvalTests/` | 18 | Evaluation |
-| `src/Ch19.AgentHarness/` | 19 | The Agent Harness |
-| `src/Ch20.NextSteps/` | 20 | Your Next Steps |
+| `src/Ch16.SkillsHarnesses/` | 17 | Agent Skills |
+| `src/Ch21.Evaluation/`, `Ch21.FaqEval/`, `Ch21.EvalTests/` | 18 | Evaluation |
+| `src/Ch16.SkillsHarnesses/` | 19 | The Agent Harness |
+| `src/Ch24.Operations/` | 20 | Your Next Steps |
 | `exercises/` | 2–16 | Worked exercise solutions (also indexed in Appendix E) |
 
 ## Exercise solutions
@@ -212,7 +212,7 @@ Not every exercise in the book has a solution here:
 Each solution runs on its own:
 
 ```bash
-dotnet run --project exercises/Ch08.Exercises/Ex01.UnitConverterTool
+dotnet run --project exercises/Ch07.Exercises/Ex01.UnitConverterTool
 ```
 
 Try the exercise yourself first, from the brief in its chapter, before you reach for the code here.

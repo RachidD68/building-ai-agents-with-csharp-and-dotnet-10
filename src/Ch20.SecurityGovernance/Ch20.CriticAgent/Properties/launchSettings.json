@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch20.CriticAgent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

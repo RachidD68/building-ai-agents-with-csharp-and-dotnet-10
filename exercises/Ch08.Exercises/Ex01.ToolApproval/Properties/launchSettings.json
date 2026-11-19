@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex01.ToolApproval": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

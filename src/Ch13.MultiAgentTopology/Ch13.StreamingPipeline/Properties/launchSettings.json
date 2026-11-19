@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch13.StreamingPipeline": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

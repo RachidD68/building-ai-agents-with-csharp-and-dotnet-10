@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch13.MagenticOrchestrator": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

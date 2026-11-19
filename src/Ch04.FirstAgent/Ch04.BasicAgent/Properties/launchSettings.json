@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch04.BasicAgent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

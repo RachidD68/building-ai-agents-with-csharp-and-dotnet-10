@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch07.CalculatorTool": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

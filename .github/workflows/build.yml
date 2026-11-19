@@ -114,10 +114,10 @@ jobs:
           set -uo pipefail
           failed=0
           for p in \
-            src/Ch11.Multimodal/Ch11.Multimodal.Tests/Ch11.Multimodal.Tests.csproj \
-            src/Ch12.MultiAgent/Ch12.MultiAgent.Tests/Ch12.MultiAgent.Tests.csproj \
-            src/Ch13.Workflows/Ch13.WorkflowTests/Ch13.WorkflowTests.csproj \
-            src/Ch18.EvalTests/Ch18.EvalTests/Ch18.EvalTests.csproj
+            src/Ch12.MultimodalDocuments/Ch12.Multimodal.Tests/Ch12.Multimodal.Tests.csproj \
+            src/Ch13.MultiAgentTopology/Ch13.MultiAgent.Tests/Ch13.MultiAgent.Tests.csproj \
+            src/Ch14.Workflows/Ch14.WorkflowTests/Ch14.WorkflowTests.csproj \
+            src/Ch21.Evaluation/Ch21.EvalTests/Ch21.EvalTests.csproj
           do
             echo "::group::$p"
             if dotnet run --project "$p" --configuration "$CONFIGURATION" --no-build; then

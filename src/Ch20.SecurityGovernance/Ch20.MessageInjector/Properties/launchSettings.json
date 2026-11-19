@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch20.MessageInjector": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch14.CheckpointedApproval": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

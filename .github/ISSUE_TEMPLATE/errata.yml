@@ -78,4 +78,4 @@ body:
     attributes:
       label: Companion project (if code-related)
       description: Which companion project does this relate to, if any?
-      placeholder: e.g. src/Ch08.ToolsFunctionCalling/Ch08.WeatherTool — or not applicable
+      placeholder: e.g. src/Ch07.Tools/Ch07.WeatherTool — or not applicable
