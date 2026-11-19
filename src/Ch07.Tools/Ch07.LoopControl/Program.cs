@@ -24,15 +24,23 @@
 //
 // Both demos force a specific tool with ChatToolMode.RequireSpecific so the
 // loop is deterministic enough for a stable transcript.
+//
+// A real model may stop polling on its own before any cap is reached, so the
+// live run proves little about the brakes. `dotnet run -- --self-test` drives
+// the SAME agent factory with a scripted model that never stops calling the
+// tool, and asserts what each brake does. No network, no model.
 // ============================================================================
 
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await LoopSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -83,10 +91,11 @@ await RunCappedAsync(
     includeDetail: true);
 
 Console.WriteLine("\n=== Loop-control demo complete! ===");
+return 0;
 
 // ----------------------------------------------------------------------------
-// Builds an agent whose FunctionInvokingChatClient is configured with the
-// supplied limits, forces the named tool, and reports how the loop ended.
+// Builds an agent with the supplied limits, forces the named tool, and reports
+// how the loop ended.
 // ----------------------------------------------------------------------------
 async Task RunCappedAsync(
     AIFunction tool,
@@ -96,32 +105,7 @@ async Task RunCappedAsync(
     int maxErrors,
     bool includeDetail)
 {
-    // Decorate the raw client with a CONFIGURED function-invocation layer.
-    IChatClient pipeline = innerClient
-        .AsBuilder()
-        .UseFunctionInvocation(configure: c =>
-        {
-            c.MaximumIterationsPerRequest = maxIterations;
-            c.MaximumConsecutiveErrorsPerRequest = maxErrors;
-            c.IncludeDetailedErrors = includeDetail;
-        })
-        .Build();
-
-    // UseProvidedChatClientAsIs = true → the agent will NOT add its own default
-    // function-invocation decorator on top of ours, so our limits take effect.
-    ChatClientAgent agent = new(
-        pipeline,
-        new ChatClientAgentOptions
-        {
-            Name = "LoopAssistant",
-            UseProvidedChatClientAsIs = true,
-            ChatOptions = new ChatOptions
-            {
-                Instructions = "You are an assistant. Use the provided tool to answer.",
-                ToolMode = ChatToolMode.RequireSpecific(toolName),
-                Tools = [tool],
-            },
-        });
+    ChatClientAgent agent = LoopAgent.Create(innerClient, tool, toolName, maxIterations, maxErrors, includeDetail);
 
     AgentSession session = await agent.CreateSessionAsync(cts.Token);
 
@@ -154,3 +138,163 @@ static string QueryLedger(
     [Description("The ledger account number, e.g. '4001'.")] string account)
     => throw new InvalidOperationException(
         $"LEDGER-DB-503: ledger database is unavailable (account '{account}').");
+
+internal static class LoopAgent
+{
+    /// <summary>
+    /// An agent whose FunctionInvokingChatClient carries the supplied limits.
+    /// The live demo and the self-test both build their agent here.
+    /// </summary>
+    public static ChatClientAgent Create(IChatClient innerClient, AIFunction tool, string toolName,
+        int maxIterations, int maxErrors, bool includeDetail)
+    {
+        // Decorate the raw client with a CONFIGURED function-invocation layer.
+        IChatClient pipeline = innerClient
+            .AsBuilder()
+            .UseFunctionInvocation(configure: c =>
+            {
+                c.MaximumIterationsPerRequest = maxIterations;
+                c.MaximumConsecutiveErrorsPerRequest = maxErrors;
+                c.IncludeDetailedErrors = includeDetail;
+            })
+            .Build();
+
+        // UseProvidedChatClientAsIs = true → the agent will NOT add its own default
+        // function-invocation decorator on top of ours, so our limits take effect.
+        return new ChatClientAgent(
+            pipeline,
+            new ChatClientAgentOptions
+            {
+                Name = "LoopAssistant",
+                UseProvidedChatClientAsIs = true,
+                ChatOptions = new ChatOptions
+                {
+                    Instructions = "You are an assistant. Use the provided tool to answer.",
+                    ToolMode = ChatToolMode.RequireSpecific(toolName),
+                    Tools = [tool],
+                },
+            });
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Offline proof of the brakes: dotnet run -- --self-test
+// ----------------------------------------------------------------------------
+internal static class LoopSelfTest
+{
+    static int s_passed, s_total;
+
+    public static async Task<int> RunAsync()
+    {
+        Console.WriteLine("=== Loop Control: self-test (scripted model, no network) ===\n");
+
+        // 1. The iteration cap. The scripted model asks for poll_job on every turn, forever.
+        int polls = 0;
+        AIFunction poll = AIFunctionFactory.Create(
+            (string jobId) => { polls++; return "Status: STILL PROCESSING. Call poll_job again to continue."; },
+            name: "poll_job");
+        var looping = new ScriptedLoopModel("poll_job", new() { ["jobId"] = "JOB-77" });
+        AgentResponse capped = await LoopAgent.Create(looping, poll, "poll_job", 3, 3, false)
+            .RunAsync("Has export job JOB-77 finished yet?");
+        Console.WriteLine($"-- MaximumIterationsPerRequest = 3, a model that never stops calling poll_job --");
+        Console.WriteLine($"   poll_job ran {polls} time(s); the model was called {looping.Calls} time(s)");
+        Console.WriteLine($"   the last request carried {looping.LastRequestTools}");
+        Console.WriteLine($"   the run returned: {capped.Text}");
+        Expect("the tool ran exactly 3 times, then the loop stopped invoking it", polls == 3);
+        Expect("the last request went out with no tools, so the model had to answer in text",
+            looping.Calls == 4 && looping.LastRequestTools.StartsWith("0 tool(s)"));
+        Expect("the run returned that answer normally, with no exception",
+            capped.Text.StartsWith("I stopped checking"));
+
+        // 2. The error brake at 0: the first failure is rethrown to the caller.
+        var failing = new ScriptedLoopModel("query_ledger", new() { ["account"] = "4001" });
+        AIFunction ledger = AIFunctionFactory.Create(Fail, name: "query_ledger");
+        string? thrown = await ThrowsAsync(LoopAgent.Create(failing, ledger, "query_ledger", 5, 0, false));
+        Console.WriteLine("\n-- MaximumConsecutiveErrorsPerRequest = 0, a tool that always throws --");
+        Console.WriteLine($"   {thrown ?? "no exception"}");
+        Expect("the first failure is rethrown as the tool's own exception",
+            thrown is not null && thrown.StartsWith("InvalidOperationException: LEDGER-DB-503") && failing.Calls == 1);
+
+        // 3. The error brake at 3, detailed errors off: what the model is told.
+        var observing = new ScriptedLoopModel("query_ledger", new() { ["account"] = "4001" });
+        string? thrownAfterRetries = await ThrowsAsync(LoopAgent.Create(observing, ledger, "query_ledger", 10, 3, false));
+        Console.WriteLine("\n-- MaximumConsecutiveErrorsPerRequest = 3, IncludeDetailedErrors = false --");
+        Console.WriteLine($"   the model was called {observing.Calls} time(s), then: {thrownAfterRetries ?? "no exception"}");
+        Console.WriteLine($"   the model saw: {observing.ResultsSeen.FirstOrDefault() ?? "(nothing)"}");
+        Expect("three failures go back to the model, the fourth is rethrown",
+            thrownAfterRetries is not null && observing.Calls == 4);
+        Expect("with detailed errors off, the model never sees the exception message",
+            observing.ResultsSeen.Count == 3 && observing.ResultsSeen.All(r => !r.Contains("LEDGER-DB-503")));
+
+        Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
+        return s_passed == s_total ? 0 : 1;
+    }
+
+    static string Fail(string account) =>
+        throw new InvalidOperationException($"LEDGER-DB-503: ledger database is unavailable (account '{account}').");
+
+    static async Task<string?> ThrowsAsync(ChatClientAgent agent)
+    {
+        try
+        {
+            await agent.RunAsync("What was the closing balance for account 4001?");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return $"{ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    static void Expect(string name, bool ok)
+    {
+        s_total++;
+        if (ok) s_passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+    }
+}
+
+/// <summary>
+/// A model that answers every request with a call to the same tool, and
+/// records the tool results it is sent back.
+/// </summary>
+internal sealed class ScriptedLoopModel(string toolName, Dictionary<string, object?> arguments) : IChatClient
+{
+    public int Calls { get; private set; }
+    public List<string> ResultsSeen { get; } = [];
+    public string LastRequestTools { get; private set; } = "";
+
+    public Task<ChatResponse> GetResponseAsync(
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        Calls++;
+        LastRequestTools = $"{options?.Tools?.Count ?? 0} tool(s), tool mode {Describe(options?.ToolMode)}";
+        ResultsSeen.Clear();
+        ResultsSeen.AddRange(messages.SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => r.Result?.ToString() ?? ""));
+        if (options?.Tools is not { Count: > 0 })      // no tool left to call: answer in text
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+                "I stopped checking: the job was still processing at the last poll.")));
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+            [new FunctionCallContent($"call-{Calls}", toolName, arguments)])));
+    }
+
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ChatResponse response = await GetResponseAsync(messages, options, cancellationToken);
+        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates()) yield return update;
+    }
+
+    static string Describe(ChatToolMode? mode) => mode switch
+    {
+        null => "(not set)",
+        RequiredChatToolMode { RequiredFunctionName: { } name } => $"RequireSpecific({name})",
+        _ => mode.GetType().Name,
+    };
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+    public void Dispose() { }
+}

@@ -1,7 +1,7 @@
 // ============================================================================
-// FileAccessProvider: a sandboxed scratchpad for your agent
+// FileAccessProvider: a scoped scratchpad for your agent
 // ----------------------------------------------------------------------------
-// MAF ships (since 1.13) a built-in context provider that gives an agent a SAFE, scoped
+// MAF ships a built-in context provider that gives an agent a scoped, store-backed
 // filesystem: FileAccessProvider. Register it and the model gains eight tools —
 // read, read_lines, write, delete, ls, grep, replace, and replace_lines — all confined to a
 // store you choose. No System.IO, no path the
@@ -14,7 +14,7 @@
 //   2. FileAccessProvider(store) — registered on ChatClientAgentOptions
 //      .AIContextProviders, it exposes the eight tools over that store.
 //
-// SAFETY (the 1.13 headline): file tools are gated. We wrap the agent in a
+// SAFETY: file tools are gated. We wrap the agent in a
 // ToolApprovalAgent and pass FileAccessProvider.ReadOnlyToolsAutoApprovalRule,
 // which waves through the read-only tools (read/read_lines/ls/grep) but still pauses
 // on write, delete, and replace. That boundary — reads are cheap, writes need a human — is
@@ -36,7 +36,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== FileAccessProvider — a sandboxed scratchpad ===\n");
+Console.WriteLine("=== FileAccessProvider: a scoped scratchpad ===\n");
 
 // ── Step 1: a store, seeded directly via its API ─────────────────────────────
 // InMemoryAgentFileStore keeps files in a dictionary — perfect for a demo and
@@ -51,7 +51,7 @@ await store.WriteAsync("policy.md",
 
 Console.WriteLine("Seeded the store with: notes.txt, policy.md\n");
 
-// ── Step 2: the provider exposes six file tools over that store ──────────────
+// ── Step 2: the provider exposes eight file tools over that store ────────────
 FileAccessProvider files = new(store);
 
 // ── Step 3: the agent — register the provider, then GATE it ──────────────────
