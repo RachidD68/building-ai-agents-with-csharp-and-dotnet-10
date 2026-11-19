@@ -130,7 +130,7 @@ Console.WriteLine();
 Console.WriteLine("-- Scenario 2: $5000 refund exceeds policy, reject --");
 AgentSession s2 = await agent.CreateSessionAsync(cts.Token);
 await DriveWithDecision(agent, s2, "Refund $5000 to customer C-1001.",
-    approve: false, reason: "Refund exceeds the $1000 policy limit; denied.", cts.Token);
+    approve: false, reason: "Refund of $5,000 is far above the $50 auto-approve limit; denied.", cts.Token);
 Console.WriteLine();
 
 // ── Scenario 3: a small refund — auto-approved by the rule ────────────
