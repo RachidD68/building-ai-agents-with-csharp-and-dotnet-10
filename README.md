@@ -80,7 +80,7 @@ No prior machine-learning background is assumed. The book explains what you need
 | 19 | The Agent Harness | V |
 | 20 | Your Next Steps | V |
 
-Plus five appendices — a themed package reference, a Semantic Kernel and AutoGen migration guide, a troubleshooting catalogue, a glossary, and worked solutions to every exercise — followed by a keyword index.
+Plus five appendices — a themed package reference, a Semantic Kernel and AutoGen migration guide, a troubleshooting catalogue, a glossary, and an exercise solutions reference that indexes the worked solutions — followed by a keyword index.
 
 ---
 
@@ -178,13 +178,21 @@ Not sure which settings a sample will use? `dotnet run -- --config-check` lists 
 
 ## Exercise solutions
 
-The [`exercises/`](./exercises) folder holds the full worked answers to every Practice Exercise in the book — 45 projects across Chapters 2–16, one folder per chapter. Each solution matches the brief printed in its chapter and reproduced in **Appendix E**, and each runs on its own:
+The [`exercises/`](./exercises) folder holds worked exercise solutions for Chapters 2–16: 45 projects in 43 solution folders (each Chapter 9 solution is an MCP server plus a consumer), grouped in one `ChXX.Exercises` folder per chapter. **Appendix E** indexes them by chapter and difficulty, with a one-line summary of what each solution shows.
+
+Not every exercise in the book has a solution here:
+
+- Chapter 1's three exercises are reflective and have no code.
+- The Challenge exercises that Chapters 4, 7, 9, 10, 12 and 15 print without a project name are left for you to build.
+- Chapters 17–19 have no exercise projects. Appendix E lists their exercises and marks each one "(No companion project)".
+
+Each solution runs on its own:
 
 ```bash
 dotnet run --project exercises/Ch08.Exercises/Ex01.UnitConverterTool
 ```
 
-Try the exercise yourself first — the chapter gives you hints, and Appendix E walks through the reasoning before you reach for the code here.
+Try the exercise yourself first, from the brief in its chapter, before you reach for the code here.
 
 ## Errata & feedback
 
