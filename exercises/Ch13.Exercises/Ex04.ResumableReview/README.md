@@ -31,4 +31,6 @@ dotnet run --project exercises/Ch13.Exercises/Ex04.ResumableReview -- --self-tes
 
 Both modes take `--store <folder>` (default: `AgenticAI/Ex04.ResumableReview` under the temp folder). A missing, unknown, corrupted or already signed-off checkpoint fails closed: `resume` prints `RESUME FAILED`, signs nothing off and exits non-zero.
 
+The single-process demo has nobody at the keyboard, so its sign-off is a fixed, typed `SignOffDecision` printed as `SIMULATED reviewer decision: approve`. No mode approves a sign-off request with empty findings: the demo stops with `DEMO STOPPED` and `resume` fails closed (`--empty-findings` makes the scanner return nothing, to show it). The self-test covers both and runs 21 checks.
+
 The worked solution is in Appendix E.

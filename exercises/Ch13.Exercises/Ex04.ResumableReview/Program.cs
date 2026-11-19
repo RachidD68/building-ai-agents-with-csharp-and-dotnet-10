@@ -8,7 +8,8 @@
 //   Analyzer → SecurityScanner → [RequestPort: human sign-off] → Verdict
 //
 // Modes:
-//   dotnet run                            in-memory demo, both runs in one process
+//   dotnet run                            in-memory demo, both runs in one process;
+//                                         the sign-off is SIMULATED (a fixed decision)
 //   dotnet run -- prepare                 run to the sign-off, persist, exit
 //   dotnet run -- resume <session> <approve|reject>
 //                                         a NEW process loads the checkpoint
@@ -16,9 +17,12 @@
 //   dotnet run -- --self-test             prepare and resume as two separate
 //                                         child processes, plus failure cases
 // prepare and resume accept --store <folder> (default: a folder under %TEMP%).
+// Every mode fails closed: a sign-off request with empty findings is never
+// approved (--empty-findings makes the scanner return nothing, to show it).
 // ============================================================================
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Agents.AI.Workflows.Checkpointing;
 
@@ -34,10 +38,13 @@ string codeUnderReview = """
 
 RequestPort signOffPort = RequestPort.Create<string, string>("human-sign-off");
 
+// Fault injection for the self-test: the scanner returns no findings at all.
+bool emptyFindings = args.Contains("--empty-findings");
+
 Workflow BuildReviewWorkflow()
 {
     ExecutorBinding analyzer = new CodeAnalyzerExecutor().BindExecutor();
-    ExecutorBinding scanner = new SecurityScannerExecutor().BindExecutor();
+    ExecutorBinding scanner = new SecurityScannerExecutor(emptyFindings).BindExecutor();
     ExecutorBinding signOff = signOffPort.BindAsExecutor();
     ExecutorBinding verdict = new VerdictExecutor().BindExecutor();
 
@@ -53,7 +60,8 @@ Workflow BuildReviewWorkflow()
 string storePath = OptionValue("--store")
     ?? Path.Combine(Path.GetTempPath(), "AgenticAI", "Ex04.ResumableReview");
 
-switch (args.FirstOrDefault())
+string[] positional = PositionalArgs();
+switch (positional.FirstOrDefault())
 {
     case null:
         break; // the in-memory demo below
@@ -61,8 +69,8 @@ switch (args.FirstOrDefault())
     case "prepare":
         return await PrepareAsync();
 
-    case "resume" when args.Length >= 3:
-        return await ResumeAsync(args[1], args[2]);
+    case "resume" when positional.Length >= 3:
+        return await ResumeAsync(positional[1], positional[2]);
 
     default:
         Console.Error.WriteLine("Usage: [prepare | resume <session-id> <approve|reject>] [--store <folder>] | --self-test");
@@ -104,28 +112,52 @@ await foreach (WorkflowEvent evt in firstRun.WatchStreamAsync(cts.Token))
 }
 
 // ---------------------------------------------------------------
-// Run 2: resume from the checkpoint and approve.
+// Run 2: resume from the checkpoint and sign off.
+//
+// Nobody is at the keyboard in this demo, so the decision is
+// SIMULATED: a fixed, typed SignOffDecision, printed as such. The
+// prepare/resume modes take a real decision from the command line.
 // ---------------------------------------------------------------
+const SignOffDecision SimulatedDecision = SignOffDecision.Approve;
+
 Console.WriteLine("--- Run 2: resume from checkpoint, sign off ---\n");
 
 StreamingRun resumedRun = await InProcessExecution.ResumeStreamingAsync(
     BuildReviewWorkflow(), pauseCheckpoint!, checkpoints, cts.Token);
 
+bool stopped = false;
 await foreach (WorkflowEvent evt in resumedRun.WatchStreamAsync(cts.Token))
 {
     switch (evt)
     {
         case RequestInfoEvent request
             when request.Request.TryGetDataAs<string>(out string? findings):
-            Console.WriteLine("Sign-off request re-emitted after restart. Reviewer approves.\n");
-            ExternalResponse response = request.Request.CreateResponse("approved");
-            await resumedRun.SendResponseAsync(response);
+            Console.WriteLine("Sign-off request re-emitted after restart.");
+            Console.WriteLine($"SIMULATED reviewer decision: {SimulatedDecision.ToString().ToLowerInvariant()} " +
+                              "(no reviewer in this demo; use prepare/resume to decide yourself).\n");
+
+            // Fail closed: signing off needs findings the reviewer could have read.
+            if (!SignOffDecisions.TryCreateReply(SimulatedDecision, findings, out string? reply))
+            {
+                stopped = true;
+                break;
+            }
+            await resumedRun.SendResponseAsync(request.Request.CreateResponse(reply));
             break;
 
         case WorkflowOutputEvent output:
             Console.WriteLine(output.Data);
             break;
     }
+
+    if (stopped) break;   // leave the event loop, not just the switch
+}
+
+if (stopped)
+{
+    Console.Error.WriteLine("DEMO STOPPED: the sign-off request has empty findings, so there is nothing to approve. " +
+                            "Review left pending; nothing was signed off.");
+    return 2;
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
@@ -191,13 +223,7 @@ async Task<int> ResumeAsync(string session, string decisionArg)
 {
     Console.WriteLine("=== Exercise: Resumable Review — resume ===\n");
 
-    string? decision = decisionArg.Trim().ToLowerInvariant() switch
-    {
-        "approve" => "approved",
-        "reject" => "rejected",
-        _ => null,
-    };
-    if (decision is null)
+    if (!SignOffDecisions.TryParse(decisionArg, out SignOffDecision decision))
         return Fail($"unknown decision \"{decisionArg}\" (use approve or reject).", 2);
 
     if (!Directory.Exists(storePath))
@@ -237,7 +263,11 @@ async Task<int> ResumeAsync(string session, string decisionArg)
                         answered = true;
                         Console.WriteLine($"Sign-off request re-emitted in a new process:\n{findings}\n");
                         Console.WriteLine($"Reviewer decision: {decisionArg}\n");
-                        await run.SendResponseAsync(request.Request.CreateResponse(decision));
+                        // Fail closed: signing off needs findings the reviewer could have read.
+                        if (!SignOffDecisions.TryCreateReply(decision, findings, out string? reply))
+                            return Fail($"session {session} has empty findings at checkpoint {latest.CheckpointId}, " +
+                                        "so there is nothing to approve.");
+                        await run.SendResponseAsync(request.Request.CreateResponse(reply));
                         break;
 
                     case WorkflowOutputEvent output:
@@ -283,6 +313,61 @@ string? OptionValue(string name)
     return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
 }
 
+// The mode word and its values, without the --switches (and --store's folder).
+string[] PositionalArgs()
+{
+    List<string> words = [];
+    for (int i = 0; i < args.Length; i++)
+    {
+        if (args[i] == "--store") i++;
+        else if (!args[i].StartsWith("--", StringComparison.Ordinal)) words.Add(args[i]);
+    }
+    return [.. words];
+}
+
+// ---------------------------------------------------------------
+// The decision, typed: the only two outcomes a reviewer can choose.
+// ---------------------------------------------------------------
+
+internal enum SignOffDecision { Approve, Reject }
+
+internal static class SignOffDecisions
+{
+    /// <summary>The replies the sign-off port passes on to the verdict step.</summary>
+    public const string ApprovedReply = "approved";
+    public const string RejectedReply = "rejected";
+
+    /// <summary>
+    /// Accepts exactly "approve" or "reject" (case and surrounding spaces
+    /// ignored). Everything else, including empty input, is not a decision.
+    /// </summary>
+    public static bool TryParse(string? input, out SignOffDecision decision)
+    {
+        switch (input?.Trim().ToLowerInvariant())
+        {
+            case "approve": decision = SignOffDecision.Approve; return true;
+            case "reject": decision = SignOffDecision.Reject; return true;
+            default: decision = default; return false;
+        }
+    }
+
+    /// <summary>
+    /// Builds the reply for a decision. Fails closed: approving a sign-off
+    /// request whose findings are null, empty or whitespace returns false and
+    /// no reply, because the reviewer had nothing to acknowledge.
+    /// </summary>
+    public static bool TryCreateReply(SignOffDecision decision, string? findings, [NotNullWhen(true)] out string? reply)
+    {
+        reply = decision switch
+        {
+            SignOffDecision.Reject => RejectedReply,
+            SignOffDecision.Approve when !string.IsNullOrWhiteSpace(findings) => ApprovedReply,
+            _ => null,
+        };
+        return reply is not null;
+    }
+}
+
 // ---------------------------------------------------------------
 // Executors
 // ---------------------------------------------------------------
@@ -305,11 +390,18 @@ internal sealed class CodeAnalyzerExecutor() : Executor<string, string>("analyze
 }
 
 /// <summary>Adds security findings to the style findings.</summary>
-internal sealed class SecurityScannerExecutor() : Executor<string, string>("scanner")
+/// <param name="returnNothing">Self-test fault injection: return no findings at all.</param>
+internal sealed class SecurityScannerExecutor(bool returnNothing = false) : Executor<string, string>("scanner")
 {
     public override ValueTask<string> HandleAsync(
         string styleFindings, IWorkflowContext context, CancellationToken ct)
     {
+        if (returnNothing)
+        {
+            Console.WriteLine("  [Scanner] returned no findings (--empty-findings)");
+            return ValueTask.FromResult(string.Empty);
+        }
+
         List<string> issues = [];
         if (styleFindings.Length > 0)
             issues.Add(styleFindings);
@@ -330,7 +422,8 @@ internal sealed class VerdictExecutor() : Executor<string>("verdict")
     public override async ValueTask HandleAsync(
         string decision, IWorkflowContext context, CancellationToken ct)
     {
-        string verdict = decision.Equals("approved", StringComparison.OrdinalIgnoreCase)
+        // Only the exact approve reply signs off; anything else blocks the merge.
+        string verdict = decision == SignOffDecisions.ApprovedReply
             ? "REVIEW SIGNED OFF — findings acknowledged, merge allowed."
             : "REVIEW BLOCKED — changes required.";
         await context.YieldOutputAsync(verdict, ct);
@@ -354,6 +447,32 @@ internal static class CrossProcessSelfTest
 
         try
         {
+            // 0. The typed decision and the reply it produces (in process).
+            Check("only \"approve\" and \"reject\" parse as decisions",
+                SignOffDecisions.TryParse(" APPROVE ", out SignOffDecision a) && a == SignOffDecision.Approve &&
+                SignOffDecisions.TryParse("reject", out SignOffDecision r) && r == SignOffDecision.Reject &&
+                !SignOffDecisions.TryParse("", out _) && !SignOffDecisions.TryParse(null, out _) &&
+                !SignOffDecisions.TryParse("approved", out _) && !SignOffDecisions.TryParse("yes", out _));
+            Check("approve + empty or null findings -> no reply (fail closed)",
+                !SignOffDecisions.TryCreateReply(SignOffDecision.Approve, "", out _) &&
+                !SignOffDecisions.TryCreateReply(SignOffDecision.Approve, "   ", out _) &&
+                !SignOffDecisions.TryCreateReply(SignOffDecision.Approve, null, out _));
+            Check("approve + findings -> approved; reject -> rejected",
+                SignOffDecisions.TryCreateReply(SignOffDecision.Approve, "SECURITY: x", out string? yes) &&
+                yes == SignOffDecisions.ApprovedReply &&
+                SignOffDecisions.TryCreateReply(SignOffDecision.Reject, null, out string? no) &&
+                no == SignOffDecisions.RejectedReply);
+
+            // The no-argument demo says its decision is simulated, and refuses empty findings.
+            Child demo = RunChild();
+            Check("demo mode labels the sign-off as SIMULATED and completes",
+                demo.ExitCode == 0 && demo.Output.Contains("SIMULATED reviewer decision: approve") &&
+                demo.Output.Contains("REVIEW SIGNED OFF"));
+            Child emptyDemo = RunChild("--empty-findings");
+            Check("demo mode with empty findings signs nothing off",
+                emptyDemo.ExitCode != 0 && emptyDemo.Output.Contains("DEMO STOPPED") &&
+                !emptyDemo.Output.Contains("REVIEW SIGNED OFF"));
+
             // 1. prepare (process A) then resume + approve (process B).
             string approveStore = Path.Combine(root, "approve");
             Child prepare = RunChild("prepare", "--store", approveStore);
@@ -383,6 +502,11 @@ internal static class CrossProcessSelfTest
             Check("resume + reject -> REVIEW BLOCKED", reject.ExitCode == 0 && reject.Output.Contains("REVIEW BLOCKED"));
 
             // 3. Failure cases all fail closed: non-zero exit, clear message, no verdict.
+            string emptyStore = Path.Combine(root, "empty-findings");
+            Child prepare3 = RunChild("prepare", "--store", emptyStore, "--empty-findings");
+            Child emptyResume = RunChild("resume", SessionFrom(prepare3) ?? "none", "approve", "--store", emptyStore);
+            Check("resume + approve of empty findings fails closed", FailedClosed(emptyResume, "empty findings"));
+
             Child unknown = RunChild("resume", Guid.NewGuid().ToString("N"), "approve", "--store", approveStore);
             Check("unknown session fails closed", FailedClosed(unknown, "no checkpoint for session"));
 
