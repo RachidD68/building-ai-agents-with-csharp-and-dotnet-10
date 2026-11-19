@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A deterministic pre-execution policy for model-proposed reimbursements.
+       No package, no model, no API key. The other authorized-actions samples
+       (IdempotentCommit, ToolApproval, the Contoso snapshot) reference this
+       project for the policy types and the canonical digest. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+</Project>

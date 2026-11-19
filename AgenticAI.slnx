@@ -39,6 +39,7 @@
     <Project Path="src/Ch07.Tools/Ch07.WeatherTool/Ch07.WeatherTool.csproj" />
   </Folder>
   <Folder Name="/src/Ch08.AuthorizedActions/">
+    <Project Path="src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
     <Project Path="src/Ch08.AuthorizedActions/Ch08.ApprovalRules/Ch08.ApprovalRules.csproj" />
     <Project Path="src/Ch08.AuthorizedActions/Ch08.ToolApproval/Ch08.ToolApproval.csproj" />
   </Folder>
