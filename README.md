@@ -203,6 +203,7 @@ Not sure which settings a sample will use? `dotnet run -- --config-check` lists 
 | `src/Ch21.Evaluation/` | 21 | Evaluation With Evidence and Uncertainty |
 | `src/Ch24.Operations/` | 24 | Operating and Evolving Agents (a reading list, no project yet) |
 | `src/AppA.CSharpEssentials/` | App. A | C# Essentials for AI Development |
+| `contoso/` | — | The Contoso expense assistant, one snapshot folder per milestone (so far `v2-authorized-reimbursement`, the authorized-actions chapter); simulated effects only |
 | `exercises/` | — | Worked exercise solutions, one `ChNN.Exercises` folder per chapter plus `AppA.Exercises` (indexed in Appendix F) |
 
 Chapters with no folder yet have no companion project in the repository so far. Folder and project names carry the second-edition chapter number; the book refers to them by name.

@@ -76,7 +76,7 @@ jobs:
       - name: Run --self-test projects
         run: |
           set -uo pipefail
-          mapfile -t files < <(grep -rl --include='*.cs' 'args.Contains("--self-test")' src exercises | sort)
+          mapfile -t files < <(grep -rl --include='*.cs' 'args.Contains("--self-test")' src exercises contoso | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::No --self-test projects found."
             exit 1

@@ -208,4 +208,8 @@
     <Project Path="exercises/AppA.Exercises/Ex03.MinimalApiCrud/Ex03.MinimalApiCrud.csproj" />
     <Project Path="exercises/AppA.Exercises/Ex04.JsonRoundTrip/Ex04.JsonRoundTrip.csproj" />
   </Folder>
+  <Folder Name="/contoso/" />
+  <Folder Name="/contoso/v2-authorized-reimbursement/">
+    <Project Path="contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
+  </Folder>
 </Solution>

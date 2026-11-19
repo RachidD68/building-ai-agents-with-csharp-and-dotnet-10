@@ -1,0 +1,33 @@
+# Contoso v2: authorized reimbursement
+
+The Contoso expense assistant at the end of the authorized-actions chapter. An employee files a claim; the model proposes a reimbursement; the application decides and commits it once.
+
+```
+claim -> model proposal (structured output) -> ActionPolicy
+      -> Deny | AwaitingReview -> reviewer (not the requester) | Allow
+      -> IdempotentCommit (unique operation id, version recheck, outbox)
+      -> payment provider -> OutcomeUnknown -> reconciliation
+```
+
+`ReimbursementDesk` composes the chapter's three projects as they are: `Ch08.ActionPolicy`, `Ch08.IdempotentCommit` and `Ch08.UncertainOutcome`. Identity comes from the caller the host authenticated, never from the model. The claim's submission id, created once when the form opens, is the operation id from start to end.
+
+The scenario: Alice's taxi claim (64.80 EUR) needs review, and she double-clicks Submit; she tries to approve it herself; Rita edits the amount to 60.00 and approves (twice, concurrently); the provider accepts the payment and the response is lost; the process restarts and reconciles. Then a low-value claim goes straight through, and a claim whose text asks to pay another employee is denied.
+
+Claim states: `Submitted`, `AwaitingReview`, `Rejected`, `Committed`, `Delivered`, `OutcomeUnknown`, `Reconciled`.
+
+## Why a console app
+
+It is the smallest host that shows the whole path with real SQLite state and a restart. The API and interface snapshot adds ASP.NET Core and an authenticated caller later; here the callers are constructed as the host's authentication would produce them.
+
+## Running
+
+```bash
+dotnet run --project contoso/v2-authorized-reimbursement                  # Ollama llama3.2 by default
+dotnet run --project contoso/v2-authorized-reimbursement -- --self-test   # scripted model, no network
+```
+
+Simulated effects only: the payment provider is a fake with its own journal file, and both databases live in a temporary folder that is deleted at the end.
+
+## Earlier snapshots
+
+This snapshot is self-contained. The earlier snapshots (`v0-agent-fake-model`, `v1-owned-conversation`) are not in the repository yet. When they exist, v2 should take from them: the agent and fake-model test setup (v0), the owned conversation and session store (v1), and the typed `ExpenseClaim` with domain validation from the typed-responses chapter, which v2 defines here in its smallest form.

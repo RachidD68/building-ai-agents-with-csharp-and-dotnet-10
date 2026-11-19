@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contoso snapshot v2, "Authorized reimbursement": an employee's expense claim
+       becomes a model proposal, then a policy decision, a review, one idempotent
+       commit and a reconciled payment. A console app: it is the smallest host that
+       shows the whole path, and the API/UI snapshot adds ASP.NET Core later.
+       Simulated effects only: the payment provider is a fake with its own journal. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GA-only provider switch: Ollama by default. -->
+    <ProjectReference Include="../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- The three building blocks of the authorized-actions chapter, used as they are. -->
+    <ProjectReference Include="../../src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
+    <ProjectReference Include="../../src/Ch08.AuthorizedActions/Ch08.IdempotentCommit/Ch08.IdempotentCommit.csproj" />
+    <ProjectReference Include="../../src/Ch08.AuthorizedActions/Ch08.UncertainOutcome/Ch08.UncertainOutcome.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
