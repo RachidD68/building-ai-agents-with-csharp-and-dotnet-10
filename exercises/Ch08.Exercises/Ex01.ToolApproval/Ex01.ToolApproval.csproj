@@ -2,19 +2,21 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- ToolApprovalAgent / ToolApprovalAgentOptions have been GA since MAF 1.14 — no suppression needed. -->
-
+    <!-- ToolApprovalAgent, ToolApprovalAgentOptions and ApprovalRequiredAIFunction carry
+         no [Experimental] attribute in Microsoft.Agents.AI 1.28.0 / Microsoft.Extensions.AI
+         10.11.0, so no suppression is needed. -->
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
-    <PackageReference Include="Azure.AI.OpenAI" />
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The GA-only provider switch (Ollama by default) and the policy checked before approval. -->
+    <ProjectReference Include="../../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../../src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
   </ItemGroup>
 
   <ItemGroup>
