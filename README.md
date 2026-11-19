@@ -81,7 +81,7 @@ No prior machine-learning background is assumed. The book explains what you need
 | 19 | The Agent Harness | V |
 | 20 | Your Next Steps | V |
 
-Plus five appendices — a themed package reference, a Semantic Kernel and AutoGen migration guide, a troubleshooting catalogue, a glossary, and an exercise solutions reference that indexes the worked solutions — followed by a keyword index.
+Plus five appendices — a NuGet package reference, a Semantic Kernel to MAF migration map, an AutoGen to MAF migration map, a glossary, and an exercise solutions reference that points to the worked solutions — followed by a keyword index.
 
 ---
 
