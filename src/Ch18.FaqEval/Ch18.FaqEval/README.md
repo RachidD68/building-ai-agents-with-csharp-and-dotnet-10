@@ -1,7 +1,7 @@
 # Chapter 18 -- Evaluating a RAG agent (FaqEval)
 
-Grounds the Chapter 10 Contoso FAQ agent against a **golden set**. This is the
-`rag.groundedness` gate Chapter 15 points at, and the payoff for the chapter's
+Checks the Chapter 10 Contoso FAQ agent against a **golden set**. This is the
+nightly evaluation gate Chapter 15 points at, and the payoff for the chapter's
 opening PTO-confabulation anecdote: the failure becomes a test that fails loudly
 whenever an answer drifts off the source.
 
@@ -12,22 +12,25 @@ whenever an answer drifts off the source.
 - A golden set pairing each question with the exact policy value a grounded
   answer must contain. Questions are curated against the source wording so a
   correctly grounded answer retrieves the right chunk.
-- **`LocalEvaluator` (always on, offline)** — `grounded_answer` reads the aligned
-  `expectedOutput` for each query and asserts the value is present;
+- **`LocalEvaluator` (always on, offline)** — `expected_value` reads the aligned
+  `expectedOutput` for each query and asserts the value is present as a whole
+  token ("15" matches "15 days", not "115 days"). It is a lexical value check,
+  not a groundedness or faithfulness score;
   `no_idk_leak` asserts the agent did not fall back to "I don't have
   information" on an answerable question.
 - **MEAI `GroundednessEvaluator` (gated, off by default)** — a 1-5 LLM-judged
-  groundedness score against the retrieved context, wired through
+  groundedness score against the retrieved context (the actual groundedness
+  measure), wired through
   `ChatConfiguration`. It reuses the local model as the judge.
 
-Exit code `0` when every local grounding check passes, `1` otherwise.
+Exit code `0` when every local value check passes, `1` otherwise.
 
 ## Running
 
 ```bash
 # Offline by default: Ollama (nomic-embed-text embeddings + llama3.2 chat).
 # Pull the embedding model once: ollama pull nomic-embed-text
-dotnet run --project src/Ch17.FaqEval/Ch17.FaqEval
+dotnet run --project src/Ch18.FaqEval/Ch18.FaqEval
 ```
 
 ## Enabling the groundedness judge

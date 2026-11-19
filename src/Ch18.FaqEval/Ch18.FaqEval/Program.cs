@@ -8,12 +8,13 @@
 //
 // The opening anecdote of the chapter is the first golden-set entry: "How many
 // PTO days do new employees get?" The policy says 15 (0-2 years of service).
-// The agent once confabulated 20. The grounding check below turns that incident
-// into a test that fails loudly whenever the answer drifts off the source.
+// The agent once confabulated 20. The value check below turns that incident
+// into a test that fails loudly whenever the stated value drifts off the source.
 //
 // Two layers, mirroring the rest of the chapter:
-//   1. LocalEvaluator (always on, offline) — a per-question grounding check
-//      that asserts the answer contains the exact policy value from the docs,
+//   1. LocalEvaluator (always on, offline) — a per-question value check
+//      that asserts the answer contains the exact policy value from the docs
+//      as a whole token (lexical, not a faithfulness or groundedness score),
 //      plus a global KeywordCheck that the "I don't know" fallback never leaks
 //      into a question the KB can actually answer.
 //   2. MEAI GroundednessEvaluator (gated) — an LLM-as-judge groundedness score
@@ -21,8 +22,9 @@
 //      true (it reuses the local Ollama model as the judge); skipped otherwise
 //      with a printed note, so the suite stays runnable with zero cloud setup.
 //
-// Exit code 0 when every local grounding check passes; 1 otherwise — so this
-// drops into CI as the "rag.groundedness" gate Chapter 15 points at.
+// Exit code 0 when every local value check passes; 1 otherwise — so this
+// drops into CI as the nightly evaluation gate Chapter 15 points at. The
+// groundedness score itself comes from the gated LLM judge in step 4.
 // ============================================================================
 
 using Azure.AI.OpenAI;
@@ -168,7 +170,7 @@ GoldenItem[] golden =
 string[] queries = golden.Select(g => g.Question).ToArray();
 string[] expectedOutputs = golden.Select(g => g.GroundTruth).ToArray();
 
-// ── Step 3: the LocalEvaluator (grounding checks, always on) ──────
+// ── Step 3: the LocalEvaluator (value checks, always on) ──────────
 // "expected_value" is the load-bearing check: the response must contain the
 // exact policy value for this question. Because EvaluateAsync aligns the
 // expectedOutput array with the queries positionally, the (response,
@@ -181,7 +183,7 @@ LocalEvaluator local = new(
         (string response) =>
             !response.Contains("don't have information", StringComparison.OrdinalIgnoreCase)));
 
-Console.WriteLine($"Evaluating {queries.Length} golden questions with the LocalEvaluator (2 grounding checks each)...");
+Console.WriteLine($"Evaluating {queries.Length} golden questions with the LocalEvaluator (2 value checks each)...");
 Console.WriteLine();
 
 AgentEvaluationResults localResults = await agent.EvaluateAsync(
@@ -190,13 +192,13 @@ AgentEvaluationResults localResults = await agent.EvaluateAsync(
     expectedOutput: expectedOutputs,
     cancellationToken: cts.Token);
 
-Console.WriteLine("--- LocalEvaluator (rag.groundedness gate) ---");
+Console.WriteLine("--- LocalEvaluator (expected_value + no_idk_leak value checks) ---");
 Console.WriteLine($"Provider: {localResults.ProviderName}");
 Console.WriteLine($"Passed:   {localResults.Passed}/{localResults.Total}");
 Console.WriteLine($"Failed:   {localResults.Failed}");
 Console.WriteLine(localResults.AllPassed
-    ? "All answers grounded in the policy docs."
-    : "GROUNDING FAILURE — an answer drifted off the source (see the chapter's PTO anecdote).");
+    ? "Every answer states the expected policy value (a lexical check, not a groundedness score)."
+    : "VALUE CHECK FAILURE — an answer drifted off the source value (see the chapter's PTO anecdote).");
 Console.WriteLine();
 
 // Per-question breakdown: Items holds one MEAI EvaluationResult per query,
