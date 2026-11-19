@@ -1,0 +1,54 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Calculator Tool — Multi-Tool Chaining Demo ===
+
+Registered tools:
+  - Add: Adds two numbers together and returns the result.
+  - Subtract: Subtracts the second number from the first and returns the result.
+  - Multiply: Multiplies two numbers together and returns the result.
+  - Divide: Divides the first number by the second. Returns an error if the divisor is zero.
+  - ConvertUnits: Converts a numeric value from one unit to another. Supports currency (USD, EUR, GBP, JPY), distance (km, miles), weight (kg, lbs), and temperature (celsius, fahrenheit).
+
+You: What's 15% tip on a $47.50 bill in euros?
+Agent: Now that we have the bill in euros, we can calculate the 15% tip.
+
+1. Convert 15% to a decimal: 15% = 0.15
+2. Multiply the bill in euros by the tip decimal: 43.70 EUR x 0.15 = 6.555 EUR
+
+The 15% tip is approximately 6.56 EUR.
+
+To find the total amount, add the bill and the tip:
+
+43.70 EUR + 6.56 EUR = 50.26 EUR
+
+So, the total amount with the 15% tip is approximately 50.26 EUR.
+
+You: If I run 5 km every day for a week, how many miles is that total?
+Agent: To convert 5 km to miles, we can use the conversion factor: 1 km = 0.621371 miles.
+
+5 km × 0.621371 miles/km = 3.10685 miles
+
+So, 5 km is approximately 3.11 miles.
+
+Now, let's calculate the total distance for a week:
+5 km/day × 7 days = 35 km
+
+Converting 35 km to miles:
+35 km × 0.621371 miles/km = 21.77715 miles
+
+So, running 5 km every day for a week is equivalent to approximately 21.78 miles.
+
+You: Split a $120 bill evenly among 4 people, then convert each share to GBP.
+Agent: To split the $120 bill evenly among 4 people, we need to divide $120 by 4.
+
+$120 ÷ 4 = $30
+
+Since we want to convert each share to GBP, we need to use the exchange rate of 1 USD = 0.78 GBP.
+
+$30 ÷ 0.78 = £38.46
+
+You: What's the area of a rectangle that is 12.5 meters by 8.3 meters?
+Agent: The area of the rectangle is approximately 103.75 square meters.
+
+=== Calculator Tool demo complete! ===

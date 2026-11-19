@@ -1,0 +1,52 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== Tool approval: self-test ===
+
+-- Per-order ledger --
+  PASS  first refund issues a credit
+  PASS  second refund of the same order issues no credit
+  PASS  order id is matched case-insensitively and trimmed
+  PASS  exactly one credit for ORD-1001
+  PASS  50 concurrent refunds of ORD-2002 issue one credit
+  PASS  a different order gets its own credit
+
+-- Amount rule, read under de-DE --
+  PASS  0.01                         -> auto-approved
+  PASS  50                           -> auto-approved
+  PASS  20                           -> auto-approved
+  PASS  20                           -> auto-approved
+  PASS  1.5                          -> auto-approved
+  PASS  1.5                          -> auto-approved
+  PASS  -10                          -> needs a decision
+  PASS  0                            -> needs a decision
+  PASS  50.01                        -> needs a decision
+  PASS  5000                         -> needs a decision
+  PASS  -10                          -> needs a decision
+  PASS  '1,5' (unreadable amount)    -> needs a decision
+  PASS  'abc' (unreadable amount)    -> needs a decision
+  PASS  '' (unreadable amount)       -> needs a decision
+  PASS  '' (unreadable amount)       -> needs a decision
+
+-- Approval loop: ActionPolicy before approval (scripted model) --
+  PASS  get_order_status runs unattended (auto-approved, no request surfaced)
+  PASS  refund of 20 USD is auto-approved by rule + policy: one credit, no reviewer
+    [approval] refund_order(orderId=ORD-2002, amount=80, currency=USD) policy=RequireApproval/approval_missing -> APPROVED
+  PASS  refund of 80 USD surfaces a request; policy says RequireApproval; reviewer asked once
+  PASS  after the reviewer approves, the tool runs and issues one credit
+    [approval] refund_order(orderId=ORD-2002, amount=80, currency=USD) policy=Allow/exact_proposal_approved -> APPROVED
+  PASS  the same refund again: the stored approval still matches, reviewer not asked
+  PASS  ... and the ledger issues no second credit (approval is not idempotency)
+    [approval] refund_order(orderId=ORD-2002, amount=95, currency=USD) policy=Deny/approval_invalid -> REJECTED
+  PASS  approval reused with a changed amount: Deny approval_invalid, never offered to the reviewer
+  PASS  ... and the tool never ran
+    [approval] refund_order(orderId=ORD-1001, amount=-10, currency=USD) policy=Deny/invalid_amount -> REJECTED
+  PASS  refund of -10 USD: Deny invalid_amount before any reviewer, no credit
+    [approval] refund_order(orderId=ORD-3003, amount=30, currency=EUR) policy=Deny/currency_mismatch -> REJECTED
+  PASS  refund in EUR on a USD order: Deny currency_mismatch, not auto-approved
+    [approval] refund_order(orderId=ORD-4004, amount=300, currency=USD) policy=RequireApproval/approval_missing -> REJECTED
+  PASS  requester approving their own refund is rejected (separation of duties): no credit
+    [approval] refund_order(orderId=ORD-3003, amount=60, currency=USD) policy=RequireApproval/approval_missing -> REJECTED
+  PASS  reviewer rejects: the tool never runs, no credit
+
+RESULT 33/33

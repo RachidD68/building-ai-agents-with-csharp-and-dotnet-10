@@ -1,0 +1,51 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== Action policy: self-test ===
+
+-- Policy cases (decision and reason code) --
+  PASS  exact proposal approved -> Allow exact_proposal_approved
+  PASS  missing approval -> RequireApproval approval_missing
+  PASS  negative amount -> Deny invalid_amount
+  PASS  zero amount -> Deny invalid_amount
+  PASS  above reimbursable balance -> Deny invalid_amount
+  PASS  cross tenant -> Deny resource_scope
+  PASS  permission revoked -> Deny missing_permission
+  PASS  anonymous subject -> Deny missing_permission
+  PASS  wrong employee -> Deny resource_scope
+  PASS  currency mismatch -> Deny currency_mismatch
+  PASS  malformed currency -> Deny currency_mismatch
+  PASS  currency symbol is not a code -> Deny currency_mismatch
+  PASS  stale resource version -> Deny stale_version
+  PASS  approval expired -> Deny approval_invalid
+  PASS  approval rejected -> Deny approval_rejected
+  PASS  arguments changed after approval -> Deny approval_invalid
+  PASS  operation changed after approval -> Deny approval_invalid
+  PASS  policy version changed -> Deny approval_invalid
+  PASS  approval belongs to another requester -> Deny approval_invalid
+  PASS  missing operation id -> Deny missing_operation_id
+  PASS  authorized low value -> Allow low_value_policy
+  PASS  low value still requires permission -> Deny missing_permission
+
+-- Reviewer identity and separation of duties --
+  PASS  requester approved their own claim -> Deny separation_of_duties
+  PASS  reviewer without the finance role -> Deny reviewer_not_authorized
+  PASS  approval with no reviewer identity -> Deny reviewer_not_authorized
+
+-- Canonical digest and currency form --
+  PASS  digest of 100m equals digest of 100.00m
+  PASS  approval over 100m accepts the proposal written 100.00m -> Allow exact_proposal_approved
+  PASS  digest is the same under de-DE, fr-FR and the invariant culture
+  PASS  currency ' eur ' is normalized to EUR -> Allow exact_proposal_approved
+
+-- Permission revoked between proposal and commit --
+  PASS  at proposal -> approval_missing; at commit, with a valid approval -> missing_permission
+
+-- Defect reproductions (first-edition predicates) --
+  PASS  DEFECT REPRODUCED: substring grounding check accepts 115
+  PASS  DEFECT REPRODUCED: substring grounding check accepts a contradiction
+  PASS  DEFECT REPRODUCED: auto-approve rule amount <= 50 accepts -10
+  PASS  DEFECT REPRODUCED: auto-approve rule amount <= 50 accepts 0
+  PASS  DEFECT REPRODUCED: a digest over the serialized decimal differs for 100m and 100.00m
+
+RESULT 35/35

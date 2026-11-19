@@ -1,0 +1,20 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Tool approval, policy first ===
+
+>> What is the status of order ORD-3003?
+<< The status of order ORD-3003 is shipped and in transit.
+
+>> Refund 20 USD on order ORD-1001.
+<< The refund for ORD-1001 has been processed. A credit of 20.00 USD has been issued to the customer.
+
+>> Refund 80 USD on order ORD-2002.
+   [approval] refund_order(orderId=ORD-2002, amount=80, currency=USD) policy=RequireApproval/approval_missing -> APPROVED
+<< The refund for the specified amount has been processed successfully. The order status is now updated to reflect the refund. Would you like to check the current status of the order?
+
+>> Refund -10 USD on order ORD-1001.
+   [approval] refund_order(orderId=ORD-1001, amount=-10, currency=USD) policy=Deny/invalid_amount -> REJECTED
+<< I apologize for the issue. It seems that the amount to be refunded is invalid. The amount to be refunded must be a positive number. Please provide a valid amount to proceed with the refund.
+
+Credits issued: 2

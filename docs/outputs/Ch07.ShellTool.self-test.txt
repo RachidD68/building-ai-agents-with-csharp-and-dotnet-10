@@ -1,0 +1,44 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+  PASS  ls                                 -> allowed
+  PASS  ls -la                             -> allowed
+  PASS  wc -l data.txt                     -> allowed
+  PASS  cat README.md                      -> allowed
+  PASS  cat notes/today.txt                -> allowed
+  PASS  cat my notes.txt                   -> allowed
+  PASS  dotnet --version                   -> allowed
+  PASS  cat C:\Windows\win.ini             -> refused: 'C:\Windows\win.ini' is outside the scratch folder.
+  PASS  cat /etc/passwd                    -> refused: '/etc/passwd' is outside the scratch folder.
+  PASS  cat ..\..\secrets.txt              -> refused: '..\..\secrets.txt' is outside the scratch folder.
+  PASS  cat ../../secrets.txt              -> refused: '../../secrets.txt' is outside the scratch folder.
+  PASS  cat ../outside.txt                 -> refused: '../outside.txt' is outside the scratch folder.
+  PASS  cat \\server\share\file            -> refused: '\\server\share\file' is outside the scratch folder.
+  PASS  cat //server/share/file            -> refused: '//server/share/file' is outside the scratch folder.
+  PASS  cat D:file.txt                     -> refused: 'D:file.txt' is outside the scratch folder.
+  PASS  cat --file=../x                    -> refused: argument '--file=../x' contains a shell metacharacter or control character.
+  PASS  dotnet run                         -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
+  PASS  dotnet exec a.dll                  -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
+  PASS  dotnet --version extra             -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
+  PASS  find . -exec rm {} ;               -> refused: program 'find' is not on the allow-list.
+  PASS  where cmd                          -> refused: program 'where' is not on the allow-list.
+  PASS  pwsh -Command Get-ChildItem        -> refused: program 'pwsh' is not on the allow-list.
+  PASS                                     -> refused: no executable specified.
+  PASS  type a.txt&del x                   -> refused: argument 'a.txt&del' contains a shell metacharacter or control character.
+  PASS  type a.txt|more                    -> refused: argument 'a.txt|more' contains a shell metacharacter or control character.
+  PASS  type a.txt>out.txt                 -> refused: argument 'a.txt>out.txt' contains a shell metacharacter or control character.
+  PASS  cat <in.txt                        -> refused: argument '<in.txt' contains a shell metacharacter or control character.
+  PASS  type a^.txt                        -> refused: argument 'a^.txt' contains a shell metacharacter or control character.
+  PASS  type %USERPROFILE%                 -> refused: argument '%USERPROFILE%' contains a shell metacharacter or control character.
+  PASS  type "a.txt"                       -> refused: argument '"a.txt"' contains a shell metacharacter or control character.
+  PASS  cat 'a.txt'                        -> refused: argument ''a.txt'' contains a shell metacharacter or control character.
+  PASS  type a.txt,..\..\x                 -> refused: argument 'a.txt,..\..\x' contains a shell metacharacter or control character.
+  PASS  cat a.txt;b                        -> refused: argument 'a.txt;b' contains a shell metacharacter or control character.
+  PASS  dir a.txt del x                    -> refused: argument 'a.txt del x' contains a shell metacharacter or control character.
+  PASS  missing program -> Error: program 'ch08-no-such-program' was not found on this machine.
+  PASS  Windows: dir -> cmd.exe [/d, /c, dir]
+  PASS  Windows: type README.md -> cmd.exe [/d, /c, type, README.md]
+  PASS  Windows: ls -la -> ls [-la]
+  PASS  Linux: dir -l -> dir [-l]
+  PASS  type README.md -> exit 0: hello from the scratch folder
+RESULT 40/40

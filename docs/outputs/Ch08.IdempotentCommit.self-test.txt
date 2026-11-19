@@ -1,0 +1,24 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== Idempotent commit: self-test ===
+
+-- 50 concurrent identical submits --
+  committed=1 replayed=49 other=0 (50 connections opened)
+  PASS  the submits overlapped on two or more connections
+  PASS  exactly one submit committed
+  PASS  the other 49 replayed the stored outcome
+  PASS  one state change: balance 400, version 8
+  PASS  one operations row and one outbox row
+
+-- Replay, conflict and stale version --
+  PASS  after a restart, the same submit -> Replayed: reimbursed 100 EUR to E-1001; balance 400, version 8
+  PASS  100.00m replays the operation committed as 100m
+  PASS  same operation id, amount 120 -> Conflict
+  PASS  same operation id, another requester -> Conflict
+  PASS  stale version (expected 7, stored 8) -> StaleVersion
+  PASS  the stale submit left no trace: same balance, version, operations and outbox
+  PASS  new operation id at version 8 -> Committed: reimbursed 100 EUR to E-1001; balance 300, version 9
+  PASS  301 against a balance of 300 -> InsufficientBalance, no effect
+
+RESULT 13/13

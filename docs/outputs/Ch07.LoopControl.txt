@@ -1,0 +1,13 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Loop Control (FunctionInvokingChatClient) ===
+
+--- Demo 1: MaximumIterationsPerRequest = 3 (runaway poll loop) ---
+Run completed without throwing. Agent: Unfortunately, the export job JOB-77 is still processing and has not yet finished. You can try calling the poll_job function again to check for updates on the status of the job.
+poll_job was invoked 1 time(s); the model stopped polling on its own before the cap.
+
+--- Demo 2: MaximumConsecutiveErrorsPerRequest = 0 (failing tool) ---
+Loop terminated by error guardrail: InvalidOperationException: LEDGER-DB-503: ledger database is unavailable (account '4001').
+
+=== Loop-control demo complete! ===

@@ -1,0 +1,47 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== Uncertain outcome: two-process self-test ===
+
+-- accept-then-timeout --
+    | === Uncertain outcome: submit (fault: AcceptThenTimeout) ===
+    | Operation: 3f1c2b7e-8a4d-4e6f-9b0a-1c2d3e4f5a6b
+    | Status: OutcomeUnknown
+    | Provider effects: 1
+  PASS  submit records OutcomeUnknown after the timeout
+  PASS  the provider journal already holds one payment
+    | === Uncertain outcome: resume ===
+    | Operation: 3f1c2b7e-8a4d-4e6f-9b0a-1c2d3e4f5a6b -> Reconciled (found PAY-E9EF8C1613D0 by reference)
+    | Provider effects: 1
+  PASS  resume runs in a different process
+  PASS  resume finds the payment by reference and reconciles it
+  PASS  same operation id, stored payment id, still one effect
+    | === Uncertain outcome: resume ===
+    | Nothing to reconcile.
+    | Provider effects: 1
+  PASS  a second resume finds nothing to do
+
+-- lost-request --
+    | === Uncertain outcome: submit (fault: LostRequest) ===
+    | Operation: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+    | Status: OutcomeUnknown
+    | Provider effects: 0
+  PASS  submit records OutcomeUnknown and no payment exists yet
+    | === Uncertain outcome: resume ===
+    | Operation: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d -> Delivered (not found; sent again as PAY-AFA79BABC22B)
+    | Provider effects: 1
+  PASS  resume finds no payment, sends again with the same reference: one effect
+
+-- crash-after-accept --
+    | === Uncertain outcome: submit (fault: CrashAfterAccept) ===
+    |   [fault] the provider accepted the payment; the worker process dies now
+  PASS  the worker died (exit 3) with the delivery still marked Sending
+    | === Uncertain outcome: resume ===
+    | Operation: 5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e -> Reconciled (found PAY-52834CB1926D by reference)
+    | Provider effects: 1
+  PASS  resume reconciles the Sending row: one effect, same operation id
+
+-- Defect reproduction --
+  PASS  DEFECT REPRODUCED: a blind retry with a new reference pays twice (2 effects)
+
+RESULT 11/11

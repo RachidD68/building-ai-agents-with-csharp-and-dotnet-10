@@ -1,0 +1,22 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Weather Tool — Function Calling Demo ===
+
+You: What's the weather like in Seattle right now?
+Agent: The current weather in Seattle is overcast with light rain, with a temperature of 12°C (53°F) and a relative humidity of 78%.
+
+You: Compare the weather in Tokyo and London.
+Agent: The current weather in Tokyo is partly cloudy with a temperature of 22°C (71°F) and a relative humidity of 65%. In contrast, the weather in London is foggy with a temperature of 14°C (57°F) and a relative humidity of 82%.
+
+You: What is the capital of France?
+Agent: {"name": "null", "parameters": {}}
+
+You: Is it a good day for a picnic in Miami?
+Agent: It's a sunny day in Miami, but the heat and humidity might make it uncomfortable for a picnic. The temperature is around 87°F (31°C), and the humidity is quite high at 88%. You may want to consider bringing plenty of water, sunscreen, and shade to make your picnic more enjoyable.
+
+--- Graceful Degradation: Simulating API Failure ---
+
+Agent (during failure): I apologize for the error. It seems that the weather service is currently unavailable for Paris. However, I can suggest checking a weather website or app later, as the issue might be temporary. Alternatively, I can try to provide general information about Paris's climate if that's helpful.
+
+=== Weather Tool demo complete! ===

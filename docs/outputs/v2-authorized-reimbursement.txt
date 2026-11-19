@@ -1,0 +1,29 @@
+# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Contoso: authorized reimbursement ===
+
+-- 1. Alice submits the taxi claim, and double-clicks --
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: AwaitingReview (approval_missing)
+
+-- 2. Alice tries to approve her own claim --
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: AwaitingReview (separation_of_duties)
+
+-- 3. Rita edits the amount to 60.00 and approves; the provider's response is lost --
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: OutcomeUnknown (exact_proposal_approved)
+   account: balance 440, version 8
+
+-- 4. Alice submits the same claim again --
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: OutcomeUnknown (exact_proposal_approved)
+
+-- 5. The process restarts and reconciles --
+   reconcile 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (found PAY-B7818A8EDB2B by reference)
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (exact_proposal_approved) payment PAY-B7818A8EDB2B
+
+-- 6. Bob's lunch claim is low value --
+   claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-CBF8F40CC1D6
+
+-- 7. A claim whose text asks to pay someone else --
+   claim 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d: Rejected (resource_scope)
+
+Simulated payments in the provider journal: 2
