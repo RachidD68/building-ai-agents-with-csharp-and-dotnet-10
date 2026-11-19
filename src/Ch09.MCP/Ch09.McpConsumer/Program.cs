@@ -71,7 +71,7 @@ Console.WriteLine();
 // Step 3: Feed MCP tools to the ChatClientAgent
 // ---------------------------------------------------------------
 // McpClientTool extends AITool, so it plugs directly into the agent's
-// tools parameter — identical to how we registered inline tools in Ch08.
+// tools parameter — identical to how we registered inline tools in the tools chapter.
 ChatClientAgent agent = new(
     chatClient,
     instructions: "You are a product assistant. Use the available tools to look up products and check inventory. Be helpful and concise.",

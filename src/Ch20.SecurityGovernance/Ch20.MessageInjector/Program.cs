@@ -21,7 +21,7 @@
 //
 // This demo registers an AuditReminderProvider that (a) supplies the agent's
 // standing instructions and (b) injects an [audit] system message on every
-// second model invocation. Compose it with the Ch16 middleware
+// second model invocation. Compose it with the Ch20.MiddlewarePipeline middleware
 // (LoggingMiddleware, TimingMiddleware, ContentFilterMiddleware): the provider
 // handles per-invocation concerns, the middleware handles whole-request ones.
 // ============================================================================

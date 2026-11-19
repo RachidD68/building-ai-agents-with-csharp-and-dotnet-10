@@ -6,7 +6,7 @@
 #
 # This Dockerfile is the CUSTOM path, for teams that require one in source
 # control. Build context is the CodeSample repo root (it references the
-# Common project), so build from there:
+# Common and ServiceDefaults projects), so build from there:
 #   docker build -f src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Dockerfile -t agent-api .
 # ============================================================================
 
@@ -14,9 +14,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Central package management files first, for layer-cached restores.
+# Central package management files first, then every project file in the
+# ProjectReference graph (Common and ServiceDefaults), for layer-cached restores.
 COPY Directory.Packages.props Directory.Build.props ./
 COPY src/Common/AgenticAI.Common/AgenticAI.Common.csproj src/Common/AgenticAI.Common/
+COPY src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/
 COPY src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/
 RUN dotnet restore src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj
 

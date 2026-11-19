@@ -29,12 +29,13 @@ This chapter is mostly theory; its one sample is `src/Ch01.Agency/Ch01.FirstGlim
 - [ ] The competitive advantage of understanding agents as a .NET developer
 
 ### What You Will Build in This Book
-- [ ] **Ch 2-4 (Foundations)** -- C# essentials, LLM mental model, first API call
-- [ ] **Ch 5-7 (Your First Agents)** -- agents, conversations, structured output
-- [ ] **Ch 8-11 (Giving Agents Superpowers)** -- tool calling, MCP integration, RAG pipelines, agents that read images
-- [ ] **Ch 12-13 (Multi-Agent & Workflows)** -- orchestration, sequential and conditional pipelines
-- [ ] **Ch 14-19 (Production)** -- hosting, observability, safety guardrails, agent skills, evaluation, the agent harness
-- [ ] **Ch 20 (Next Steps)** -- where to go after the book
+- [ ] **Understand and Start** -- the right amount of agency, models and context, a reproducible environment, your first agent and its first test
+- [ ] **Contracts and Authorized Actions** -- typed responses, conversations and memory, bounded tools, authorizing and committing agent actions
+- [ ] **Knowledge and Documents** -- MCP across trust boundaries, a grounded RAG baseline, RAG with permissions and freshness, multimodal document processing
+- [ ] **Composition and Durable Execution** -- multi-agent topologies, workflows with human review, durable execution, skills and harnesses
+- [ ] **Interfaces, Security and Observation** -- hosting and identity, streaming and approval interfaces, observability, security policies and governance
+- [ ] **Qualification and Operations** -- evaluation, cost and capacity, qualifying the Contoso agent system, operating and evolving agents
+- [ ] **Appendices** -- C# essentials, Semantic Kernel and AutoGen migration, exercise solutions and the first-edition project mapping
 
 ## Key Takeaways
 1. Agentic AI is not a fad -- it is a fundamental shift in how software is designed.

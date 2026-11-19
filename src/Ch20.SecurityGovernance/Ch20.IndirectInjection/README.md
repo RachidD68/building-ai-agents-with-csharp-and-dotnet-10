@@ -2,7 +2,8 @@
 
 The dangerous case the chapter's direct-injection defence does **not** cover:
 the malicious instruction arrives inside content the agent **ingests** — a
-RAG-retrieved document (Ch10), MCP tool/server output (Ch09), a web page, an
+RAG-retrieved document (the RAG chapter), MCP tool/server output (the MCP
+chapter), a web page, an
 email, a file.
 
 ## What It Shows

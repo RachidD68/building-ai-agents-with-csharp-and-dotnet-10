@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 // Direct injection is the user typing "ignore previous instructions". The more
 // dangerous case is INDIRECT: the malicious instruction arrives inside content
-// the agent INGESTS — a RAG-retrieved document (Ch10), MCP tool/server output
-// (Ch09), a web page, an email, a file. The user is innocent; the data is the
+// the agent INGESTS — a RAG-retrieved document (the RAG chapter), MCP
+// tool/server output (the MCP chapter), a web page, an email, a file. The user is innocent; the data is the
 // attacker.
 //
 // Two mitigations, layered:
@@ -17,8 +17,8 @@
 // Honest caveat (printed by the program): a safety-tuned model sometimes resists
 // the payload on its own and sometimes complies — model resistance is
 // probabilistic. The DETERMINISTIC defence is the scanner; spotlighting raises
-// the odds. Never rely on the model alone. Pair with the Ch16 output filters and
-// the critic.
+// the odds. Never rely on the model alone. Pair with the output filters
+// (Ch20.OutputHandling) and the critic (Ch20.CriticAgent).
 // ============================================================================
 
 using System.Text.RegularExpressions;

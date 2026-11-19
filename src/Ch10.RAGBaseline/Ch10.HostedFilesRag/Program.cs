@@ -20,7 +20,7 @@
 //
 // Trade-offs:
 //   - hosted: faster to ship, tied to Foundry, retrieval is server-side
-//   - custom (the rest of Ch10): portable across providers, more code
+//   - custom (the rest of the RAG chapter): portable across providers, more code
 //
 // To run: configure LlmProvider:Foundry:ProjectEndpoint AND a vector-store id
 // in LlmProvider:Foundry:VectorStoreId, and `az login` so DefaultAzure-

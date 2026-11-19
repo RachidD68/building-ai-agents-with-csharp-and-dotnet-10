@@ -52,7 +52,7 @@ public sealed class InMemoryProductRepository : IProductRepository
         CancellationToken cancellationToken)
     {
         // Check-then-decrement must be atomic: an agent can fire concurrent
-        // tool calls (see the AllowConcurrentInvocation discussion in Ch08),
+        // tool calls (see the AllowConcurrentInvocation discussion in the tools chapter),
         // and two orders racing on the last units must not both succeed.
         lock (_stockLock)
         {

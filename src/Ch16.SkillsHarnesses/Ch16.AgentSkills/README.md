@@ -37,5 +37,5 @@ run the demo locally.
 ## Running
 
 ```bash
-dotnet run --project src/Ch16.AgentSkills/Ch16.AgentSkills
+dotnet run --project src/Ch16.SkillsHarnesses/Ch16.AgentSkills
 ```

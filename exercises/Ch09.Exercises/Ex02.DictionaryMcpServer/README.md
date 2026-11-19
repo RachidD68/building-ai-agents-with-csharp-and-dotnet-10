@@ -6,8 +6,8 @@ Build an MCP server that exposes two tools: `DefineWord(string word)` and `GetSy
 
 ## Structure
 
-- `Server/` — MCP server with the two dictionary tools and the in-memory dictionary
-- `Consumer/` — MCP consumer + agent
+- `Ex02.DictionaryMcpServer/` (this folder) — MCP server with the two dictionary tools and the in-memory dictionary
+- `../Ex02.DictionaryMcpConsumer/` — MCP consumer + agent
 
 ## Hints
 

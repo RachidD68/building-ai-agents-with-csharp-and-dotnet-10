@@ -6,8 +6,8 @@ Build a tiny MCP server in C# with **one** tool: `GetCurrentTime(string timezone
 
 ## Structure
 
-- `Server/` — The MCP server (stdio transport), exposing only `GetCurrentTime`
-- `Consumer/` — The MCP consumer + agent
+- `Ex01.TimeMcpServer/` (this folder) — The MCP server (stdio transport), exposing only `GetCurrentTime`
+- `../Ex01.TimeMcpConsumer/` — The MCP consumer + agent
 
 ## Hints
 
@@ -18,11 +18,11 @@ Build a tiny MCP server in C# with **one** tool: `GetCurrentTime(string timezone
 ## Running
 
 ```bash
-# First build the server
-dotnet build Server/
+# First build the server (the consumer starts it with --no-build)
+dotnet build exercises/Ch09.Exercises/Ex01.TimeMcpServer
 
 # Then run the consumer (it launches the server automatically)
-dotnet run --project Consumer/
+dotnet run --project exercises/Ch09.Exercises/Ex01.TimeMcpConsumer
 ```
 
 ## Key Concepts

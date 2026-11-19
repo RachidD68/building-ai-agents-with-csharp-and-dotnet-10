@@ -21,7 +21,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 // Register the agent as a singleton so all requests share the same agent instance.
 // Each request will create its own session (the conversations and memory chapter covers persistent sessions).
 //
-// FORWARD REFERENCE: the Ch05 Challenge exercise (Ex03.MultiPersonaApi) extends
+// FORWARD REFERENCE: this chapter's Challenge exercise (Ex03.MultiPersonaApi) extends
 // this to several personas using keyed DI — AddKeyedSingleton(...) plus
 // [FromKeyedServices("pirate")] on the endpoint — so one API can route to a
 // different agent per request.

@@ -137,7 +137,7 @@ catch (OperationCanceledException)
 // Step 5: Alternative creation pattern — ChatClientAgentOptions
 // ---------------------------------------------------------------
 // For more control, use the options object. This is the pattern to reach for
-// when you need to pin chat options, or add history/context providers (Ch 6).
+// when you need to pin chat options, or add history/context providers (the conversations and memory chapter).
 Console.WriteLine("\n--- Alternative: Using ChatClientAgentOptions ---\n");
 
 ChatClientAgentOptions options = new()

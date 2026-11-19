@@ -82,7 +82,7 @@ Directory.CreateDirectory(scratchDir);
 
 // Seed the scratch folder with a couple of files for the agent to discover.
 File.WriteAllText(Path.Combine(scratchDir, "README.md"),
-    "# Scratch folder\nThis directory was created for the Ch08 shell-tool demo.\n");
+    "# Scratch folder\nThis directory was created for the shell-tool demo.\n");
 File.WriteAllText(Path.Combine(scratchDir, "data.txt"),
     string.Join("\n", Enumerable.Range(1, 50).Select(i => $"line {i}")));
 

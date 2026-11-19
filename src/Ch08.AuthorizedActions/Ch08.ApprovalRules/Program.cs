@@ -17,8 +17,8 @@
 //      request.CreateResponse(approved: true/false, reason). Resume on the
 //      SAME session. Approve -> the tool runs. Reject -> it never executes.
 //
-// Ch08 covers the per-function mechanics of tool approval. Ch16's angle is the
-// SAFETY pattern: sensitive action => approval gate + argument validation +
+// Ch08.ToolApproval covers the per-function mechanics of tool approval. This
+// project's angle is the SAFETY pattern: sensitive action => approval gate + argument validation +
 // least privilege.
 //
 // NOTE: ToolApprovalAgent / ToolApprovalAgentOptions carried [Experimental

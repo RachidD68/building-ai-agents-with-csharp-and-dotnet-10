@@ -13,7 +13,7 @@ A token-free console assertion harness for testing multi-agent compositions. A f
 ## Running
 
 ```bash
-dotnet run --project src/Ch13.MultiAgentTopology/Ch13.MultiAgentTopology.Tests
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.MultiAgent.Tests
 ```
 
 No Ollama or API key required -- the fake client never calls a model.
