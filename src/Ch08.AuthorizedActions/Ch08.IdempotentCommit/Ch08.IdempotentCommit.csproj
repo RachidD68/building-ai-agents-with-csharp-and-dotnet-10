@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Idempotent commit of an authorized reimbursement in one SQLite transaction:
+       unique (tenant, operation_id), argument digest, stored outcome, version
+       recheck and an outbox row. No model. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.Data.Sqlite.Core is the ADO.NET provider; the bundle supplies
+         the native SQLite library for Windows, Linux and macOS. -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The proposal type and the canonical argument digest. -->
+    <ProjectReference Include="../Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
+  </ItemGroup>
+
+</Project>
