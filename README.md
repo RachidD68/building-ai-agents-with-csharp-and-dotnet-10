@@ -21,13 +21,13 @@ Corrections in the companion code, with what to change in the printed listings, 
 | Area / chapter | Severity | What was wrong | Fix | Fixed in |
 |---|---|---|---|---|
 | Ch10, Ch14, Ch16 · RAG provider (B1) | A | `RagContextProvider` needed a mutable `CurrentQuery`: Chapter 14 never set it (no retrieval), Chapter 16 set it on a shared singleton (requests could swap context) | Reads the question from the call's `InvokingContext`; `CurrentQuery` removed | v1.1.0 (companion code) |
-| Ch08 · `Ch08.ShellTool` (R02) | A | Allow-list let `dotnet` and `find` run arbitrary code; "sandbox" wording | Read-only viewers in a scratch folder; not called a sandbox | v1.1.0 (companion code) |
+| Ch08 · `Ch08.ShellTool` (R02) | A | Allow-list let `dotnet` and `find` run arbitrary code; "sandbox" wording; on Windows every viewer failed to start and the model invented results | Read-only viewers in a scratch folder; not called a sandbox; a missing program is reported, `dir`/`type` run through cmd with metacharacters refused | v1.1.0 (companion code) |
 | Ch13 · `Ch13.ApprovalWorkflow` (R03) | A | Empty input, typos or end of input approved the document | Only `approve`, `revise` or `reject`; anything else stays pending | v1.1.0 (companion code) |
 | Ch08 · `Ch08.ToolApproval` (R04) | A | An approved refund could run twice | Idempotent per order | v1.1.0 (companion code) |
 | Ch16 · `Ch16.ToolApproval` (R05) | A | Refunds of -10 and 0 were auto-approved; culture-dependent parsing | Only `0 < amount <= 50`, invariant parsing | v1.1.0 (companion code) |
 | Ch04 · configuration (R06) | B | User secrets, Azure key, `ANTHROPIC_API_KEY` and README keys did not work as described | Working recipe and `--config-check` | v1.1.0 (companion code) |
 | Ch18 · evals (R07) | A | `Contains("15")` passed "115 days" and was called a grounding check | Exact value check with counterexamples | v1.1.0 (companion code) |
-| Ch13 · checkpoint resume (R08) | B | "Restart" ran in one process with in-memory checkpoints | `prepare`/`resume` across two processes on a file store | v1.1.0 (companion code) |
+| Ch13 · checkpoint resume (R08) | B | "Restart" ran in one process with in-memory checkpoints; demos approved implicitly, even an empty draft | `prepare`/`resume` across two processes on a file store; simulated decisions labelled, empty drafts never approved | v1.1.0 (companion code) |
 | Ch14 · hosted routes (R09) | B | Routes were single-turn without saying so | Documented as single-turn | v1.1.0 (companion code) |
 | Common · retries (R10) | B | SDK and HTTP handler both retried: up to 16 requests per call | One retry owner | v1.1.0 (companion code) |
 | Ch14 · rate limiting (R11) | B | Every authenticated user fell back to the IP partition | Partition by user id, then IP | v1.1.0 (companion code) |
@@ -37,6 +37,7 @@ Corrections in the companion code, with what to change in the printed listings, 
 | Security pins | A | Aspire < 13.6.5, MessagePack 3.1.7 and System.Text.Json 11 previews failed NuGet audit, so restore failed | Aspire 13.6.5, MessagePack 3.1.12, Microsoft.Extensions.* 10.0.13 | v1.1.0 (companion code); MessagePack in v1.0.1 |
 | `global.json` | A | A machine with only a newer SDK could not build | `rollForward: latestMajor` | v1.1.0 (companion code) |
 | All · MAF 1.28 | B | Pinned to an earlier Agent Framework release | MAF 1.28.0, MCP 2.4.0 | v1.1.0 (companion code) |
+| README · exercise solutions | B | Claimed a worked answer for every exercise | Says which exercises have solutions | v1.1.0 (companion code) |
 | Ch04 · project count | B | "50+ projects"; README sub-totals ambiguous | 127 projects: 125 runnable + 2 libraries | v1.1.0 (companion code) |
 
 ---
