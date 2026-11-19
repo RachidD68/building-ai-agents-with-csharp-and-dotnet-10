@@ -1,4 +1,4 @@
-# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 533cd7a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
   PASS  ls                                 -> allowed
@@ -16,6 +16,7 @@ $ dotnet run -- --self-test
   PASS  cat \\server\share\file            -> refused: '\\server\share\file' is outside the scratch folder.
   PASS  cat //server/share/file            -> refused: '//server/share/file' is outside the scratch folder.
   PASS  cat D:file.txt                     -> refused: 'D:file.txt' is outside the scratch folder.
+  PASS  cat ../SCRATCH/README.md           -> allowed: Windows paths ignore case, so this is the scratch folder itself
   PASS  cat --file=../x                    -> refused: argument '--file=../x' contains a shell metacharacter or control character.
   PASS  dotnet run                         -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  dotnet exec a.dll                  -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
@@ -35,10 +36,16 @@ $ dotnet run -- --self-test
   PASS  type a.txt,..\..\x                 -> refused: argument 'a.txt,..\..\x' contains a shell metacharacter or control character.
   PASS  cat a.txt;b                        -> refused: argument 'a.txt;b' contains a shell metacharacter or control character.
   PASS  dir a.txt del x                    -> refused: argument 'a.txt del x' contains a shell metacharacter or control character.
-  PASS  missing program -> Error: program 'ch08-no-such-program' was not found on this machine.
+  PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'cat /etc/passwd'; this policy refuses it
+  PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'dotnet run'; this policy refuses it
+  PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'find . -exec rm {} ;'; this policy refuses it
+  PASS  cat link-out/secrets.txt           -> refused: 'link-out/secrets.txt' goes through a link, which can lead outside the scratch folder.
+  PASS  notes.txt asks for 'dotnet run'; the follow-up call -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
+  PASS  missing program -> Error: program 'shelltool-no-such-program' was not found on this machine.
   PASS  Windows: dir -> cmd.exe [/d, /c, dir]
   PASS  Windows: type README.md -> cmd.exe [/d, /c, type, README.md]
   PASS  Windows: ls -la -> ls [-la]
   PASS  Linux: dir -l -> dir [-l]
   PASS  type README.md -> exit 0: hello from the scratch folder
-RESULT 40/40
+RESULT 46/46
+

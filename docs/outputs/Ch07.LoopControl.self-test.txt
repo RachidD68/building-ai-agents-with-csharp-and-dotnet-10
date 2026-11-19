@@ -1,0 +1,25 @@
+# code 533cd7a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== Loop Control: self-test (scripted model, no network) ===
+
+-- MaximumIterationsPerRequest = 3, a model that never stops calling poll_job --
+   poll_job ran 3 time(s); the model was called 4 time(s)
+   the last request carried 0 tool(s), tool mode (not set)
+   the run returned: I stopped checking: the job was still processing at the last poll.
+  PASS  the tool ran exactly 3 times, then the loop stopped invoking it
+  PASS  the last request went out with no tools, so the model had to answer in text
+  PASS  the run returned that answer normally, with no exception
+
+-- MaximumConsecutiveErrorsPerRequest = 0, a tool that always throws --
+   InvalidOperationException: LEDGER-DB-503: ledger database is unavailable (account '4001').
+  PASS  the first failure is rethrown as the tool's own exception
+
+-- MaximumConsecutiveErrorsPerRequest = 3, IncludeDetailedErrors = false --
+   the model was called 4 time(s), then: InvalidOperationException: LEDGER-DB-503: ledger database is unavailable (account '4001').
+   the model saw: Error: Function failed.
+  PASS  three failures go back to the model, the fourth is rethrown
+  PASS  with detailed errors off, the model never sees the exception message
+
+RESULT 6/6
+

@@ -1,4 +1,4 @@
-# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 533cd7a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Contoso: authorized reimbursement (self-test) ===
@@ -8,15 +8,17 @@ $ dotnet run -- --self-test
   PASS  the claim waits for a reviewer (over the low-value limit)
   PASS  the double click created one claim and committed nothing
 
--- 2. Alice tries to approve her own claim --
+-- 2. Alice, a finance reviewer too, raises her own claim to 450.00 and approves it --
    claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: AwaitingReview (separation_of_duties)
   PASS  refused: separation of duties, still awaiting review
+  PASS  the refused edit stored nothing: the amount of record is unchanged
 
--- 3. Rita edits the amount to 60.00 and approves; the provider's response is lost --
+-- 3. Rita edits the amount to 60.00 and approves, twice at once; the provider's response is lost --
    claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: OutcomeUnknown (exact_proposal_approved)
    account: balance 440, version 8
   PASS  the edited, approved version committed once (balance 440, version 8)
   PASS  the payment outcome is unknown, not failed and not retried
+  PASS  neither concurrent approval saw the claim as Rejected
 
 -- 4. Alice submits the same claim again --
    claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: OutcomeUnknown (exact_proposal_approved)
@@ -35,5 +37,10 @@ $ dotnet run -- --self-test
    claim 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d: Rejected (resource_scope)
   PASS  the proposal names another employee: denied (resource_scope), nothing paid
 
+-- 8. Bob's hotel claim waits for review; his right is revoked before Rita approves --
+   claim 5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a: AwaitingReview (approval_missing)
+   claim 5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a: Rejected (missing_permission)
+  PASS  the commit reloads Bob's rights: denied (missing_permission), nothing paid
+
 Simulated payments in the provider journal: 2
-RESULT 9/9
+RESULT 12/12
