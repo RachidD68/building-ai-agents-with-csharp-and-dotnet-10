@@ -76,7 +76,6 @@
     <Project Path="src/Ch13.Workflows/Ch13.SequentialWorkflow/Ch13.SequentialWorkflow.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.ConditionalWorkflow/Ch13.ConditionalWorkflow.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.ApprovalWorkflow/Ch13.ApprovalWorkflow.csproj" />
-    <Project Path="src/Ch13.Workflows/Ch13.A2AInputRequest/Ch13.A2AInputRequest.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.AgentWorkflow/Ch13.AgentWorkflow.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.CheckpointedApproval/Ch13.CheckpointedApproval.csproj" />
     <Project Path="src/Ch13.Workflows/Ch13.ParallelAnalysis/Ch13.ParallelAnalysis.csproj" />
