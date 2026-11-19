@@ -1,268 +1,204 @@
 // ============================================================================
-// Tool approval (human-in-the-loop)
+// Tool approval, with the policy checked first
 // ----------------------------------------------------------------------------
-// Some tools are too dangerous to fire on the model's say-so alone. Refunding
-// an order, deleting a record, sending money — you want a human (or a policy)
-// to approve the call before it runs. MAF 1.28 gives you two layers for this:
+// Some tools must not fire on the model's say-so alone. Two framework layers:
 //
-//   1. ApprovalRequiredAIFunction (Microsoft.Extensions.AI) — wrap any
+//   1. ApprovalRequiredAIFunction (Microsoft.Extensions.AI) wraps an
 //      AIFunction so that, instead of executing, the run PAUSES and returns a
-//      ToolApprovalRequestContent. You inspect the requested call, decide, and
-//      RESUME the run by sending back a ToolApprovalResponseContent.
+//      ToolApprovalRequestContent. You decide, then RESUME the run on the same
+//      session with request.CreateResponse(approved, reason).
+//   2. ToolApprovalAgent (Microsoft.Agents.AI) sits in front of the agent and
+//      applies AutoApprovalRules, so a trusted call flows through unattended
+//      while a sensitive one still pauses.
 //
-//   2. ToolApprovalAgent (Microsoft.Agents.AI, stable in 1.28) — a delegating
-//      agent that sits in front of your agent and applies "don't ask again"
-//      rules plus auto-approval heuristics, so trusted calls flow through
-//      without a prompt while sensitive ones still pause.
+// The application adds the part the framework cannot know: ActionPolicy runs
+// BEFORE anyone is asked. A Deny (negative amount, wrong currency, unknown
+// order, an approval reused with other arguments) is rejected without ever
+// reaching a reviewer. RequireApproval goes to a reviewer, whose decision is
+// stored server-side and bound to the exact arguments. Allow goes through.
 //
-// This sample shows BOTH: a manual approve path, a manual reject path, and an
-// auto-approval rule that waves a read-only tool through untouched.
+// Approval is not idempotency. An approved call can still run twice (a retry
+// after a timeout, a resumed session, a double click), so refund_order goes
+// through a per-order ledger: one credit per order, however often it runs.
+// Framework approval request ids and business operation ids are two ids with
+// two jobs: the first pairs a response with its request, the second keys the
+// effect.
 //
-// All-or-nothing gotcha: when ANY tool in a model response requires approval,
-// the function-invoking client converts ALL the tool calls in that response
-// into approval requests. We set ChatOptions.AllowMultipleToolCalls = false so
-// the model emits one call at a time and each approval decision is isolated.
+// All-or-nothing: when ANY tool call in a response needs approval, every call
+// in that response becomes an approval request. AllowMultipleToolCalls = false
+// keeps one call, and one decision, per turn.
 //
-// Approval is not idempotency. An approved call can still run twice — a retry
-// after a timeout, a resumed session, a double-clicked button. So the refund
-// tool is idempotent on its business key (the order id): refunding the same
-// order again returns the original confirmation and issues no second credit.
-// Offline check of that ledger: dotnet run -- --self-test
+//   dotnet run                    four prompts against the configured model
+//   dotnet run -- --self-test     offline: the ledger, the amount rule (de-DE)
+//                                 and the approval loop with a scripted model
 // ============================================================================
 
 using System.ComponentModel;
+using Ch08.ActionPolicy;
+using Ch08.ToolApproval;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
-if (args.Contains("--self-test")) return RefundLedger.SelfTest();
+if (args.Contains("--self-test")) return await ToolApprovalSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
-
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Tool Approval (human-in-the-loop) ===\n");
+Console.WriteLine("=== Tool approval, policy first ===\n");
 
-// ── Tools ───────────────────────────────────────────────────────────
-// One sensitive write tool (RefundOrder) and one harmless read tool
-// (GetOrderStatus). We will gate the write tool behind approval.
-// Name the tools explicitly so the schema the model sees is "refund_order"
-// and "get_order_status" — not the compiler-generated local-function name.
-AIFunction refundFn = AIFunctionFactory.Create(RefundOrder, name: "refund_order");
-AIFunction statusFn = AIFunctionFactory.Create(GetOrderStatus, name: "get_order_status");
+RefundGate gate = OrderAdmin.CreateGate(new RefundLedger());
+AIAgent agent = OrderAdmin.CreateAgent(chatClient, gate, out _);
 
-// Wrap the sensitive tool. The run will pause on a call to this one.
-AIFunction gatedRefund = new ApprovalRequiredAIFunction(refundFn);
+// A simulated reviewer: the server would authenticate this person first.
+Func<FunctionCallContent, ReviewerDecision> approveAsRita = _ => new("rita", Roles.FinanceReviewer, Approved: true);
 
-// Instructions, tools, and AllowMultipleToolCalls all live on ChatOptions.
-// Forcing one tool call per turn keeps each approval decision isolated — see
-// the all-or-nothing note in the header.
-ChatOptions chatOptions = new()
-{
-    Instructions =
-        "You are an order-administration assistant for Contoso. " +
-        "Use refund_order to refund an order and get_order_status to check status. " +
-        "Always call the tool; do not claim an action without calling its tool.",
-    Tools = [gatedRefund, statusFn],
-    AllowMultipleToolCalls = false,
-};
-
-ChatClientAgent agent = new(
-    chatClient,
-    new ChatClientAgentOptions
-    {
-        Name = "OrderAdmin",
-        ChatOptions = chatOptions,
-    });
-
-// ── Demo 1: the APPROVED path ───────────────────────────────────────
-Console.WriteLine("--- Demo 1: refund, approved ---");
-await RunWithApprovalAsync(
-    agent,
-    "Please refund order ORD-1001.",
-    approve: true,
-    cts.Token);
-
-// ── Demo 2: the REJECTED path ───────────────────────────────────────
-Console.WriteLine("\n--- Demo 2: refund, rejected ---");
-await RunWithApprovalAsync(
-    agent,
-    "Please refund order ORD-2002.",
-    approve: false,
-    cts.Token);
-
-// ── Demo 3: auto-approval with ToolApprovalAgent ────────────────────
-// Wrap the agent in a ToolApprovalAgent whose auto-approval rule waves
-// through any call whose tool name is "get_order_status". Sensitive calls
-// (refund_order) would still pause — but this prompt only needs the read.
-Console.WriteLine("\n--- Demo 3: auto-approval rule (read-only tool) ---");
-
-AIAgent autoAgent = agent.AsBuilder()
-    .UseToolApproval(new ToolApprovalAgentOptions
-    {
-        // AutoApprovalRules is an IEnumerable<Func<ToolAutoApprovalRuleContext, ValueTask<bool>>>.
-        // Each rule sees the run's context — the pending call is context.FunctionCallContent —
-        // and returns true to wave it through.
-        AutoApprovalRules =
-        [
-            (ToolAutoApprovalRuleContext context) =>
-                ValueTask.FromResult(context.FunctionCallContent.Name == "get_order_status"),
-        ],
-    })
-    .Build();
-
-AgentSession autoSession = await autoAgent.CreateSessionAsync(cts.Token);
-AgentResponse autoResponse = await autoAgent.RunAsync(
+string[] prompts =
+[
     "What is the status of order ORD-3003?",
-    autoSession,
-    cancellationToken: cts.Token);
-Console.WriteLine($"Agent: {autoResponse.Text}\n");
-
-Console.WriteLine("=== Tool approval demo complete! ===");
+    "Refund 20 USD on order ORD-1001.",
+    "Refund 80 USD on order ORD-2002.",
+    "Refund -10 USD on order ORD-1001.",
+];
+foreach (string prompt in prompts)
+{
+    Console.WriteLine($">> {prompt}");
+    AgentSession session = await agent.CreateSessionAsync(cts.Token);
+    AgentResponse final = await ApprovalLoop.RunAsync(
+        agent, session, prompt, gate, approveAsRita, Console.WriteLine, cts.Token);
+    Console.WriteLine($"<< {final.Text}\n");
+}
+Console.WriteLine($"Credits issued: {gate.Ledger.CreditsIssued}");
 return 0;
 
-// ----------------------------------------------------------------------------
-// Drives one approve/reject loop against an agent that has a gated tool.
-// 1) First run pauses with a ToolApprovalRequestContent.
-// 2) We build a ToolApprovalResponseContent via request.CreateResponse(...).
-// 3) Second run resumes with that response and produces the final answer.
-// ----------------------------------------------------------------------------
-static async Task RunWithApprovalAsync(
-    AIAgent agent,
-    string prompt,
-    bool approve,
-    CancellationToken ct)
+/// <summary>The order-administration agent: one gated write, one read.</summary>
+internal static class OrderAdmin
 {
-    AgentSession session = await agent.CreateSessionAsync(ct);
-    Console.WriteLine($"User: {prompt}");
+    public const string Tenant = "contoso";
 
-    AgentResponse response = await agent.RunAsync(prompt, session, cancellationToken: ct);
+    public static readonly Order[] Orders =
+    [
+        new("ORD-1001", "C-1001", 129.00m, "USD", 3),
+        new("ORD-2002", "C-2002", 480.00m, "USD", 5),
+        new("ORD-3003", "C-3003", 64.50m, "USD", 2),
+        new("ORD-4004", "C-4004", 900.00m, "USD", 1),
+    ];
 
-    // Did the run pause for approval?
-    List<ToolApprovalRequestContent> approvals = response.Messages
-        .SelectMany(m => m.Contents)
-        .OfType<ToolApprovalRequestContent>()
-        .ToList();
+    public static RefundGate CreateGate(RefundLedger ledger) =>
+        new(Tenant, new Caller(Tenant, "ann", new HashSet<string> { Permissions.SubmitReimbursement }),
+            ledger, Orders);
 
-    if (approvals.Count == 0)
+    public static AIAgent CreateAgent(IChatClient chatClient, RefundGate gate, out Func<int> statusLookups)
     {
-        // No tool needed approval — the model answered (or used a free tool).
-        Console.WriteLine($"Agent: {response.Text}\n");
-        return;
-    }
+        int lookups = 0;
+        statusLookups = () => Volatile.Read(ref lookups);
 
-    // Build a response for each pending approval request.
-    List<AIContent> decisions = [];
-    foreach (ToolApprovalRequestContent request in approvals)
-    {
-        // request.ToolCall is a ToolCallContent; the concrete type is
-        // FunctionCallContent, which carries the name and arguments.
-        FunctionCallContent? call = request.ToolCall as FunctionCallContent;
-        Console.WriteLine(
-            $"  [approval requested] tool='{call?.Name}' " +
-            $"args={FormatArgs(call)} -> {(approve ? "APPROVE" : "REJECT")}");
+        [Description("Refunds an amount on an order to the original payment method. Sensitive write: " +
+                     "needs approval. Idempotent per order: a second refund of the same order issues no credit.")]
+        string RefundOrder(
+            [Description("The order id, e.g. 'ORD-1001'.")] string orderId,
+            [Description("The amount to refund, e.g. 20.00.")] decimal amount,
+            [Description("ISO currency code, e.g. 'USD'.")] string currency)
+            => gate.Refund(orderId, amount, currency);
 
-        decisions.Add(request.CreateResponse(
-            approved: approve,
-            reason: approve ? "Authorized by admin." : "Denied by admin."));
-    }
-
-    // Resume: send the decision(s) back in the SAME session.
-    ChatMessage decisionMessage = new(ChatRole.User, decisions);
-    AgentResponse final = await agent.RunAsync(decisionMessage, session, cancellationToken: ct);
-
-    Console.WriteLine($"Agent: {final.Text}\n");
-}
-
-static string FormatArgs(FunctionCallContent? call)
-{
-    if (call?.Arguments is null || call.Arguments.Count == 0)
-    {
-        return "{}";
-    }
-    return "{ " + string.Join(", ", call.Arguments.Select(a => $"{a.Key}={a.Value}")) + " }";
-}
-
-// ----------------------------------------------------------------------------
-// Tools
-// ----------------------------------------------------------------------------
-
-[Description("Refunds the specified order in full and returns a confirmation. This is a sensitive write operation. Idempotent per order: refunding the same order again returns the original confirmation and issues no second credit.")]
-static string RefundOrder(
-    [Description("The order identifier to refund, e.g. 'ORD-1001'.")] string orderId)
-    => RefundLedger.Refund(orderId);
-
-[Description("Gets the current status of an order. Read-only and safe to call without approval.")]
-static string GetOrderStatus(
-    [Description("The order identifier to look up, e.g. 'ORD-3003'.")] string orderId)
-{
-    return $"Order {orderId}: shipped on 2026-04-12, expected delivery 2026-04-16.";
-}
-
-// ----------------------------------------------------------------------------
-// The refund ledger: one credit per order, however many times the call runs.
-// In a real system this is a UNIQUE constraint on the order id in the payments
-// database (and the payment provider's own idempotency key), not a dictionary.
-// ----------------------------------------------------------------------------
-internal static class RefundLedger
-{
-    static readonly object Gate = new();
-    static readonly Dictionary<string, string> Confirmations = new(StringComparer.OrdinalIgnoreCase);
-    static int creditsIssued;
-
-    public static int CreditsIssued => creditsIssued;
-
-    public static string Refund(string orderId)
-    {
-        string key = orderId.Trim();
-        // The check and the credit happen under one lock, so two concurrent
-        // calls for the same order can never both issue a credit.
-        lock (Gate)
+        [Description("Gets the current status of an order. Read-only.")]
+        string GetOrderStatus([Description("The order id, e.g. 'ORD-3003'.")] string orderId)
         {
-            if (Confirmations.TryGetValue(key, out string? earlier))
-                return $"{earlier} (Already refunded earlier; no second credit was issued.)";
-
-            // In a real system this would call the payments service.
-            string confirmation = $"Refund processed for {key}. A credit of $129.00 was issued to the original payment method.";
-            creditsIssued++;
-            Confirmations[key] = confirmation;
-            return confirmation;
-        }
-    }
-
-    /// <summary>Offline check: dotnet run -- --self-test</summary>
-    public static int SelfTest()
-    {
-        int passed = 0, total = 0;
-        void Check(string name, bool ok)
-        {
-            total++; passed += ok ? 1 : 0;
-            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+            Interlocked.Increment(ref lookups);
+            return $"Order {orderId}: shipped, in transit.";
         }
 
-        string first = Refund("ORD-1001");
-        string again = Refund("ORD-1001");
-        string sameIdOtherCase = Refund(" ord-1001 ");
-        Check("first refund issues a credit", first.StartsWith("Refund processed") && !first.Contains("Already"));
-        Check("second refund of the same order issues no credit", again.Contains("no second credit"));
-        Check("order id is matched case-insensitively and trimmed", sameIdOtherCase.Contains("no second credit"));
-        Check("exactly one credit for ORD-1001", CreditsIssued == 1);
+        // Both tools are wrapped; the auto-approval rule below decides which
+        // calls may skip the pause.
+        AIFunction refund = new ApprovalRequiredAIFunction(
+            AIFunctionFactory.Create((Delegate)RefundOrder, name: "refund_order"));
+        AIFunction status = new ApprovalRequiredAIFunction(
+            AIFunctionFactory.Create((Delegate)GetOrderStatus, name: "get_order_status"));
 
-        Parallel.For(0, 50, _ => Refund("ORD-2002"));
-        Check("50 concurrent refunds of ORD-2002 issue one credit", CreditsIssued == 2);
+        ChatClientAgent inner = new(chatClient, new ChatClientAgentOptions
+        {
+            Name = "OrderAdmin",
+            ChatOptions = new ChatOptions
+            {
+                Instructions =
+                    "You are an order-administration assistant. Use refund_order to refund an amount on an " +
+                    "order and get_order_status to check an order. Always call the tool; never claim an " +
+                    "action without calling its tool.",
+                Tools = [refund, status],
+                AllowMultipleToolCalls = false,
+            },
+        });
 
-        Refund("ORD-3003");
-        Check("a different order gets its own credit", CreditsIssued == 3);
-
-        Console.WriteLine($"RESULT {passed}/{total}");
-        return passed == total ? 0 : 1;
+        // Auto-approve the read-only lookup, and a refund only when the amount
+        // rule (more than 0, at most the low-value limit, read in the
+        // invariant culture) AND ActionPolicy both say yes.
+        return inner.AsBuilder()
+            .UseToolApproval(new ToolApprovalAgentOptions
+            {
+                AutoApprovalRules =
+                [
+                    (ToolAutoApprovalRuleContext context) => ValueTask.FromResult(
+                        context.FunctionCallContent.Name switch
+                        {
+                            "get_order_status" => true,
+                            "refund_order" =>
+                                context.FunctionCallContent.Arguments is { } a &&
+                                a.TryGetValue("amount", out object? raw) &&
+                                RefundRule.ShouldAutoApprove(raw, out _) &&
+                                gate.Check(context.FunctionCallContent).Decision == Decision.Allow,
+                            _ => false,
+                        }),
+                ],
+            })
+            .Build();
     }
+}
+
+/// <summary>
+/// Request, decide, resume: the loop every approval-gated run goes through.
+/// The policy decides first; a reviewer sees only what the policy cannot settle.
+/// </summary>
+internal static class ApprovalLoop
+{
+    public const int MaxRounds = 5;
+
+    public static async Task<AgentResponse> RunAsync(
+        AIAgent agent, AgentSession session, string prompt, RefundGate gate,
+        Func<FunctionCallContent, ReviewerDecision> reviewer, Action<string> log, CancellationToken ct)
+    {
+        AgentResponse response = await agent.RunAsync(prompt, session, cancellationToken: ct);
+        for (int round = 1; response.Messages.SelectMany(m => m.Contents).OfType<ToolApprovalRequestContent>().ToList()
+             is { Count: > 0 } requests; round++)
+        {
+            if (round > MaxRounds) throw new InvalidOperationException($"still asking for approval after {MaxRounds} rounds");
+            List<AIContent> decisions = [];
+            foreach (ToolApprovalRequestContent request in requests)
+            {
+                var call = (FunctionCallContent)request.ToolCall;
+                PolicyResult policy = gate.Check(call);                 // ActionPolicy before any human
+                bool approved = policy.Decision switch
+                {
+                    Decision.Allow => true,
+                    Decision.RequireApproval => gate.RecordReview(call, reviewer),
+                    _ => false,                                         // Deny: never offered to a reviewer
+                };
+                log($"   [approval] {call.Name}({FormatArgs(call)}) policy={policy.Decision}/{policy.Reason} " +
+                    $"-> {(approved ? "APPROVED" : "REJECTED")}");
+                decisions.Add(request.CreateResponse(approved, approved ? policy.Reason : $"denied: {policy.Reason}"));
+            }
+            // Resume on the SAME session with the decision(s).
+            response = await agent.RunAsync(new ChatMessage(ChatRole.User, decisions), session, cancellationToken: ct);
+        }
+        return response;
+    }
+
+    private static string FormatArgs(FunctionCallContent call) =>
+        call.Arguments is null ? "" : string.Join(", ", call.Arguments.Select(a => $"{a.Key}={a.Value}"));
 }

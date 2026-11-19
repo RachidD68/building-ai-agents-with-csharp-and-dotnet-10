@@ -2,26 +2,25 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- No NoWarn needed. In Microsoft.Agents.AI 1.28.0, ToolApprovalAgent,
-         ToolApprovalAgentOptions, ToolAutoApprovalRuleContext and UseToolApproval
-         carry no [Experimental] attribute (they were MAAI001 in earlier 1.x
-         releases), and ApprovalRequiredAIFunction / ToolApprovalRequestContent in
-         Microsoft.Extensions.AI.Abstractions are stable. The only experimental
-         member nearby is ToolApprovalRequestContent.RequiresConfirmation
+    <!-- No NoWarn needed. Checked by reflection on Microsoft.Agents.AI 1.28.0 and
+         Microsoft.Extensions.AI.Abstractions 10.11.0: ToolApprovalAgent,
+         ToolApprovalAgentOptions, ToolAutoApprovalRuleContext and UseToolApproval,
+         and ApprovalRequiredAIFunction, ToolApprovalRequestContent and
+         ToolApprovalResponseContent, carry no [Experimental] attribute. The only
+         experimental member nearby is ToolApprovalRequestContent.RequiresConfirmation
          (MEAI001), which this sample does not use. -->
-
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- The policy that runs before any approval is offered. -->
+    <ProjectReference Include="../Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
   </ItemGroup>
 
   <ItemGroup>
