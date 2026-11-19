@@ -1,21 +1,20 @@
-using System.ClientModel;
-using System.ClientModel.Primitives;
-using Anthropic;
 using Polly;
-using Azure.AI.OpenAI;
-using Azure.AI.Projects;
-using Azure.Identity;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using AgenticAI.Common.Configuration;
+using AgenticAI.Common.Providers;
 
 namespace AgenticAI.Common.Extensions;
 
 /// <summary>
 /// Extension methods for registering LLM services in the DI container.
+/// This package is GA-only: it references no prerelease package, directly or
+/// transitively. Preview and vendor-specific wiring lives in the optional
+/// packages AgenticAI.Common.Azure, AgenticAI.Common.Foundry and
+/// AgenticAI.Common.Anthropic.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
@@ -25,13 +24,14 @@ public static class ServiceCollectionExtensions
     ///
     /// Every provider's HTTP traffic flows through a named HttpClient wrapped in
     /// <c>AddStandardResilienceHandler</c> — transient-fault retries, a circuit
-    /// breaker, and timeouts re-tuned for LLM latency (see Chapter 14).
+    /// breaker, and timeouts re-tuned for LLM latency.
     ///
-    /// Supports the three chat-completion providers: azure, openai, ollama.
-    /// For the Microsoft Foundry path (provider="foundry"), use
-    /// <see cref="AddFoundryAgent(IServiceCollection, IConfiguration, string, string)"/>
-    /// instead — Foundry returns an <see cref="AIAgent"/> directly, not an
-    /// <see cref="IChatClient"/>.
+    /// Built in: <c>openai</c> and <c>ollama</c>. Another arm plugs in through
+    /// <see cref="ILlmChatClientProvider"/>: reference AgenticAI.Common.Azure and
+    /// call <c>AddAzureOpenAIProvider()</c> for <c>azure</c>. The order of the two
+    /// calls does not matter. Foundry and Anthropic return an AIAgent, not an
+    /// <see cref="IChatClient"/>; they have their own <c>AddFoundryAgent</c> and
+    /// <c>AddAnthropicAgent</c> in their packages.
     /// </summary>
     public static IServiceCollection AddLlmChatClient(this IServiceCollection services, IConfiguration configuration,
         TimeSpan? attemptTimeout = null)
@@ -40,7 +40,20 @@ public static class ServiceCollectionExtensions
 
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
-        ValidateChatClientSettings(settings);
+
+        services.AddLlmChatClientProvider(new OpenAIChatClientProvider());
+        services.AddLlmChatClientProvider(new OllamaChatClientProvider());
+
+        // Fail at registration, before any model call, when the selected arm is
+        // already registered and a required setting is missing. An arm that is
+        // registered later is checked when the IChatClient is first resolved.
+        ILlmChatClientProvider? known = FindProvider(
+            services.Select(d => d.IsKeyedService ? null : d.ImplementationInstance).OfType<ILlmChatClientProvider>(),
+            settings.Provider);
+        if (known is not null)
+        {
+            ThrowIfMissing(known, settings);
+        }
 
         // Every provider call rides one named HttpClient wrapped in the
         // standard resilience handler (retry on transient 408/429/5xx, circuit
@@ -65,80 +78,39 @@ public static class ServiceCollectionExtensions
         // built over IHttpClientFactory's pipeline instead of a raw socket.
         services.AddSingleton<IChatClient>(sp =>
         {
+            ILlmChatClientProvider provider =
+                FindProvider(sp.GetServices<ILlmChatClientProvider>(), settings.Provider)
+                ?? throw UnknownProvider(settings.Provider);
+            ThrowIfMissing(provider, settings);
+
             HttpClient http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("llm");
-
-            return settings.Provider.ToLowerInvariant() switch
-            {
-                "azure" => CreateAzureOpenAIClient(http, settings.AzureOpenAI)
-                    .GetChatClient(settings.AzureOpenAI.Model)
-                    .AsIChatClient(),
-
-                "openai" => new OpenAI.OpenAIClient(
-                        new ApiKeyCredential(settings.OpenAI.ApiKey),
-                        new OpenAI.OpenAIClientOptions
-                        {
-                            Transport = new HttpClientPipelineTransport(http),
-                            // One retry owner: the resilience handler on the "llm"
-                            // HttpClient. Left on, the SDK's own retries would
-                            // multiply with it (4 x 4 = 16 sends for one call).
-                            RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
-                        })
-                    .GetChatClient(settings.OpenAI.Model)
-                    .AsIChatClient(),
-
-                "ollama" => CreateOllamaClient(http, settings),
-
-                "foundry" => throw new InvalidOperationException(
-                    "Provider 'foundry' returns an AIAgent, not an IChatClient. " +
-                    "Call AddFoundryAgent(...) instead of AddLlmChatClient(...). " +
-                    "See Chapter 4 for the Foundry quick-start."),
-
-                _ => throw new InvalidOperationException(
-                    $"Unknown LLM provider: '{settings.Provider}'. " +
-                    "Valid values: azure, openai, ollama, foundry.")
-            };
+            return provider.CreateChatClient(http, settings);
         });
 
         return services;
     }
 
-    // An API key, when configured, is used as-is; otherwise Microsoft Entra ID
-    // through DefaultAzureCredential (run `az login` once for local dev).
-    private static AzureOpenAIClient CreateAzureOpenAIClient(HttpClient http, AzureOpenAISettings azure)
+    /// <summary>
+    /// Adds an arm to the provider switch of
+    /// <see cref="AddLlmChatClient(IServiceCollection, IConfiguration, TimeSpan?)"/>.
+    /// Registering the same provider type twice is a no-op. When two providers
+    /// claim the same name, the one registered last wins.
+    /// </summary>
+    public static IServiceCollection AddLlmChatClientProvider(this IServiceCollection services,
+        ILlmChatClientProvider provider)
     {
-        AzureOpenAIClientOptions options = new()
-        {
-            Transport = new HttpClientPipelineTransport(http),
-            // One retry owner: the resilience handler on the "llm" HttpClient.
-            RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
-        };
-        Uri endpoint = new(azure.Endpoint);
-
-        if (!string.IsNullOrWhiteSpace(azure.ApiKey))
-        {
-            return new AzureOpenAIClient(endpoint, new ApiKeyCredential(azure.ApiKey), options);
-        }
-
-        // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
-        // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
-        // great for local dev but adds cold-start latency in production. There,
-        // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
-        // — or use ManagedIdentityCredential directly.
-        return new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton(provider));
+        return services;
     }
 
-    // Fail at startup, before any model call, with the name of the missing
-    // setting — instead of an opaque "Value cannot be an empty string".
-    private static void ValidateChatClientSettings(LlmSettings settings)
-    {
-        string? missing = settings.Provider.ToLowerInvariant() switch
-        {
-            "openai" when string.IsNullOrWhiteSpace(settings.OpenAI.ApiKey) => "LlmProvider:OpenAI:ApiKey",
-            "azure" when string.IsNullOrWhiteSpace(settings.AzureOpenAI.Endpoint) => "LlmProvider:AzureOpenAI:Endpoint",
-            _ => null,
-        };
+    private static ILlmChatClientProvider? FindProvider(IEnumerable<ILlmChatClientProvider> providers, string name) =>
+        providers.LastOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
 
+    // Fail with the name of the missing setting instead of an opaque
+    // "Value cannot be an empty string" from the SDK.
+    private static void ThrowIfMissing(ILlmChatClientProvider provider, LlmSettings settings)
+    {
+        string? missing = provider.FindMissingSetting(settings);
         if (missing is not null)
         {
             throw new InvalidOperationException(
@@ -149,13 +121,26 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static IChatClient CreateOllamaClient(HttpClient http, LlmSettings settings)
+    private static InvalidOperationException UnknownProvider(string name) => name.ToLowerInvariant() switch
     {
-        // OllamaSharp takes the endpoint from the HttpClient's BaseAddress;
-        // CreateClient returns a fresh instance, so setting it here is safe.
-        http.BaseAddress = new Uri(settings.Ollama.Endpoint);
-        return new OllamaSharp.OllamaApiClient(http, settings.Ollama.Model);
-    }
+        "azure" => new InvalidOperationException(
+            "Provider 'azure' (Azure OpenAI) lives in the optional package AgenticAI.Common.Azure, " +
+            "because Azure.AI.OpenAI is a prerelease package. Add a ProjectReference to " +
+            "src/Common/AgenticAI.Common.Azure and call services.AddAzureOpenAIProvider(), " +
+            "or set LlmProvider:Provider to openai or ollama."),
+
+        "foundry" => new InvalidOperationException(
+            "Provider 'foundry' returns an AIAgent, not an IChatClient. Reference " +
+            "AgenticAI.Common.Foundry and call AddFoundryAgent(...) instead of AddLlmChatClient(...)."),
+
+        "anthropic" => new InvalidOperationException(
+            "Provider 'anthropic' returns an AIAgent, not an IChatClient. Reference " +
+            "AgenticAI.Common.Anthropic and call AddAnthropicAgent(...) instead of AddLlmChatClient(...)."),
+
+        _ => new InvalidOperationException(
+            $"Unknown LLM provider: '{name}'. Valid values: openai, ollama " +
+            "(azure with AgenticAI.Common.Azure; foundry and anthropic through their own Add...Agent methods)."),
+    };
 
     /// <summary>
     /// Attaches the standard resilience pipeline (transient-fault retries with
@@ -168,9 +153,9 @@ public static class ServiceCollectionExtensions
     /// <param name="attemptTimeout">
     /// Per-attempt timeout. Defaults to two minutes, which suits a single chat
     /// call. Compositions that send a large tool schema and then loop -- the
-    /// agent harness in Chapter 19 is the clearest case -- can legitimately
-    /// exceed that on local hardware, so they widen it here rather than
-    /// letting Polly cancel a call that was going to succeed.
+    /// agent harness is the clearest case -- can legitimately exceed that on
+    /// local hardware, so they widen it here rather than letting Polly cancel a
+    /// call that was going to succeed.
     /// </param>
     public static IHttpClientBuilder AddLlmResilienceHandler(this IHttpClientBuilder builder,
         TimeSpan? attemptTimeout = null)
@@ -191,104 +176,9 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a Microsoft Foundry-backed <see cref="AIAgent"/> in the DI
-    /// container. Foundry is Microsoft's recommended path for new MAF projects;
-    /// the agent is constructed from an <see cref="AIProjectClient"/> via the
-    /// <c>AsAIAgent</c> extension method (Microsoft.Agents.AI.Foundry).
-    /// </summary>
-    /// <param name="services">The DI container.</param>
-    /// <param name="configuration">Configuration with an "LlmProvider:Foundry" section.</param>
-    /// <param name="instructions">The agent's system prompt.</param>
-    /// <param name="name">The agent's display name.</param>
-    public static IServiceCollection AddFoundryAgent(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        string instructions,
-        string name)
-    {
-        LlmConfigCheck.RunIfRequested(configuration);   // dotnet run -- --config-check
-
-        LlmSettings settings = new();
-        configuration.GetSection("LlmProvider").Bind(settings);
-
-        if (string.IsNullOrWhiteSpace(settings.Foundry.ProjectEndpoint))
-        {
-            throw new InvalidOperationException(
-                "LlmProvider:Foundry:ProjectEndpoint is required. " +
-                "Set it in appsettings.json (or as an environment variable) — e.g. " +
-                "\"https://my-foundry.services.ai.azure.com/api/projects/my-project\".");
-        }
-
-        AIAgent agent = new AIProjectClient(
-                new Uri(settings.Foundry.ProjectEndpoint),
-                // Pro Tip: unscoped DefaultAzureCredential probes the whole chain
-                // (env, workload/managed identity, Visual Studio, Azure CLI...), which is
-                // great for local dev but adds cold-start latency in production. There,
-                // scope it: new DefaultAzureCredential(new DefaultAzureCredentialOptions
-                // { ExcludeVisualStudioCredential = true, ExcludeAzureCliCredential = true })
-                // — or use ManagedIdentityCredential directly.
-                new DefaultAzureCredential())
-            .AsAIAgent(
-                model: settings.Foundry.Model,
-                instructions: instructions,
-                name: name);
-
-        services.AddSingleton(agent);
-        return services;
-    }
-
-    /// <summary>
-    /// Registers an Anthropic (Claude) <see cref="AIAgent"/> in the DI container.
-    /// Like Foundry, the Anthropic provider returns an <see cref="AIAgent"/> directly
-    /// (via <c>IAnthropicClient.AsAIAgent(...)</c> from Microsoft.Agents.AI.Anthropic),
-    /// not an <see cref="IChatClient"/> — so it has its own registration method rather
-    /// than an arm in <see cref="AddLlmChatClient(IServiceCollection, IConfiguration)"/>.
-    /// </summary>
-    /// <param name="services">The DI container.</param>
-    /// <param name="configuration">Configuration with an "LlmProvider:Anthropic" section.</param>
-    /// <param name="instructions">The agent's system prompt.</param>
-    /// <param name="name">The agent's display name.</param>
-    public static IServiceCollection AddAnthropicAgent(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        string instructions,
-        string name)
-    {
-        LlmConfigCheck.RunIfRequested(configuration);   // dotnet run -- --config-check
-
-        LlmSettings settings = new();
-        configuration.GetSection("LlmProvider").Bind(settings);
-
-        // LlmProvider:Anthropic:ApiKey wins; the conventional ANTHROPIC_API_KEY
-        // environment variable is the fallback.
-        string apiKey = !string.IsNullOrWhiteSpace(settings.Anthropic.ApiKey)
-            ? settings.Anthropic.ApiKey
-            : configuration["ANTHROPIC_API_KEY"] ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new InvalidOperationException(
-                "LlmProvider:Anthropic:ApiKey is required. Set it with " +
-                "dotnet user-secrets set \"LlmProvider:Anthropic:ApiKey\" \"<key>\" " +
-                "or the ANTHROPIC_API_KEY environment variable. " +
-                "Run with --config-check to see which settings were found.");
-        }
-
-        AnthropicClient client = new() { ApiKey = apiKey };
-
-        AIAgent agent = client.AsAIAgent(
-            model: settings.Anthropic.Model,
-            instructions: instructions,
-            name: name);
-
-        services.AddSingleton(agent);
-        return services;
-    }
-
-    /// <summary>
     /// Reads a required configuration value or throws with a helpful message.
     /// </summary>
-    public static string GetRequiredValue(this IConfiguration configuration,string key)
+    public static string GetRequiredValue(this IConfiguration configuration, string key)
     {
         return configuration[key]
             ?? throw new InvalidOperationException(

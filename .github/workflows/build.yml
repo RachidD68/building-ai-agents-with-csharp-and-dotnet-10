@@ -132,6 +132,11 @@ jobs:
           echo "4 harness(es) run, $failed failed."
           [ "$failed" -eq 0 ]
 
+      # AgenticAI.Common is the GA-only core: fail if its lock file resolves
+      # any prerelease package, direct or transitive.
+      - name: Check the core library is GA-only
+        run: pwsh -NoProfile -File tools/check-ga.ps1
+
       # "dotnet list package" exits 0 even when it finds something, so the
       # step reads its report and fails on any vulnerable package.
       - name: Check for vulnerable packages

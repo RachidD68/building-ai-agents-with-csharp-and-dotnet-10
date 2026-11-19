@@ -114,6 +114,9 @@
   </Folder>
   <Folder Name="/src/Common/">
     <Project Path="src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <Project Path="src/Common/AgenticAI.Common.Anthropic/AgenticAI.Common.Anthropic.csproj" />
+    <Project Path="src/Common/AgenticAI.Common.Azure/AgenticAI.Common.Azure.csproj" />
+    <Project Path="src/Common/AgenticAI.Common.Foundry/AgenticAI.Common.Foundry.csproj" />
   </Folder>
   <Folder Name="/exercises/" />
   <Folder Name="/exercises/Ch02.Exercises/">

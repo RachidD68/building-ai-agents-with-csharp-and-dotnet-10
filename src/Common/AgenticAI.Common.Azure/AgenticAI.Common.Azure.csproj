@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The azure arm of AddLlmChatClient. Separate from the core because
+       Azure.AI.OpenAI ships only as a prerelease (2.x-beta). -->
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+</Project>

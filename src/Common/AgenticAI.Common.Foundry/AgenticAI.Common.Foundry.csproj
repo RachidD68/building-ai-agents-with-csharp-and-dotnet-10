@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Microsoft Foundry agent wiring. Preview: Microsoft.Agents.AI.Foundry and
+       Azure.AI.Projects ship only as prereleases. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Foundry" />
+    <PackageReference Include="Azure.AI.Projects" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -87,7 +87,7 @@ Plus five appendices — a NuGet package reference, a Semantic Kernel to MAF mig
 
 ## Companion code
 
-**127 projects** in `AgenticAI.slnx`: **125 runnable projects**, that is 80 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus two shared libraries under `src/` (`AgenticAI.Common` and the Aspire `ServiceDefaults`). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+**130 projects** in `AgenticAI.slnx`: **125 runnable projects**, that is 80 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus five shared libraries under `src/` (the four `AgenticAI.Common*` libraries described below and the Aspire `ServiceDefaults`). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
 
 ### Target stack
 
@@ -140,7 +140,7 @@ dotnet user-secrets set "LlmProvider:Provider" "openai"
 dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "YOUR-KEY"
 ```
 
-Azure OpenAI signs in with Microsoft Entra ID by default (run `az login` once; your account needs the *Cognitive Services OpenAI User* role on the resource). An API key is optional:
+Azure OpenAI works in the samples that reference `AgenticAI.Common.Azure` (see [Shared libraries](#shared-libraries) to add it to any other). It signs in with Microsoft Entra ID by default (run `az login` once; your account needs the *Cognitive Services OpenAI User* role on the resource). An API key is optional:
 
 ```bash
 dotnet user-secrets set "LlmProvider:Provider" "azure"
@@ -150,13 +150,33 @@ dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "YOUR-DEPLOYMENT-NAME"
 
 User secrets load in the Development environment, which each sample's launch profile sets (`dotnet run` and Visual Studio both use it). Environment variables work everywhere: `LlmProvider__Provider`, `LlmProvider__OpenAI__ApiKey`, and for Anthropic either `LlmProvider__Anthropic__ApiKey` or `ANTHROPIC_API_KEY`. Microsoft Foundry also signs in through `DefaultAzureCredential`.
 
+### Shared libraries
+
+The provider wiring is split so the default path stays generally available:
+
+| Library | What it adds | Package status |
+|---|---|---|
+| `src/Common/AgenticAI.Common` | `AddLlmChatClient` with the `openai` and `ollama` providers, settings, `--config-check`, the resilience handler | GA only, transitive packages included (`pwsh tools/check-ga.ps1` proves it from the lock file) |
+| `src/Common/AgenticAI.Common.Azure` | the `azure` provider: `services.AddAzureOpenAIProvider()` | prerelease (`Azure.AI.OpenAI` is a beta) |
+| `src/Common/AgenticAI.Common.Foundry` | `AddFoundryAgent(...)`, a Microsoft Foundry `AIAgent` | preview (`Microsoft.Agents.AI.Foundry`, `Azure.AI.Projects`) |
+| `src/Common/AgenticAI.Common.Anthropic` | `AddAnthropicAgent(...)`, a Claude `AIAgent` | GA |
+
+Each sample references only the libraries it uses. To run a sample that references only `AgenticAI.Common` against Azure OpenAI, add a project reference to `src/Common/AgenticAI.Common.Azure` and one line next to `AddLlmChatClient`:
+
+```csharp
+builder.Services.AddAzureOpenAIProvider();   // before or after AddLlmChatClient
+builder.Services.AddLlmChatClient(builder.Configuration);
+```
+
+Without it, `"Provider": "azure"` stops at startup with a message that says exactly this.
+
 Not sure which settings a sample will use? `dotnet run -- --config-check` lists each one and where it comes from — appsettings.json, user secrets or an environment variable — without printing values or calling a model.
 
 ### Repository layout
 
 | Folder | Chapter | Topic |
 |--------|---------|-------|
-| `src/Common/` | — | Shared configuration, DI, provider wiring, resilience |
+| `src/Common/` | — | Shared configuration, DI, provider wiring, resilience: a GA-only core plus the Azure, Foundry and Anthropic add-ons |
 | `src/Ch01.*` | 1 | The AI Revolution in .NET (concept + a first code glimpse) |
 | `src/Ch02.CSharpEssentials/` | 2 | C# Essentials for AI Development |
 | `src/Ch03.HowLLMsWork/` | 3 | How LLMs Work |

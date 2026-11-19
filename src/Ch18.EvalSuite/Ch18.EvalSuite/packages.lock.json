@@ -141,14 +141,6 @@
           "Microsoft.Extensions.Options": "10.0.13"
         }
       },
-      "Anthropic": {
-        "type": "Transitive",
-        "resolved": "12.53.0",
-        "contentHash": "NS4eDj4By+7C8RfhKQDq+/KKPd2m9HZvsflGJIJwT9MTNngNIyCkw6dnFwJp84wOClKHNDM6NXA9OXC8MfwAuQ==",
-        "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.5.1"
-        }
-      },
       "Azure.AI.Extensions.OpenAI": {
         "type": "Transitive",
         "resolved": "3.0.0-beta.5",
@@ -615,12 +607,6 @@
       "agenticai.common": {
         "type": "Project",
         "dependencies": {
-          "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
-          "Azure.AI.Projects": "[3.0.0-beta.5, )",
-          "Azure.Identity": "[1.21.0, )",
-          "Microsoft.Agents.AI": "[1.28.0, )",
-          "Microsoft.Agents.AI.Anthropic": "[1.28.0, )",
-          "Microsoft.Agents.AI.Foundry": "[1.28.0-preview.261106.1, )",
           "Microsoft.Extensions.AI": "[10.11.0, )",
           "Microsoft.Extensions.AI.Abstractions": "[10.11.0, )",
           "Microsoft.Extensions.AI.OpenAI": "[10.11.0, )",
@@ -633,16 +619,6 @@
           "OllamaSharp": "[5.4.25, )"
         }
       },
-      "Azure.AI.OpenAI": {
-        "type": "CentralTransitive",
-        "requested": "[2.9.0-beta.1, )",
-        "resolved": "2.9.0-beta.1",
-        "contentHash": "CgIYDuCSOFx+yPuCdK7iz71OW2envfVeIE/YoNYK+mhr6bxgIJV6jfBF+mV9aHDQ6KVQjeSL6OZ7x90XrvsoRg==",
-        "dependencies": {
-          "Azure.Core": "1.51.1",
-          "OpenAI": "2.9.1"
-        }
-      },
       "Microsoft.Agents.AI.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[1.28.0, )",
@@ -650,25 +626,6 @@
         "contentHash": "f0pcDqs9JUHffTMjdsktAF+pa7On+q3w8MoyuWzl8mYTT+U+tMuP5N2qvQtyfC3N2SvVWkdkdZNqnRdonySkjg==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.11.0"
-        }
-      },
-      "Microsoft.Agents.AI.Anthropic": {
-        "type": "CentralTransitive",
-        "requested": "[1.28.0, )",
-        "resolved": "1.28.0",
-        "contentHash": "24CEX6O/bcAO9scbM44jy5FvNxyXWlGE+vTwzgHe4MaDMvJys4WbuATlxgh1frmVf+RfIl/FLEHyQ4zRTRLwhw==",
-        "dependencies": {
-          "Anthropic": "12.53.0",
-          "Microsoft.Agents.AI": "1.28.0",
-          "Microsoft.Extensions.AI": "10.11.0",
-          "Microsoft.Extensions.AI.Abstractions": "10.11.0",
-          "Microsoft.Extensions.AI.Evaluation": "10.11.0",
-          "Microsoft.Extensions.Compliance.Abstractions": "10.10.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.13",
-          "Microsoft.Extensions.FileSystemGlobbing": "10.0.12",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
-          "Microsoft.Extensions.VectorData.Abstractions": "10.10.0",
-          "Microsoft.ML.Tokenizers": "2.0.0"
         }
       },
       "Microsoft.Extensions.AI.Abstractions": {

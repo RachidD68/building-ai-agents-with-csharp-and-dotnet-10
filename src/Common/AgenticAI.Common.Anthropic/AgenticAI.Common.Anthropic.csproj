@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Anthropic (Claude) agent wiring through Microsoft.Agents.AI.Anthropic.
+       A separate package so samples that do not use Claude do not carry the
+       Anthropic SDK. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Anthropic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+</Project>
