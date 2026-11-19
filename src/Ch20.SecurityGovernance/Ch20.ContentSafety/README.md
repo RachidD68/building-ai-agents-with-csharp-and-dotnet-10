@@ -1,8 +1,8 @@
-# Ch15.ContentSafety — Graduating from regex (Azure AI Content Safety)
+# Ch20.ContentSafety — Graduating from regex (Azure AI Content Safety)
 
 The production layer above the chapter's regex filters. Part of Microsoft
 Foundry; ML-backed harm detection plus managed custom blocklists. Backs
-Chapter 15's "Azure AI Content Safety" section.
+the security chapter's "Azure AI Content Safety" section.
 
 ## What It Shows
 

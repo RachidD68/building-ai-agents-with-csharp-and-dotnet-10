@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 14 — Hosting and Deployment (ASP.NET Core Host)
+// Hosting and Deployment (ASP.NET Core Host)
 // Demonstrates hosting multiple agents in a single ASP.NET Core application
 // using the Microsoft Agent Framework Hosting package (AddAIAgent pattern),
 // plus the production cross-cutting concerns the chapter teaches:
@@ -224,7 +224,7 @@ app.MapGet("/agents", () => Results.Ok(new
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Chapter 14 — Multi-Agent ASP.NET Core Host",
+    service = "Multi-Agent ASP.NET Core Host",
     endpoints = new
     {
         chat = "POST /chat { \"message\": \"...\" }  (auth)",

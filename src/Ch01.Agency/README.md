@@ -1,6 +1,6 @@
-# Chapter 1 -- The AI Revolution in .NET
+# The AI Revolution in .NET
 
-This chapter is mostly theory; its one sample is `src/Ch01.Agency`. Use the checklist below as a study guide while reading.
+This chapter is mostly theory; its one sample is `src/Ch01.Agency/Ch01.FirstGlimpse`. Use the checklist below as a study guide while reading.
 
 ## Study Checklist
 
@@ -40,4 +40,4 @@ This chapter is mostly theory; its one sample is `src/Ch01.Agency`. Use the chec
 1. Agentic AI is not a fad -- it is a fundamental shift in how software is designed.
 2. Microsoft has consolidated its AI frameworks into a single, coherent stack.
 3. .NET developers are uniquely positioned because the entire stack (abstractions, agents, hosting) is first-party.
-4. Chapters 2-19 have runnable code (Chapter 20 is a reading list). This chapter gives you the mental map to navigate them.
+4. Most chapters have runnable code under `src/` and `exercises/`. This chapter gives you the mental map to navigate them.

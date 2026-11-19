@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Introduction to Workflows (Sequential Workflow)
+// Introduction to Workflows (Sequential Workflow)
 // Demonstrates the Workflow engine from Microsoft.Agents.AI.Workflows.
 //
 // Key concepts:
@@ -16,7 +16,7 @@
 
 using Microsoft.Agents.AI.Workflows;
 
-Console.WriteLine("=== Chapter 13: Sequential Workflow — Uppercase → Reverse ===\n");
+Console.WriteLine("=== Sequential Workflow — Uppercase → Reverse ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

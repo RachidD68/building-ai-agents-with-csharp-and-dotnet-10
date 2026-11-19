@@ -1,4 +1,4 @@
-# Chapter 8 -- Tools and Function Calling (Weather Tool)
+# Tools and Function Calling (Weather Tool)
 
 Demonstrates the full tool-calling loop with the Microsoft Agent Framework. The agent decides when to call the weather tool vs. answering directly from its training data.
 

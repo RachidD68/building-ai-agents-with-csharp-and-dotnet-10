@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 17 — Agent Skills: file-based, inline, and class-based
+// Agent Skills: file-based, inline, and class-based
 // ----------------------------------------------------------------------------
 // One SkillsAgent surfaces three different skill styles through a single
 // AgentSkillsProvider:
@@ -38,7 +38,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 17: Agent Skills demo ===");
+Console.WriteLine("=== Agent Skills demo ===");
 Console.WriteLine();
 
 // ── 1. File-based skill ────────────────────────────────────────────

@@ -1,4 +1,4 @@
-# Chapter 4 -- Setting Up Your Development Environment (First LLM Call)
+# Setting Up Your Development Environment (First LLM Call)
 
 Your first real conversation with an AI model. This project connects to an LLM provider using `Microsoft.Extensions.AI` and the multi-provider pattern from `AgenticAI.Common`.
 

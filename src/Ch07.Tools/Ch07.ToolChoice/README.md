@@ -1,4 +1,4 @@
-# Chapter 8 -- Controlling Tool Choice (ChatOptions.ToolMode)
+# Controlling Tool Choice (ChatOptions.ToolMode)
 
 Supports the chapter's "Controlling tool choice" section. One weather agent is run three times against the same prompt, changing only `ChatOptions.ToolMode`, and the program reports whether the tool actually fired.
 

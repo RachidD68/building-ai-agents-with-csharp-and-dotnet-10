@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Introduction to Workflows (Approval Workflow — Capstone)
+// Introduction to Workflows (Approval Workflow — Capstone)
 // Demonstrates a human-in-the-loop approval workflow using RequestPort.
 //
 // Key concepts:
@@ -35,7 +35,7 @@ hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
 using IHost host = hostBuilder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 13: Approval Workflow — Human-in-the-Loop ===\n");
+Console.WriteLine("=== Approval Workflow — Human-in-the-Loop ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -20,7 +20,7 @@ internal static partial class RagSelfTest
 
     public static async Task<int> RunAsync()
     {
-        Console.WriteLine("=== Chapter 10: RagContextProvider self-test (offline) ===\n");
+        Console.WriteLine("=== RagContextProvider self-test (offline) ===\n");
 
         int passed = 0, total = 0;
         void Check(bool ok, string name, string detail)

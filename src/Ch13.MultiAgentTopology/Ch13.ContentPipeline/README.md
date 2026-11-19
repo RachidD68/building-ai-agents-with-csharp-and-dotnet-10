@@ -1,4 +1,4 @@
-# Chapter 11 -- Content Pipeline (Capstone)
+# Content Pipeline (Capstone)
 
 Demonstrates a three-stage content creation pipeline: Researcher, Writer, and Editor. The Researcher uses a simulated search tool to gather information, the Writer creates an engaging article, and the Editor provides feedback and a polished final version.
 
@@ -14,5 +14,5 @@ Demonstrates a three-stage content creation pipeline: Researcher, Writer, and Ed
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.ContentPipeline
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.ContentPipeline
 ```

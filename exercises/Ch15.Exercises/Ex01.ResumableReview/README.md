@@ -1,6 +1,6 @@
-# Exercise 04 -- Resumable Review (Challenge)
+# Exercise 01 -- Resumable Review (Challenge)
 
-Takes Exercise 02's review pipeline and makes it **durable**. The workflow runs an analyzer and a security scanner, then pauses on a `RequestPort` for a human sign-off. It captures a checkpoint at that pause, simulates a process crash, then resumes from the checkpoint in a second run and completes. FULLY STANDALONE (no model provider).
+Takes the workflows chapter's `Ex02.ReviewPipeline` and makes it **durable**. The workflow runs an analyzer and a security scanner, then pauses on a `RequestPort` for a human sign-off. It captures a checkpoint at that pause, simulates a process crash, then resumes from the checkpoint in a second run and completes. FULLY STANDALONE (no model provider).
 
 The `prepare` and `resume` modes make the restart real: two separate processes that share nothing but a checkpoint folder written by `FileSystemJsonCheckpointStore`.
 

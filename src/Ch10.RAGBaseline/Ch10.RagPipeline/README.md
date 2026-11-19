@@ -1,4 +1,4 @@
-# Chapter 10 -- Introduction to RAG (Full RAG Pipeline)
+# Introduction to RAG (Full RAG Pipeline)
 
 Demonstrates the complete Retrieval-Augmented Generation pipeline: Ingest, Chunk, Embed, Store, Retrieve.
 

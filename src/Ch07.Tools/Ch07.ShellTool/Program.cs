@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 8 — Building a shell tool (the most dangerous tool you'll build)
+// Building a shell tool (the most dangerous tool you'll build)
 // ----------------------------------------------------------------------------
 // A shell tool is an ordinary AIFunction — AIFunctionFactory.Create wrapping a
 // delegate — whose body starts a process and returns its stdout. There is no
@@ -43,7 +43,7 @@
 // Offline check of the policy and the runner: dotnet run -- --self-test
 //
 // In production, a shell tool should NEVER be exposed on a public endpoint
-// without the safety pipeline from Chapter 16 (input sanitisation + critic
+// without the safety pipeline from the security chapter (input sanitisation + critic
 // agent + middleware). The example below is the "training-wheels" version; the
 // productionized path is the preview Microsoft.Agents.AI.Tools.Shell package's
 // LocalShellExecutor (or DockerShellExecutor for container isolation).
@@ -150,7 +150,7 @@ ChatClientAgent agent = new(
 
 AgentSession session = await agent.CreateSessionAsync(cts.Token);
 
-Console.WriteLine("=== Chapter 8: dotnet shell tool ===");
+Console.WriteLine("=== dotnet shell tool ===");
 Console.WriteLine();
 
 string task = """

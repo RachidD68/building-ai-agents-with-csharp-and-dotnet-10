@@ -1,4 +1,4 @@
-# Chapter 2 -- C# Essentials for AI Development (Console App)
+# C# Essentials for AI Development (Console App)
 
 Demonstrates the modern C# features used throughout the book. No external packages required -- this is pure C# 14 on .NET 10.
 

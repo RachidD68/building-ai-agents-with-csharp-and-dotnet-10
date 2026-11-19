@@ -1,6 +1,6 @@
-# Chapter 9 -- The Model Context Protocol (MCP Consumer)
+# The Model Context Protocol (MCP Consumer)
 
-Connects to the Ch09.McpServer via stdio transport, discovers its tools, and feeds them to a ChatClientAgent. The agent code is identical to Chapter 8 -- the only difference is where the tools come from.
+Connects to the Ch09.McpServer via stdio transport, discovers its tools, and feeds them to a ChatClientAgent. The agent code is identical to the tools chapter -- the only difference is where the tools come from.
 
 ## Key Concepts
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 10 — Introduction to RAG (FAQ Agent — Part III Capstone)
+// Introduction to RAG (FAQ Agent — Part III Capstone)
 // ----------------------------------------------------------------------------
 // The Contoso FAQ agent, grounded in a Markdown knowledge base. This is the
 // RECOMMENDED wiring: MAF's built-in TextSearchProvider runs a search before
@@ -37,7 +37,7 @@ using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 10: FAQ Agent — Part III Capstone ===\n");
+Console.WriteLine("=== FAQ Agent — Part III Capstone ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

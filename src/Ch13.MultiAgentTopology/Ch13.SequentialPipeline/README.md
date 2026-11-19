@@ -1,4 +1,4 @@
-# Chapter 11 -- Sequential Pipeline
+# Sequential Pipeline
 
 Demonstrates the simplest multi-agent pattern: two agents in sequence. A Translator agent converts French text to English, then a Summarizer agent condenses the translation into a brief summary.
 
@@ -14,5 +14,5 @@ Demonstrates the simplest multi-agent pattern: two agents in sequence. A Transla
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.SequentialPipeline
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.SequentialPipeline
 ```

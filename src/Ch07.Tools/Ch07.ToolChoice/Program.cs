@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 8 — Controlling tool choice (ChatOptions.ToolMode)
+// Controlling tool choice (ChatOptions.ToolMode)
 // ----------------------------------------------------------------------------
 // By default the model decides whether to call a tool. ChatOptions.ToolMode
 // lets you override that decision. This sample runs ONE agent against the SAME
@@ -40,7 +40,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 8: Controlling Tool Choice (ChatOptions.ToolMode) ===\n");
+Console.WriteLine("=== Controlling Tool Choice (ChatOptions.ToolMode) ===\n");
 
 // One tool. The tool name the model sees is "get_weather".
 AIFunction weatherTool = AIFunctionFactory.Create(GetWeather, name: "get_weather");

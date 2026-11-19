@@ -1,4 +1,4 @@
-# Exercise 04 — Tool-call Approval (Intermediate)
+# Exercise 01 — Tool-call Approval (Intermediate)
 
 ## Prompt
 

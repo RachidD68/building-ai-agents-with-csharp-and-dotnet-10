@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 19 — The Agent Harness: your first harness agent (MAF 1.28)
+// The Agent Harness: your first harness agent (MAF 1.28)
 // ----------------------------------------------------------------------------
 // Everything Part V built by hand -- a chat client wrapped in middleware, a
 // context provider for memory, tool approval, OpenTelemetry -- the harness
@@ -30,7 +30,7 @@ using AgenticAI.Common.Extensions;
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
 // A harness agent sends a much larger tool schema than a plain chat call and
-// then loops, so the two-minute per-attempt envelope that suits Chapter 5 is
+// then loops, so the two-minute per-attempt envelope that suits the first-agent chapter is
 // too tight on local hardware. Widen it rather than let Polly cancel a call
 // that was going to succeed.
 hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration,
@@ -45,7 +45,7 @@ bool isLocal = provider is "ollama";
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 19: The Agent Harness (basics) ===");
+Console.WriteLine("=== The Agent Harness (basics) ===");
 Console.WriteLine();
 
 // ── The whole composition ─────────────────────────────────────────────
@@ -89,7 +89,7 @@ Console.WriteLine($"  file memory         : {(options.DisableFileMemory ? "off (
 Console.WriteLine($"  hosted web search   : {(options.DisableWebSearch ? "off (local provider)" : "ON")}");
 Console.WriteLine();
 
-// ── A session, exactly as in Chapter 6 ────────────────────────────────
+// ── A session, exactly as in the conversations and memory chapter ────────────────────────────────
 // The harness does not invent a new session model. AgentSession works here
 // the same way it works for a plain ChatClientAgent.
 AgentSession session = await agent.CreateSessionAsync(cts.Token);

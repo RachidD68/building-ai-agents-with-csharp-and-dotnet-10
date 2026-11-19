@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Unbounded Consumption: denial-of-wallet & runaway loops (LLM10)
+// Unbounded Consumption: denial-of-wallet & runaway loops (LLM10)
 // ----------------------------------------------------------------------------
 // Cost and availability are SAFETY concerns. An attacker (or a buggy tool loop)
 // can drive unbounded token spend, or an effectively infinite function-call
@@ -18,13 +18,13 @@
 // To make the cap provably fire (a small local model rarely loops on demand),
 // this demo uses a deterministic RunawayClient that requests the same tool every
 // turn and never stops. The cap stops it cleanly — no exception, no infinite
-// spin. (API-gateway rate limiting lives in Chapter 13; this is the AGENT LOOP.)
+// spin. (API-gateway rate limiting lives in the hosting chapter; this is the AGENT LOOP.)
 // ============================================================================
 
 using System.ComponentModel;
 using Microsoft.Extensions.AI;
 
-Console.WriteLine("=== Chapter 16: Unbounded Consumption (LLM10) ===");
+Console.WriteLine("=== Unbounded Consumption (LLM10) ===");
 Console.WriteLine();
 
 // ── A tool the runaway model keeps calling forever ────────────────────

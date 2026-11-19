@@ -52,7 +52,7 @@ public static class InvoiceValidation
     /// <summary>Offline check (JSON parsing only, no LLM): dotnet run -- --self-test</summary>
     public static int SelfTest()
     {
-        Console.WriteLine("=== Chapter 7: Robust Extraction — self-test (offline) ===\n");
+        Console.WriteLine("=== Robust Extraction — self-test (offline) ===\n");
 
         int passed = 0, total = 0;
         void Check(string name, bool ok)

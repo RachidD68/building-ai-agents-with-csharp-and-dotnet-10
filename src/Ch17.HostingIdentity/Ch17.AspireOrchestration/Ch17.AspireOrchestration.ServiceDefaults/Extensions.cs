@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 14 — Aspire Service Defaults
+// Aspire Service Defaults
 // Shared configuration for OpenTelemetry, health checks, and resilience.
 // Each microservice in the Aspire graph calls AddServiceDefaults() to get
 // consistent observability and health-check configuration.

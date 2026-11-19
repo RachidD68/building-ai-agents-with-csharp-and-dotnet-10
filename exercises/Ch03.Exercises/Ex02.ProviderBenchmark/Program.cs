@@ -2,7 +2,7 @@
 // Exercise 02 — Provider Benchmark (Intermediate)
 // Asks the same 10 questions of every CONFIGURED provider — one keyed
 // IChatClient per provider — and prints a table of provider -> average
-// latency -> average output tokens -> estimated cost (the Chapter 3 formula).
+// latency -> average output tokens -> estimated cost (the per-token cost formula).
 // FULLY STANDALONE — no project references to Common; the LlmSettings record
 // below mirrors the companion AgenticAI.Common.Configuration.LlmSettings.
 // ============================================================================
@@ -169,7 +169,7 @@ foreach (ProviderResult result in results)
     double avgMs = result.Runs.Average(r => r.Elapsed.TotalMilliseconds);
     double avgOutTokens = result.Runs.Average(r => (double)r.OutputTokens);
 
-    // Chapter 3 cost formula: tokens x rate / 1M, input and output priced
+    // Per-token cost formula: tokens x rate / 1M, input and output priced
     // separately, summed over every answered question.
     (decimal inputPer1M, decimal outputPer1M) = GetPricing(result.Model);
     decimal estimatedCost = result.Runs.Sum(r =>
@@ -235,7 +235,7 @@ static string ModelFor(string providerName, LlmSettings settings) => providerNam
 };
 
 /// <summary>
-/// Per-1M-token rates from the Chapter 3 pricing table (illustrative — verify
+/// Per-1M-token rates (illustrative — verify
 /// current rates before relying on them). Local models cost $0.
 /// </summary>
 static (decimal InputPer1M, decimal OutputPer1M) GetPricing(string model)
@@ -280,7 +280,7 @@ sealed record QuestionRun(TimeSpan Elapsed, long InputTokens, long OutputTokens)
 // Settings — mirrors the companion AgenticAI.Common LlmSettings record
 // ---------------------------------------------------------------
 // Only the four chat-completion providers appear here: Foundry and Anthropic
-// return an AIAgent, not an IChatClient (see Chapter 4), so they cannot join
+// return an AIAgent, not an IChatClient (see the development-environment chapter), so they cannot join
 // an IChatClient benchmark.
 
 /// <summary>

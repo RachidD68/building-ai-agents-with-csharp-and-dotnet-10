@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 4 — Your First LLM Call
+// Your First LLM Call
 // The reader's first real conversation with an AI model using
 // Microsoft.Extensions.AI and the multi-provider pattern from AgenticAI.Common.
 // ============================================================================
@@ -27,7 +27,7 @@ using IHost host = builder.Build();
 // Resolve the configured chat client
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 4: Your First LLM Call ===");
+Console.WriteLine("=== Your First LLM Call ===");
 Console.WriteLine($"Provider configured. Chat client type: {chatClient.GetType().Name}\n");
 
 using CancellationTokenSource cts = new();

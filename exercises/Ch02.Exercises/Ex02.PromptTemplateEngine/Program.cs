@@ -189,7 +189,7 @@ sealed partial record PromptTemplate(string Name, string Template, int MaxTokens
     }
 
     /// <summary>
-    /// Estimates token count with the same length / 4 trick as Chapter 3.
+    /// Estimates token count with the same length / 4 trick as the models and context chapter.
     /// </summary>
     /// <param name="text">The text to estimate.</param>
     /// <returns>Estimated token count.</returns>

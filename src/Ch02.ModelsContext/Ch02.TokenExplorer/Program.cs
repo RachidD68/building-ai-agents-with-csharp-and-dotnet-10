@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 3 — How LLMs Work: A Developer's Mental Model
+// How LLMs Work: A Developer's Mental Model
 // Explores tokenization, temperature, embeddings, and cost estimation.
 // No network calls — every number below is computed locally.
 // ============================================================================
@@ -7,7 +7,7 @@
 using Microsoft.Extensions.AI;
 using Microsoft.ML.Tokenizers;
 
-Console.WriteLine("=== Chapter 3: How LLMs Work — Token Explorer ===\n");
+Console.WriteLine("=== How LLMs Work — Token Explorer ===\n");
 
 // ----------------------------------------------------------------------------
 #region Tokenization Simulation

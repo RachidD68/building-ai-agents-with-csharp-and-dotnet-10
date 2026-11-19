@@ -1,5 +1,5 @@
 # ============================================================================
-# Exercise 04 — multi-stage Dockerfile (the CUSTOM path)
+# Exercise 03 — multi-stage Dockerfile (the CUSTOM path)
 #
 # The DEFAULT path in the chapter needs no Dockerfile at all:
 #   dotnet publish -c Release --os linux --arch x64 /t:PublishContainer

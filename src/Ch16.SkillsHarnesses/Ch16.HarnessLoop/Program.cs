@@ -1,7 +1,7 @@
 // ============================================================================
-// Chapter 19 — Looping: LoopAgent and its evaluators
+// Looping: LoopAgent and its evaluators
 // ----------------------------------------------------------------------------
-// Chapter 13 hand-rolled a self-correcting loop: run, judge, feed the critique
+// The workflows chapter hand-rolled a self-correcting loop: run, judge, feed the critique
 // back, run again, stop on a marker or a cap. The harness ships that shape as
 // LoopAgent, and the judgement as a LoopEvaluator.
 //
@@ -39,7 +39,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 19: Looping with LoopAgent ===");
+Console.WriteLine("=== Looping with LoopAgent ===");
 Console.WriteLine();
 
 // ── The agent that does the work ──────────────────────────────────────

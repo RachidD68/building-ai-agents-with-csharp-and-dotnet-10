@@ -1,4 +1,4 @@
-# Chapter 12 -- Conditional Workflow
+# Conditional Workflow
 
 Demonstrates conditional routing in the Workflow engine. A sentiment analyzer classifies messages as positive, negative, or neutral, then routes them to the appropriate handler using two approaches: typed conditional edges and switch-based routing.
 
@@ -14,5 +14,5 @@ Demonstrates conditional routing in the Workflow engine. A sentiment analyzer cl
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.ConditionalWorkflow
+dotnet run --project src/Ch14.Workflows/Ch14.ConditionalWorkflow
 ```

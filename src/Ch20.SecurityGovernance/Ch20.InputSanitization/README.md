@@ -1,4 +1,4 @@
-# Ch15.InputSanitization — Input Sanitization and PII Detection
+# Ch20.InputSanitization — Input Sanitization and PII Detection
 
 This project demonstrates pre-processing and post-processing guardrails
 for AI agents: prompt injection detection and PII redaction.

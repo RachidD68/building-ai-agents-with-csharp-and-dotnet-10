@@ -1,4 +1,4 @@
-# Ch15.IndirectInjection — Second-order prompt injection (OWASP LLM01 / LLM08)
+# Ch20.IndirectInjection — Second-order prompt injection (OWASP LLM01 / LLM08)
 
 The dangerous case the chapter's direct-injection defence does **not** cover:
 the malicious instruction arrives inside content the agent **ingests** — a
@@ -22,9 +22,9 @@ email, a file.
 A safety-tuned model sometimes resists the payload and sometimes complies —
 model resistance is **probabilistic**. The deterministic defence is the scanner;
 spotlighting raises the odds. Never rely on the model alone; pair with the
-Chapter 15 output filters and the critic.
+security chapter's output filters and the critic.
 
-Cross-references: Chapter 9 (MCP) and Chapter 10 (RAG) are the entry points for
+Cross-references: the MCP chapter (MCP) and the RAG chapter (RAG) are the entry points for
 tainted content.
 
 ## Running

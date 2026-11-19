@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 6 — Conversations and Memory (Stateless Demo)
+// Conversations and Memory (Stateless Demo)
 // Demonstrates the "amnesia problem": without session history, each call to
 // the agent is independent. The agent forgets everything between calls.
 //
@@ -20,7 +20,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: The Amnesia Problem (Stateless Demo) ===\n");
+Console.WriteLine("=== The Amnesia Problem (Stateless Demo) ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

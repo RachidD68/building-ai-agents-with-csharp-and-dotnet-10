@@ -7,7 +7,7 @@ Build a small **prompt-template class** that supports `{placeholder}` substituti
 ## Hints
 
 - The `System.Text.RegularExpressions` namespace gives you the substitution in one line: `Regex.Replace(template, @"\{(\w+)\}", m => values[m.Groups[1].Value])`.
-- The token estimate is the same length / 4 trick from Chapter 3.
+- The token estimate is the same length / 4 trick from the models and context chapter.
 - Don't over-engineer; this is about feeling how easily a prompt blows its budget.
 - Use `[GeneratedRegex]` for the compile-time regex source generator.
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 2 — Minimal API Demo
+// Minimal API Demo
 // Demonstrates the ASP.NET Core patterns used throughout the book: dependency
 // injection (including KEYED services), middleware, structured logging with
 // ILogger, the options pattern (IOptions<T>), and a thread-safe in-memory store.
@@ -21,7 +21,7 @@ builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 builder.Services.Configure<WeatherOptions>(builder.Configuration.GetSection("Weather"));
 
 // --- Dependency injection, including KEYED services ---
-// Keyed registration is exactly how Chapter 13 registers named agents with
+// Keyed registration is exactly how the hosting chapter registers named agents with
 // AddAIAgent("assistant"); you resolve them with [FromKeyedServices("...")].
 // CachedWeatherService is backed by a thread-safe ConcurrentDictionary because
 // a Singleton serves every request concurrently.
@@ -32,7 +32,7 @@ WebApplication app = builder.Build();
 
 // --- Middleware: structured logging ---
 // Never interpolate values into the message template — pass them as arguments
-// so the logging pipeline can capture them as structured fields (Chapter 14).
+// so the logging pipeline can capture them as structured fields (the observability chapter).
 app.Use(async (context, next) =>
 {
     DateTime start = DateTime.UtcNow;

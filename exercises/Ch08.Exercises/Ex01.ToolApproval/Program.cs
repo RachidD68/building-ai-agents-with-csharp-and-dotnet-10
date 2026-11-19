@@ -1,5 +1,5 @@
 // ============================================================================
-// Exercise 04 — Tool-call Approval (Intermediate)
+// Exercise 01 — Tool-call Approval (Intermediate)
 // ----------------------------------------------------------------------------
 // Gate Excessive Agency (OWASP LLM06). An agent holds two tools:
 //   - get_order_status : READ-ONLY  — safe to run unattended (auto-approved)

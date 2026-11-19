@@ -3,8 +3,8 @@ using System.ComponentModel;
 namespace Ch12.ImageToTypedData;
 
 // The shape we want back from the invoice image. These are the SAME typed-record
-// + [Description] patterns from Chapter 7 (Structured Output) — the only new
-// thing in Chapter 11 is that the input is a picture instead of text.
+// + [Description] patterns from the typed-responses chapter — the only new
+// thing in the multimodal chapter is that the input is a picture instead of text.
 //
 // [Description] flows into the generated JSON schema, so it doubles as the
 // instruction to the model about what each field means.

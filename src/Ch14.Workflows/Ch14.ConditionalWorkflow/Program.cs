@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Introduction to Workflows (Conditional Workflow)
+// Introduction to Workflows (Conditional Workflow)
 // Demonstrates conditional routing in the Workflow engine.
 //
 // Key concepts:
@@ -15,7 +15,7 @@
 
 using Microsoft.Agents.AI.Workflows;
 
-Console.WriteLine("=== Chapter 13: Conditional Workflow — Sentiment Router ===\n");
+Console.WriteLine("=== Conditional Workflow — Sentiment Router ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

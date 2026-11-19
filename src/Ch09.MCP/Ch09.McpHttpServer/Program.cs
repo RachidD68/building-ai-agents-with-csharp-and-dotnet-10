@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 9 — HTTP-hosted MCP server (streamable HTTP transport)
+// HTTP-hosted MCP server (streamable HTTP transport)
 //
 // The stdio server (Ch09.McpServer) and this one expose the SAME tools
 // (ProductCatalogTools, linked in via the .csproj) — only the transport
@@ -8,7 +8,7 @@
 // with HttpTransportMode.StreamableHttp (NOT Sse — a client pinned to the
 // legacy SSE mode gets an empty tool list from a streamable-HTTP server).
 //
-// This is the sample behind the Chapter 9 "swap WithStdioServerTransport for
+// This is the sample behind the MCP chapter's "swap WithStdioServerTransport for
 // WithHttpTransport" Pro Tip and the streamable-HTTP Challenge exercise.
 // ============================================================================
 

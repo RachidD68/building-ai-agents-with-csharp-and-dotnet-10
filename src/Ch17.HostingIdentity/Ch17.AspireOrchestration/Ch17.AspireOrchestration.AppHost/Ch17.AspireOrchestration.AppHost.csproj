@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- Opt out of CPM for implicit Aspire packages. Keep the SDK and
-         Aspire.Hosting on the same version (Chapter 14 is written against
+         Aspire.Hosting on the same version (the hosting chapter is written against
          Aspire 13.5; 13.6.5 is the patched 13.x release). -->
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <!-- ASPIRE010 (13.5+): an advisory about the optional Aspire CLI bundle,

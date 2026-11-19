@@ -1,4 +1,4 @@
-# Chapter 11 -- Handoff Orchestration
+# Handoff Orchestration
 
 Demonstrates the built-in **Handoff** orchestration: a triage agent transfers control to the right specialist based on context. This is the production-grade version of the hand-rolled support-router challenge in the chapter exercises.
 
@@ -14,7 +14,7 @@ Demonstrates the built-in **Handoff** orchestration: a triage agent transfers co
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.HandoffOrchestration
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.HandoffOrchestration
 ```
 
 Requires Ollama running locally with `llama3.2` (see `appsettings.json`).

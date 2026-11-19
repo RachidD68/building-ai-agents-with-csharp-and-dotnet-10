@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 6 — Conversations and Memory (Service-Managed State)
+// Conversations and Memory (Service-Managed State)
 // Where does the conversation actually live?
 //
 // Two storage models, same two-turn conversation:
@@ -35,7 +35,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: Where Does the Conversation Live? ===\n");
+Console.WriteLine("=== Where Does the Conversation Live? ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

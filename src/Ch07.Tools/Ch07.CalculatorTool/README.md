@@ -1,4 +1,4 @@
-# Chapter 8 -- Tools and Function Calling (Calculator Tool)
+# Tools and Function Calling (Calculator Tool)
 
 Demonstrates multiple tool registration and tool chaining. The agent calls several calculator tools in sequence to answer multi-step math questions like "What's 15% tip on a $47.50 bill in euros?"
 

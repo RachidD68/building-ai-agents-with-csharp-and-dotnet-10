@@ -1,5 +1,5 @@
 # ============================================================================
-# Chapter 14 — multi-stage Dockerfile for Ch17.AspNetCoreHost
+# Multi-stage Dockerfile for Ch17.AspNetCoreHost
 #
 # The DEFAULT path in the chapter is SDK container publishing (no Dockerfile):
 #   dotnet publish -c Release --os linux --arch x64 /t:PublishContainer
@@ -7,7 +7,7 @@
 # This Dockerfile is the CUSTOM path, for teams that require one in source
 # control. Build context is the CodeSample repo root (it references the
 # Common project), so build from there:
-#   docker build -f src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Dockerfile -t ch14-agent-api .
+#   docker build -f src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Dockerfile -t agent-api .
 # ============================================================================
 
 # ---- Build stage: full SDK ----

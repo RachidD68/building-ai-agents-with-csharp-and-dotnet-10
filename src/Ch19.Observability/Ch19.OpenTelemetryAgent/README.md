@@ -1,4 +1,4 @@
-# Ch14.OpenTelemetryAgent — Observability and Debugging
+# Ch19.OpenTelemetryAgent — Observability and Debugging
 
 This project demonstrates the three pillars of observability applied to AI agents:
 logging, metrics, and distributed tracing.

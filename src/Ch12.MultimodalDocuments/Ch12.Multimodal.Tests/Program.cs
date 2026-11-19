@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 11 — Testing multimodal agents WITHOUT a vision model (token-free)
+// Testing multimodal agents WITHOUT a vision model (token-free)
 // ----------------------------------------------------------------------------
 // You don't need a GPU, a key, or llava to test that your multimodal plumbing
 // is correct. A fake IChatClient lets you assert two things deterministically:
@@ -12,7 +12,7 @@
 //   2. The typed-extraction path deserializes — when the model returns JSON,
 //      RunAsync<Invoice>() yields a populated Invoice record.
 //
-// Same plain console assertion harness as the Chapter 12 tests: Check(...) throws
+// Same plain console assertion harness as the multi-agent chapter's tests: Check(...) throws
 // nothing, just tallies; a non-zero exit code if anything failed, so CI catches it.
 // NO real model calls anywhere in this file.
 // ============================================================================
@@ -32,7 +32,7 @@ void Check(string name, bool condition)
     else           { failed++; Console.WriteLine($"  FAIL  {name}"); }
 }
 
-Console.WriteLine("=== Chapter 11: Testing multimodal agents (token-free) ===");
+Console.WriteLine("=== Testing multimodal agents (token-free) ===");
 Console.WriteLine();
 
 // ── Test 1: a hosted-URL multimodal message carries text + UriContent ────────

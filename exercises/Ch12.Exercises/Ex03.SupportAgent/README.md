@@ -19,7 +19,7 @@ dotnet run -- "C:\path\to\screenshot.png" "Why am I seeing this?"
 
 - Multimodal input: a `ChatMessage` carrying `TextContent` (the question) + `DataContent` (the screenshot bytes)
 - Grounding the answer in the image — quoting the error code it can actually read, not inventing details
-- The same `agent.RunAsync(...)` from Chapter 5 — only the message is richer
+- The same `agent.RunAsync(...)` from the first-agent chapter — only the message is richer
 
 ## Stretch
 

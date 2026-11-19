@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 18 — Eval as a test suite: a deterministic regression harness
+// Eval as a test suite: a deterministic regression harness
 // ----------------------------------------------------------------------------
 // This is the "treat your eval suite like your test suite" discipline made
 // concrete. It is a plain console assertion harness (no xUnit, matching the
@@ -36,7 +36,7 @@ using Microsoft.Extensions.AI;
 
 int failures = 0;
 
-Console.WriteLine("=== Chapter 18: Eval test harness (deterministic, offline) ===");
+Console.WriteLine("=== Eval test harness (deterministic, offline) ===");
 Console.WriteLine();
 
 // A stub agent: the pre-response EvaluateAsync overload needs an AIAgent for

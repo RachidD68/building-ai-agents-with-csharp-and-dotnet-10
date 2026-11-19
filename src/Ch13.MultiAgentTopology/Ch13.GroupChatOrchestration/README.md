@@ -1,4 +1,4 @@
-# Chapter 11 -- Group Chat Orchestration
+# Group Chat Orchestration
 
 Demonstrates the built-in **Group Chat** orchestration: several agents collaborate in a shared conversation, taking turns under a manager. Here a Writer and a Reviewer iterate on a product tagline. The framework synchronizes context for you -- no hand-rolled `List<ChatMessage>` like the Debate exercise.
 
@@ -14,7 +14,7 @@ Demonstrates the built-in **Group Chat** orchestration: several agents collabora
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.GroupChatOrchestration
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.GroupChatOrchestration
 ```
 
 Requires Ollama running locally with `llama3.2` (see `appsettings.json`).

@@ -1,4 +1,4 @@
-# Ch15.ConsumptionLimits — Denial-of-wallet & runaway loops (OWASP LLM10)
+# Ch20.ConsumptionLimits — Denial-of-wallet & runaway loops (OWASP LLM10)
 
 Cost and availability are **safety** concerns. An attacker or a buggy tool loop
 can drive unbounded token spend or an effectively infinite function-call loop.
@@ -21,7 +21,7 @@ The demo uses deterministic test doubles so every cap is provably exercised
 without a live model. `MaximumConsecutiveErrorsPerRequest` (default 3) is the
 related cap for consecutive failing tool calls.
 
-> API-gateway / per-user rate limiting lives in **Chapter 13**. This project is
+> API-gateway / per-user rate limiting lives in **the hosting chapter**. This project is
 > about the **agent loop** specifically.
 
 ## Running

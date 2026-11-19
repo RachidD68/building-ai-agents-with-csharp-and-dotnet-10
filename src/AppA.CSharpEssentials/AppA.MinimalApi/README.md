@@ -1,4 +1,4 @@
-# Chapter 2 -- C# Essentials for AI Development (Minimal API)
+# C# Essentials for AI Development (Minimal API)
 
 A minimal ASP.NET Core API demonstrating the patterns reused throughout the book: dependency injection, middleware, and endpoint routing.
 

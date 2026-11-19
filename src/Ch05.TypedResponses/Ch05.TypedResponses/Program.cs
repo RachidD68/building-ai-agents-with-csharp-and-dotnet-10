@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 7 — Structured Output and Typed Responses
+// Structured Output and Typed Responses
 // Demonstrates RunAsync<T>() to get strongly-typed C# objects from the LLM
 // instead of raw text. The agent returns JSON that maps directly to records.
 //
@@ -26,7 +26,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 7: Structured Output — Typed Responses ===\n");
+Console.WriteLine("=== Structured Output — Typed Responses ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

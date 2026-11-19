@@ -7,7 +7,7 @@ Build a console app that lets the user type a persona description (e.g., "sarcas
 ## Hints
 
 - The instructions constructor accepts any string — the typed persona description goes into the system prompt verbatim.
-- Users providing their own prompts introduces an injection vector — for this exercise don't worry about it, but Chapter 16 shows how to sanitize.
+- Users providing their own prompts introduces an injection vector — for this exercise don't worry about it, but the security chapter shows how to sanitize.
 - A single question needs no session: omit it and MAF creates a throwaway session for the call.
 
 ## Expected Outcome

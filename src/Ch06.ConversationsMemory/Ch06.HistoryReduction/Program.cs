@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 6 — Conversations and Memory (History Reduction)
+// Conversations and Memory (History Reduction)
 // Keeping conversation history under the model's context window as it grows.
 //
 // Four approaches, default-first:
@@ -29,7 +29,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: Keeping History Under the Window ===\n");
+Console.WriteLine("=== Keeping History Under the Window ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

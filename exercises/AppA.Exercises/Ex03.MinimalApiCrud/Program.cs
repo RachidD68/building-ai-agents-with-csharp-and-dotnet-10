@@ -22,7 +22,7 @@ WebApplication app = builder.Build();
 // ---------------------------------------------------------------
 // Same shape as the AppA.MinimalApi companion: never interpolate values into
 // the message template — pass them as arguments so the logging pipeline can
-// capture them as structured fields (Chapter 14).
+// capture them as structured fields (the observability chapter).
 app.Use(async (context, next) =>
 {
     Stopwatch stopwatch = Stopwatch.StartNew();
@@ -87,7 +87,7 @@ app.MapDelete("/todos/{id:int}", (int id, TodoStore store) =>
 
 // Seed some initial data
 TodoStore seedStore = app.Services.GetRequiredService<TodoStore>();
-seedStore.Add("Read Chapter 2");
+seedStore.Add("Read the C# essentials appendix");
 seedStore.Add("Run the Minimal API companion project");
 seedStore.Add("Finish the practice exercises");
 

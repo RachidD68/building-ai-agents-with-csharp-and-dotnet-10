@@ -9,7 +9,7 @@ public sealed record LlmSettings
     /// <summary>
     /// The active provider: "azure", "openai", "ollama", "foundry", or "anthropic".
     /// Microsoft Foundry is the Microsoft-recommended path for new MAF projects
-    /// (see Chapter 4) and uses the Azure AI Projects client via AIProjectClient.
+    /// (see the development-environment chapter) and uses the Azure AI Projects client via AIProjectClient.
     /// </summary>
     public string Provider { get; init; } = "ollama";
 

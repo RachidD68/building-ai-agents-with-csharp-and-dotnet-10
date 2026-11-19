@@ -1,7 +1,7 @@
 // ============================================================================
-// Chapter 11 — Multimodal Agents (Vision Basics)
+// Multimodal Agents (Vision Basics)
 // ----------------------------------------------------------------------------
-// The SAME agent and the SAME RunAsync you learned in Chapter 5 — only the
+// The SAME agent and the SAME RunAsync you learned in the first-agent chapter — only the
 // ChatMessage is richer. Instead of a string, we build a message whose content
 // is a list of AIContent parts: a TextContent (the question) plus an image part.
 //
@@ -21,7 +21,7 @@
 // The default Ollama chat model llama3.2 is TEXT-ONLY: it will NOT accept images.
 //
 // If no vision model is reachable, the program prints a clear "[skipped]" note
-// and exits 0 — the same graceful gate as the Chapter 16 Content Safety sample.
+// and exits 0 — the same graceful gate as the security chapter's Content Safety sample.
 // ============================================================================
 
 using System.ClientModel;
@@ -37,7 +37,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 11: Vision Basics — one agent, a richer message ===\n");
+Console.WriteLine("=== Vision Basics — one agent, a richer message ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -68,7 +68,7 @@ using IChatClient chatClient = visionClient;
 
 // ---------------------------------------------------------------
 // Step 2: A vision agent is an ORDINARY agent. Nothing special here —
-// we reuse the Chapter 5 constructor and the Chapter 5 RunAsync.
+// we reuse the first-agent chapter's constructor and RunAsync.
 // ---------------------------------------------------------------
 ChatClientAgent agent = new(
     chatClient,

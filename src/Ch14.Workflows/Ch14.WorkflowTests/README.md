@@ -1,4 +1,4 @@
-# Chapter 12 -- Workflow Tests
+# Workflow Tests
 
 Demonstrates **design principle #6**: cover every branch with a test. A plain console assertion harness (no xUnit dependency) builds a keyword sentiment router and runs it with inputs that exercise each of the three branches, asserting on the streamed events and the final output.
 
@@ -16,7 +16,7 @@ The pattern moves directly to xUnit/NUnit: turn each `Case(...)` into a `[Fact]`
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.WorkflowTests
+dotnet run --project src/Ch14.Workflows/Ch14.WorkflowTests
 ```
 
 Exit code `0` means all branch tests passed; non-zero means a failure. Fully deterministic — no model provider required.

@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 6 — Conversations and Memory (Persistent Session)
+// Conversations and Memory (Persistent Session)
 // Serialize an agent session to a JSON file so conversations survive app
 // restarts. This simulates the "remember me" feature users expect.
 //
@@ -24,7 +24,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: Persistent Session ===\n");
+Console.WriteLine("=== Persistent Session ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

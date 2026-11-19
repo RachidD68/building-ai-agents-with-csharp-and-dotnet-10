@@ -1,4 +1,4 @@
-# Chapter 11 -- Concurrent Orchestration
+# Concurrent Orchestration
 
 Demonstrates the built-in **Concurrent** orchestration: one input fans out to N specialists that run in parallel, and an aggregator merges their results. Here three reviewers (performance, security, maintainability) analyze the same design doc at once.
 
@@ -14,7 +14,7 @@ Demonstrates the built-in **Concurrent** orchestration: one input fans out to N 
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.ConcurrentOrchestration
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.ConcurrentOrchestration
 ```
 
 Requires Ollama running locally with `llama3.2` (see `appsettings.json`).

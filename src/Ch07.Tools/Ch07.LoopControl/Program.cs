@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 8 — Controlling the tool-calling loop (FunctionInvokingChatClient)
+// Controlling the tool-calling loop (FunctionInvokingChatClient)
 // ----------------------------------------------------------------------------
 // The engine that runs the tool-calling loop is FunctionInvokingChatClient — a
 // DelegatingChatClient that receives FunctionCallContent from the model,
@@ -43,7 +43,7 @@ IChatClient innerClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 8: Loop Control (FunctionInvokingChatClient) ===\n");
+Console.WriteLine("=== Loop Control (FunctionInvokingChatClient) ===\n");
 
 // ── Demo 1: cap the round-trips with MaximumIterationsPerRequest ────
 // The tool never satisfies the model — it always reports "still processing,

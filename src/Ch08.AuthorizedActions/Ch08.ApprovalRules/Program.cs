@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Tool-call approval: gating Excessive Agency (OWASP LLM06)
+// Tool-call approval: gating Excessive Agency (OWASP LLM06)
 // ----------------------------------------------------------------------------
 // The middleware in Ch20.MiddlewarePipeline intercepts *messages*. It never
 // gates *actions*. An agent holding a DeleteCustomerRecord / IssueRefund tool
@@ -46,7 +46,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 16: Tool-call Approval (Excessive Agency / LLM06) ===");
+Console.WriteLine("=== Tool-call Approval (Excessive Agency / LLM06) ===");
 Console.WriteLine();
 
 using CancellationTokenSource cts = new();

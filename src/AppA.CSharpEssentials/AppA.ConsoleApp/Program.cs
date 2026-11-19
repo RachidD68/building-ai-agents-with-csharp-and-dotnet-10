@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 2 — C# Essentials for AI Development
+// C# Essentials for AI Development
 // This console app demonstrates modern C# features used throughout the book.
 // ============================================================================
 
@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-Console.WriteLine("=== Chapter 2: C# Essentials for AI Development ===\n");
+Console.WriteLine("=== C# Essentials for AI Development ===\n");
 
 // ----------------------------------------------------------------------------
 #region Records and Primary Constructors
@@ -480,7 +480,7 @@ internal static class StringExtensions
 {
     /// <summary>
     /// Truncates text to a word count as a rough proxy for token count.
-    /// NOT a real BPE tokenizer — see Chapter 3 and Microsoft.ML.Tokenizers
+    /// NOT a real BPE tokenizer — see the models and context chapter and Microsoft.ML.Tokenizers
     /// for accurate token counting.
     /// </summary>
     /// <param name="text">The input text.</param>

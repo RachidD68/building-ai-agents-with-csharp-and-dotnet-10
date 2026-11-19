@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 6 — Conversations and Memory (Agent Session Demo)
+// Conversations and Memory (Agent Session Demo)
 // Fixes the amnesia problem by using InMemoryChatHistoryProvider.
 // The agent now remembers everything within a conversation session.
 //
@@ -22,7 +22,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: Agent Session with Memory ===\n");
+Console.WriteLine("=== Agent Session with Memory ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

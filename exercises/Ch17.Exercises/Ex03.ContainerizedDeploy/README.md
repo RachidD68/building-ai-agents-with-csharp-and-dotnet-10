@@ -1,4 +1,4 @@
-# Exercise 04 — Containerize, Secure, and Deploy (Challenge)
+# Exercise 03 — Containerize, Secure, and Deploy (Challenge)
 
 ## Prompt
 

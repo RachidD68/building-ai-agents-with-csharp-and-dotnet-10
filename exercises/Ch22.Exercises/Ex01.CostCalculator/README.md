@@ -1,4 +1,4 @@
-# Exercise 03 — Conversation Cost Simulator (Challenge)
+# Exercise 01 — Conversation Cost Simulator (Challenge)
 
 ## Prompt
 

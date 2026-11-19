@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 10 — Introduction to RAG (Full RAG Pipeline)
+// Introduction to RAG (Full RAG Pipeline)
 // Demonstrates the complete Retrieval-Augmented Generation pipeline:
 //   Ingest -> Chunk -> Embed -> Store -> Retrieve
 //
@@ -27,7 +27,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 10: RAG Pipeline — Ingest, Chunk, Embed, Store, Retrieve ===\n");
+Console.WriteLine("=== RAG Pipeline — Ingest, Chunk, Embed, Store, Retrieve ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -1,6 +1,6 @@
 # Ch16.AgentSkills — File-based, inline, and class-based Agent Skills
 
-Backs Chapter 16's "Agent Skills" content. A single `SkillsAgent` surfaces three
+Backs the skills and harnesses chapter's "Agent Skills" content. A single `SkillsAgent` surfaces three
 different skill styles through one `AgentSkillsProvider`, and Microsoft Agent
 Framework automatically injects the `load_skill` / `read_skill_resource` /
 `run_skill_script` tools so the model can discover and use them on demand. The
@@ -31,7 +31,7 @@ tree is copied to the build output by the `.csproj`.
 ## Configuration
 
 Runs against **Ollama** (the default, no key) or any configured provider — see
-the repository root README and Chapter 4. No extra configuration is required to
+the repository root README and the development-environment chapter. No extra configuration is required to
 run the demo locally.
 
 ## Running

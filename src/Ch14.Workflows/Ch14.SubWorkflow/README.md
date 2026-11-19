@@ -1,4 +1,4 @@
-# Chapter 12 -- Sub-workflow & Workflow-as-Agent
+# Sub-workflow & Workflow-as-Agent
 
 Two **composition** patterns. Part 1 embeds an inner text-stats workflow as a node in a parent workflow via `BindAsExecutor()`. Part 2 exposes an agent pipeline as a single `AIAgent` via `AsAIAgent()`.
 
@@ -15,7 +15,7 @@ Two **composition** patterns. Part 1 embeds an inner text-stats workflow as a no
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.SubWorkflow
+dotnet run --project src/Ch14.Workflows/Ch14.SubWorkflow
 ```
 
 Part 1 is deterministic. Part 2 requires a running model provider — defaults to Ollama (`llama3.2`); configure others in `appsettings.json`.

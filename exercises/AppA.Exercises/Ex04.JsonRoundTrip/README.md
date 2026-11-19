@@ -1,7 +1,7 @@
 # Ex04.JsonRoundTrip (Intermediate)
 
 Serialize a set of records to JSON with `JsonSerializerOptions.Web`, deserialize them
-back, and assert a clean round-trip. Demonstrates the serialization features Chapter 2
+back, and assert a clean round-trip. Demonstrates the serialization features the C# essentials appendix
 introduces: `[JsonPropertyName]` to rename a property on the wire, and a string-valued
 enum via `[JsonConverter(typeof(JsonStringEnumConverter))]` — the exact shape MAF uses
 for tool calls.

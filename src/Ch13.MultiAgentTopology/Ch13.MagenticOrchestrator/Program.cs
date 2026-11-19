@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Magentic: the Microsoft Research orchestrator (MAF 1.28)
+// Magentic: the Microsoft Research orchestrator (MAF 1.28)
 // ----------------------------------------------------------------------------
 // Magentic is a multi-agent orchestrator from Microsoft Research that uses a
 // stateful "ledger" — a structured record of facts, plans, and observations —
@@ -38,7 +38,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 12: Magentic orchestrator ===");
+Console.WriteLine("=== Magentic orchestrator ===");
 Console.WriteLine();
 
 // ── The three specialists ──────────────────────────────────────────
@@ -95,7 +95,7 @@ ChatClientAgent manager = new(
 // RequirePlanSignoff is TRUE by default: the manager would pause and emit a
 // plan-review request for a human to approve before any work starts. This demo
 // runs unattended, so we turn signoff off and let the manager proceed on its
-// own. (Chapter 12 covers the human-in-the-loop request/response pattern that
+// own. (The workflows chapter covers the human-in-the-loop request/response pattern that
 // the default signoff uses.)
 // NOTE ON MODELS: Magentic's manager runs a planning protocol (structured
 // JSON: facts, plan, progress ledger) before and between delegations. A small

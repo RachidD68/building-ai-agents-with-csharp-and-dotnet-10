@@ -1,4 +1,4 @@
-# Chapter 11 -- Orchestrator Pattern
+# Orchestrator Pattern
 
 Demonstrates the hub-and-spoke multi-agent pattern. An orchestrator agent uses function calling to route queries to the right specialist: CodeExpert, DataExpert, or SecurityExpert.
 
@@ -14,5 +14,5 @@ Demonstrates the hub-and-spoke multi-agent pattern. An orchestrator agent uses f
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.OrchestratorPattern
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.OrchestratorPattern
 ```

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Loop Engineering: the agent as a control system
+// Loop Engineering: the agent as a control system
 // ----------------------------------------------------------------------------
 // A deterministic HARNESS wraps an LLM in a self-correcting loop that repairs a
 // deliberately broken C# file. Five phases run every iteration:
@@ -15,8 +15,8 @@
 //
 // The MODEL proposes one fix per turn; the HARNESS owns the control flow and the
 // stopping conditions. That inversion — code drives the loop, the model fills a
-// single step — is the heart of loop engineering. Cross-references: Chapter 18
-// (evaluation is the verifier), Chapter 9 (serve tools over MCP), Chapter 16
+// single step — is the heart of loop engineering. Cross-references: the evaluation chapter
+// (evaluation is the verifier), the MCP chapter (serve tools over MCP), the security chapter
 // (guardrails for unattended loops).
 //
 // NOTE: any model will BUILD this project; DRIVING the loop to a green build
@@ -40,7 +40,7 @@ const int MaxIterations = 6;
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 13: Loop Engineering — a self-correcting code loop ===\n");
+Console.WriteLine("=== Loop Engineering — a self-correcting code loop ===\n");
 
 // ── The LLM (Ollama/llama3.2 by default — see the header note). ─────────────
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);

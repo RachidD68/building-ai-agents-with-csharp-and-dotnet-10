@@ -13,7 +13,7 @@
     <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.28.0-preview.261106.1" />
-    <!-- New provider packages (1.10) — referenced from Phase 2 chapters (Ch04/Ch18) -->
+    <!-- New provider packages (1.10) -->
     <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.28.0" />
     <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...).
          3.0.0-beta.5 = the floor Microsoft.Agents.AI.Foundry 1.28.0-preview requires (major bump from 2.x). -->
@@ -22,14 +22,14 @@
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
-    <!-- Evaluation (Ch14 harness / Ch17 eval suite) -->
+    <!-- Evaluation (Ch21.EvalTests harness / Ch21.EvalSuite) -->
     <PackageVersion Include="Microsoft.Extensions.AI.Evaluation" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Quality" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Reporting" Version="10.11.0" />
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="OllamaSharp" Version="5.4.25" />
-    <!-- Tokenizers (Ch03 — real BPE token counts, offline) -->
+    <!-- Tokenizers (Ch02.TokenExplorer — real BPE token counts, offline) -->
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
@@ -72,11 +72,11 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.13" />
     <!-- ── Phase 2 chapter packages (1.10) ──────────────────────────── -->
-    <!-- Ch15 — Azure AI Content Safety (input/output moderation) -->
+    <!-- Ch20.ContentSafety — Azure AI Content Safety (input/output moderation) -->
     <PackageVersion Include="Azure.AI.ContentSafety" Version="1.0.0" />
-    <!-- Ch14 — Azure Monitor (Application Insights) OpenTelemetry exporter -->
+    <!-- Ch19.OpenTelemetryAgent — Azure Monitor (Application Insights) OpenTelemetry exporter -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.1" />
-    <!-- Ch13 — Microsoft Identity Web for securing the hosted agent endpoint -->
+    <!-- Ch17.AspNetCoreHost — Microsoft Identity Web for securing the hosted agent endpoint -->
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.10.0" />
   </ItemGroup>
 </Project>

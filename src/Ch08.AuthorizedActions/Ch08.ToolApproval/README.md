@@ -1,4 +1,4 @@
-# Chapter 8 -- Tool Approval (human-in-the-loop)
+# Tool Approval (human-in-the-loop)
 
 The flagship sample for the chapter's "Tool approval" section. A sensitive `refund_order` tool is wrapped in `ApprovalRequiredAIFunction`, so the run pauses for a decision instead of firing the tool. Demonstrates an approved path, a rejected path, and a `ToolApprovalAgent` auto-approval rule for a read-only tool.
 

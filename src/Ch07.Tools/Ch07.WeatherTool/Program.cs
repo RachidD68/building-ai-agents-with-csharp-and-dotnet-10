@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 8 — Tools and Function Calling (Weather Tool)
+// Tools and Function Calling (Weather Tool)
 // Demonstrates the full tool-calling loop: define a tool, register it with the
 // agent, and let the LLM decide when to invoke it vs. answering directly.
 //
@@ -9,7 +9,7 @@
 //   - ChatClientAgentOptions.Tools for tool registration
 //   - Graceful degradation when a tool call fails
 //
-// FORWARD REFERENCE: In Chapter 9, we'll see how tools can come from an
+// FORWARD REFERENCE: In the MCP chapter, we'll see how tools can come from an
 // external MCP server rather than being defined inline.
 // ============================================================================
 
@@ -27,7 +27,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 8: Weather Tool — Function Calling Demo ===\n");
+Console.WriteLine("=== Weather Tool — Function Calling Demo ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

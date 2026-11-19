@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 10 — Introduction to RAG (custom AIContextProvider — under the hood)
+// Introduction to RAG (custom AIContextProvider — under the hood)
 // ----------------------------------------------------------------------------
 // The capstone (Ch10.FaqAgent) wires RAG with the built-in TextSearchProvider.
 // THIS project is the "Going Deeper" companion: the same FAQ agent, but with a
@@ -40,7 +40,7 @@ using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 10: FAQ Agent — custom AIContextProvider (under the hood) ===\n");
+Console.WriteLine("=== FAQ Agent — custom AIContextProvider (under the hood) ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

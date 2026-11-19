@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Safety and Guardrails (Input Sanitization)
+// Safety and Guardrails (Input Sanitization)
 // Demonstrates input sanitization and PII detection for AI agents.
 //
 // Two layers of protection:
@@ -26,7 +26,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 16: Safety — Input Sanitization ===\n");
+Console.WriteLine("=== Safety — Input Sanitization ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

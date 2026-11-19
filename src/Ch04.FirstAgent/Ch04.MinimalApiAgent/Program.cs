@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 5 — Hello, Agent! (Minimal API)
+// Hello, Agent! (Minimal API)
 // Expose the same agent as an HTTP service using ASP.NET Core Minimal APIs.
 //
 //   POST /chat          → non-streaming JSON response
@@ -19,7 +19,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 // Register the agent as a singleton so all requests share the same agent instance.
-// Each request will create its own session (Chapter 6 covers persistent sessions).
+// Each request will create its own session (the conversations and memory chapter covers persistent sessions).
 //
 // FORWARD REFERENCE: the Ch05 Challenge exercise (Ex03.MultiPersonaApi) extends
 // this to several personas using keyed DI — AddKeyedSingleton(...) plus

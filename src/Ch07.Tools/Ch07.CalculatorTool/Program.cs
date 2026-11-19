@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 8 — Tools and Function Calling (Calculator Tool)
+// Tools and Function Calling (Calculator Tool)
 // Demonstrates multiple tools and tool chaining: the agent calls several
 // tools in sequence to answer a multi-step question like
 // "What's 15% tip on a $47.50 bill in euros?"
@@ -24,7 +24,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 8: Calculator Tool — Multi-Tool Chaining Demo ===\n");
+Console.WriteLine("=== Calculator Tool — Multi-Tool Chaining Demo ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

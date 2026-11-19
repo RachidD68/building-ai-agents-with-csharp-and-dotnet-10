@@ -6,7 +6,7 @@ Extend the companion `EstimateTokenCount` method to accept a **content type hint
 
 ## Hints
 
-- You already have `File.ReadAllTextAsync` from Chapter 2.
+- You already have `File.ReadAllTextAsync` from the C# essentials appendix.
 - For the content-type hint, use the file extension (`.cs` → code, `.json` → json, everything else → prose).
 - Keep it simple — a 20-line method beats a framework.
 - GPT-5.6 Terra input pricing: ~$2.50 per 1M tokens (verify current rates before relying on them).

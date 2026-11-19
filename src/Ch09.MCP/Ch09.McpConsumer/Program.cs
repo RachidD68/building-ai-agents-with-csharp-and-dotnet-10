@@ -1,7 +1,7 @@
 ﻿// ============================================================================
-// Chapter 9 — The Model Context Protocol (MCP Consumer)
+// The Model Context Protocol (MCP Consumer)
 // Connects to the Ch09.McpServer via stdio, discovers its tools, and feeds
-// them to a ChatClientAgent. The agent code is identical to Chapter 8 —
+// them to a ChatClientAgent. The agent code is identical to the tools chapter —
 // the only difference is WHERE the tools come from (MCP server vs. inline).
 //
 // Key concepts:
@@ -25,7 +25,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 9: MCP Consumer — Discovering Tools from an MCP Server ===\n");
+Console.WriteLine("=== MCP Consumer — Discovering Tools from an MCP Server ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -80,7 +80,7 @@ ChatClientAgent agent = new(
     tools: [.. mcpTools]);
 
 // ---------------------------------------------------------------
-// Step 4: Use the agent — identical to Chapter 8
+// Step 4: Use the agent — identical to the tools chapter
 // ---------------------------------------------------------------
 string[] queries =
 [

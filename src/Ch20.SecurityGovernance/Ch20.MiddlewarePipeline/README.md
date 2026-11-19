@@ -1,4 +1,4 @@
-# Ch15.MiddlewarePipeline — IChatClient Middleware Pipeline
+# Ch20.MiddlewarePipeline — IChatClient Middleware Pipeline
 
 This project demonstrates how to compose middleware around an `IChatClient`
 using the `ChatClientBuilder` from Microsoft.Extensions.AI.

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Indirect / second-order prompt injection (OWASP LLM01, LLM08)
+// Indirect / second-order prompt injection (OWASP LLM01, LLM08)
 // ----------------------------------------------------------------------------
 // Direct injection is the user typing "ignore previous instructions". The more
 // dangerous case is INDIRECT: the malicious instruction arrives inside content
@@ -34,7 +34,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 16: Indirect Prompt Injection (LLM01 / LLM08) ===");
+Console.WriteLine("=== Indirect Prompt Injection (LLM01 / LLM08) ===");
 Console.WriteLine();
 
 using CancellationTokenSource cts = new();

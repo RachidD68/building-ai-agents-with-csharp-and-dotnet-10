@@ -1,4 +1,4 @@
-# Exercise 05 — Consumption Limits (Challenge)
+# Exercise 04 — Consumption Limits (Challenge)
 
 ## Prompt
 

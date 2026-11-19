@@ -50,7 +50,7 @@ public static class FeedbackValidation
     /// <summary>Offline check (JSON parsing only, no LLM): dotnet run -- --self-test</summary>
     public static int SelfTest()
     {
-        Console.WriteLine("=== Chapter 7: Entity Extraction — self-test (offline) ===\n");
+        Console.WriteLine("=== Entity Extraction — self-test (offline) ===\n");
 
         int passed = 0, total = 0;
         void Check(string name, bool ok)

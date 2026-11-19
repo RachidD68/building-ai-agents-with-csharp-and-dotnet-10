@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 15 — Observability and Debugging
+// Observability and Debugging
 // Demonstrates all three observability pillars for AI agents:
 //   1. Logging    — Structured logging with ILogger
 //   2. Metrics    — Custom metrics via System.Diagnostics.Metrics
@@ -104,7 +104,7 @@ AgentMetrics metrics = host.Services.GetRequiredService<AgentMetrics>();
 ILogger logger = host.Services.GetRequiredService<ILoggerFactory>()
     .CreateLogger("Ch19.OpenTelemetryAgent");
 
-Console.WriteLine("=== Chapter 15: Observability — OpenTelemetry Agent ===");
+Console.WriteLine("=== Observability — OpenTelemetry Agent ===");
 Console.WriteLine($"Exporter: {exporter} | Trace sample ratio: {sampleRatio:0.##}");
 Console.WriteLine();
 
@@ -232,7 +232,7 @@ totalStopwatch.Stop();
 try
 {
     // The built-in KeywordCheck verifies the response mentions the topic — the
-    // simplest "did it stay on subject" gate. Chapter 18 has the full catalog:
+    // simplest "did it stay on subject" gate. The evaluation chapter has the full catalog:
     // tool-call checks, custom predicates, and LLM-as-judge scoring.
     LocalEvaluator evaluator = new(EvalChecks.KeywordCheck("telemetry"));
 
@@ -284,7 +284,7 @@ static void ApplyTraceExporter(
     switch (exporter.ToLowerInvariant())
     {
         case "otlp":
-            // Chapter 14's Aspire dashboard ingests OTLP on this endpoint.
+            // the hosting chapter's Aspire dashboard ingests OTLP on this endpoint.
             tracing.AddOtlpExporter(o => o.Endpoint = new Uri("http://localhost:4317"));
             break;
 

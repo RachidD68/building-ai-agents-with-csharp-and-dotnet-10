@@ -1,4 +1,4 @@
-# Chapter 10 -- FAQ Agent: custom `AIContextProvider` (under the hood)
+# FAQ Agent: custom `AIContextProvider` (under the hood)
 
 The "Going Deeper" companion to `Ch10.FaqAgent`. The capstone wires RAG with the
 built-in **`TextSearchProvider`**; this project shows the **hand-rolled

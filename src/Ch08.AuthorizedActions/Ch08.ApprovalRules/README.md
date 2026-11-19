@@ -1,6 +1,6 @@
-# Ch15.ToolApproval — Gating Excessive Agency (OWASP LLM06)
+# Ch08.ApprovalRules — Gating Excessive Agency (OWASP LLM06)
 
-Human-in-the-loop on the **tool itself**, the MAF-native way. Backs Chapter 15's
+Human-in-the-loop on the **tool itself**, the MAF-native way. Backs the authorized-actions chapter's
 "Excessive Agency" section.
 
 ## What It Shows
@@ -30,8 +30,8 @@ through MAF 1.13 and are stable in 1.28, so the `.csproj` has no `<NoWarn>`
 for them. The `ApprovalRequiredAIFunction` / `ToolApprovalRequestContent` /
 `ToolApprovalResponseContent` types in Microsoft.Extensions.AI are stable.
 
-Chapter 8 covers the per-function mechanics; this project is the **safety**
-angle. Contrast with Chapter 12's workflow-level `RequestPort` human-in-the-loop
+The tools chapter covers the per-function mechanics; this project is the **safety**
+angle. Contrast with the workflows chapter's workflow-level `RequestPort` human-in-the-loop
 (different granularity; both belong in a real system).
 
 ## Running

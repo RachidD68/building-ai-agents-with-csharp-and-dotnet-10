@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 6 — Conversations and Memory (Context Provider Demo)
+// Conversations and Memory (Context Provider Demo)
 // Demonstrates AIContextProvider to inject dynamic context into agent requests.
 //
 // Key concepts:
@@ -8,7 +8,7 @@
 //   - StoreAIContextAsync: runs AFTER each agent call (log usage, track tokens)
 //   - Token budget management: monitoring and controlling token consumption
 //
-// FORWARD REFERENCE: The middleware pipeline (Chapter 16) can also intercept
+// FORWARD REFERENCE: The middleware pipeline (the security chapter) can also intercept
 // and modify conversation history.
 // ============================================================================
 
@@ -26,7 +26,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 6: Context Provider Demo ===\n");
+Console.WriteLine("=== Context Provider Demo ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 8 — FileAccessProvider: a sandboxed scratchpad for your agent
+// FileAccessProvider: a sandboxed scratchpad for your agent
 // ----------------------------------------------------------------------------
 // MAF ships (since 1.13) a built-in context provider that gives an agent a SAFE, scoped
 // filesystem: FileAccessProvider. Register it and the model gains eight tools —
@@ -18,7 +18,7 @@
 // ToolApprovalAgent and pass FileAccessProvider.ReadOnlyToolsAutoApprovalRule,
 // which waves through the read-only tools (read/read_lines/ls/grep) but still pauses
 // on write, delete, and replace. That boundary — reads are cheap, writes need a human — is
-// the whole point. Cross-reference: Chapter 16 (Safety and Guardrails).
+// the whole point. Cross-reference: the security chapter.
 // ============================================================================
 
 using Microsoft.Agents.AI;
@@ -36,7 +36,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 8: FileAccessProvider — a sandboxed scratchpad ===\n");
+Console.WriteLine("=== FileAccessProvider — a sandboxed scratchpad ===\n");
 
 // ── Step 1: a store, seeded directly via its API ─────────────────────────────
 // InMemoryAgentFileStore keeps files in a dictionary — perfect for a demo and
@@ -56,7 +56,7 @@ FileAccessProvider files = new(store);
 
 // ── Step 3: the agent — register the provider, then GATE it ──────────────────
 // AIContextProviders is where context providers (RAG, memory, file access) plug
-// in — exactly the slot the Chapter 10 custom provider used.
+// in — exactly the slot the RAG chapter's custom provider used.
 ChatClientAgent baseAgent = new(chatClient, new ChatClientAgentOptions
 {
     Name = "ScratchpadAgent",
@@ -72,8 +72,8 @@ ChatClientAgent baseAgent = new(chatClient, new ChatClientAgentOptions
 });
 
 // Wrap with approval. ReadOnlyToolsAutoApprovalRule auto-approves read/list/
-// search; save and delete would still pause for a human (see Chapter 8's
-// tool-approval sample for the approve/reject loop, and Chapter 16 for why).
+// search; save and delete would still pause for a human (see the Ch08.ToolApproval
+// sample for the approve/reject loop, and the security chapter for why).
 AIAgent agent = baseAgent.AsBuilder()
     .UseToolApproval(new ToolApprovalAgentOptions
     {

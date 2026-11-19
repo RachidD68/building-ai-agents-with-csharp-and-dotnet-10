@@ -12,7 +12,7 @@ Build an MCP server that exposes two tools: `DefineWord(string word)` and `GetSy
 ## Hints
 
 - The `ProductCatalogTools.cs` file in `Ch09.McpServer` has both the `ProductLookup` and `InventoryCheck` pattern you need: two static methods, one dictionary.
-- The agent chains the two tools the same way the Chapter 8 agent chained `multiply` and `convert_units`.
+- The agent chains the two tools the same way the tools chapter's agent chained `multiply` and `convert_units`.
 
 ## Key Concepts
 

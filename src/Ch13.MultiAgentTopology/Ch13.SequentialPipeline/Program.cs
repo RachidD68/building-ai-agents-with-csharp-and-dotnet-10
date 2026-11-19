@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Multi-Agent Systems (Sequential Pipeline)
+// Multi-Agent Systems (Sequential Pipeline)
 // Demonstrates the simplest multi-agent pattern: two agents in sequence.
 // Agent 1 (Translator) translates French text to English.
 // Agent 2 (Summarizer) summarizes the English translation.
@@ -9,7 +9,7 @@
 //   - Manual sequential chaining: output of agent 1 feeds into agent 2
 //   - Each agent maintains its own session and instructions
 //
-// FORWARD REFERENCE: Chapter 12 introduces the Workflow engine that can
+// FORWARD REFERENCE: The workflows chapter introduces the Workflow engine that can
 // automate this chaining with AgentWorkflowBuilder.BuildSequential().
 // ============================================================================
 
@@ -26,7 +26,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 12: Sequential Pipeline — Translator → Summarizer ===\n");
+Console.WriteLine("=== Sequential Pipeline — Translator → Summarizer ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

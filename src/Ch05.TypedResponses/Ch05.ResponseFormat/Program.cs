@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 7 — Structured Output (ResponseFormat)
+// Structured Output (ResponseFormat)
 // The "other door" to structured output. Where RunAsync<T>() deserializes for
 // you, ResponseFormat sets the schema on the run options (or the agent) and
 // hands back JSON text you parse yourself. Use it when the type is dynamic,
@@ -29,7 +29,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 7: Structured Output — ResponseFormat ===\n");
+Console.WriteLine("=== Structured Output — ResponseFormat ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

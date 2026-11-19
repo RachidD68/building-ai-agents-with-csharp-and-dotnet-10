@@ -1,4 +1,4 @@
-# Chapter 17 -- Evaluation (EvalSuite)
+# Evaluation (EvalSuite)
 
 Evaluates a small weather agent (one tool, `get_weather`) with three layers of
 checks composed in a single `LocalEvaluator`, plus an optional, gated
@@ -24,7 +24,7 @@ otherwise. `AgentEvaluationResults` members used: `ProviderName`, `Passed`,
 
 ```bash
 # Offline by default: Ollama (llama3.2). No cloud needed.
-dotnet run --project src/Ch17.EvalSuite/Ch17.EvalSuite
+dotnet run --project src/Ch21.Evaluation/Ch21.EvalSuite
 ```
 
 ## Enabling the Foundry judge

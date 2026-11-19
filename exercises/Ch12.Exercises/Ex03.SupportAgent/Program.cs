@@ -2,7 +2,7 @@
 // Exercise 03 — Multimodal Support Agent (Challenge)
 // ----------------------------------------------------------------------------
 // A support agent that reads a SCREENSHOT and answers a question about it. This
-// is the real-world opener of Chapter 11 made runnable: the user pastes an error
+// is the real-world opener of the multimodal chapter made runnable: the user pastes an error
 // dialog and asks "what went wrong and how do I fix it?". The agent gets BOTH the
 // image and the question in a single multimodal ChatMessage, and replies with a
 // diagnosis grounded in what is actually on the screen.

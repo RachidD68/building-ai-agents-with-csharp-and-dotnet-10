@@ -1,4 +1,4 @@
-# Chapter 12 -- Agent Workflow
+# Agent Workflow
 
 Orchestrates **agents** as workflow executors. A Drafter agent and a Reviewer agent are wired into a graph; the workflow runtime manages the `TurnToken` handshake so each agent takes its turn in order.
 
@@ -15,7 +15,7 @@ Orchestrates **agents** as workflow executors. A Drafter agent and a Reviewer ag
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.AgentWorkflow
+dotnet run --project src/Ch14.Workflows/Ch14.AgentWorkflow
 ```
 
 Requires a running model provider. Defaults to Ollama (`llama3.2`); configure others in `appsettings.json`.

@@ -5,7 +5,7 @@ namespace Ch09.KnowledgeBaseMcp;
 
 /// <summary>
 /// MCP server tools for searching a knowledge base of Markdown documents.
-/// This bridges to Chapter 10 (RAG) by showing simple keyword-based retrieval.
+/// This bridges to the RAG chapter by showing simple keyword-based retrieval.
 /// </summary>
 [McpServerToolType]
 public static class KnowledgeBaseTools

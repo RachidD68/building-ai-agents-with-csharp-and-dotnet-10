@@ -1,4 +1,4 @@
-# Chapter 11 -- Multi-Agent Tests
+# Multi-Agent Tests
 
 A token-free console assertion harness for testing multi-agent compositions. A fake `IChatClient` (`ScriptedChatClient`) returns canned responses, so agents behave deterministically and no model is required. No xUnit -- the companion solution does not standardize on a test framework, so this is a plain runnable program that returns a non-zero exit code on failure (CI-friendly).
 
@@ -13,7 +13,7 @@ A token-free console assertion harness for testing multi-agent compositions. A f
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.MultiAgent.Tests
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.MultiAgentTopology.Tests
 ```
 
 No Ollama or API key required -- the fake client never calls a model.

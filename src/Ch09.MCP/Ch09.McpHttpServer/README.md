@@ -1,4 +1,4 @@
-# Chapter 9 -- The Model Context Protocol (HTTP-hosted MCP Server)
+# The Model Context Protocol (HTTP-hosted MCP Server)
 
 An ASP.NET Core MCP server that exposes the **same** product catalog tools as `Ch09.McpServer`, but over the **streamable HTTP** transport instead of stdio. This is the sample behind the chapter's "swap `WithStdioServerTransport` for `WithHttpTransport`" Pro Tip and the streamable-HTTP Challenge exercise.
 

@@ -1,4 +1,4 @@
-# Chapter 12 -- Approval Workflow (Capstone)
+# Approval Workflow (Capstone)
 
 Demonstrates a human-in-the-loop approval workflow. An LLM agent drafts a document, a validator agent reviews it, then the workflow pauses for human approval via `RequestPort`. Rejected drafts loop back to the drafter with feedback for revision.
 
@@ -16,5 +16,5 @@ Demonstrates a human-in-the-loop approval workflow. An LLM agent drafts a docume
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.ApprovalWorkflow
+dotnet run --project src/Ch14.Workflows/Ch14.ApprovalWorkflow
 ```

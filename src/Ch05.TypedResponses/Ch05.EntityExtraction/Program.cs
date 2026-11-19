@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 7 — Structured Output (Entity Extraction)
+// Structured Output (Entity Extraction)
 // Extract structured data from free-text customer feedback.
 // Demonstrates real-world entity extraction with enums, validation,
 // and edge-case handling.
@@ -31,7 +31,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 7: Entity Extraction from Customer Feedback ===\n");
+Console.WriteLine("=== Entity Extraction from Customer Feedback ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

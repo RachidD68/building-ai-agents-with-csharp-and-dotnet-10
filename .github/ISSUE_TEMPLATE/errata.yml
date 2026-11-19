@@ -29,7 +29,7 @@ body:
     attributes:
       label: Chapter and section
       description: Chapter number / title and the section heading where the issue appears.
-      placeholder: e.g. Chapter 8 — Tools and Function Calling · "The tool-calling loop"
+      placeholder: e.g. Tools and Bounded Execution · "The tool-calling loop"
     validations:
       required: true
 

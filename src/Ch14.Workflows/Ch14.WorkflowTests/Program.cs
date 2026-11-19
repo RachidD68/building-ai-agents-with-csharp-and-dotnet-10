@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Workflow Tests (design principle #6: cover every branch)
+// Workflow Tests (design principle #6: cover every branch)
 // ----------------------------------------------------------------------------
 // Workflows are testable: build the graph, run it in-process with inputs that
 // exercise each branch, and assert on the streamed events and the final output.
@@ -18,7 +18,7 @@ using Microsoft.Agents.AI.Workflows;
 
 int failures = 0;
 
-Console.WriteLine("=== Chapter 13: Workflow Tests ===\n");
+Console.WriteLine("=== Workflow Tests ===\n");
 
 // --- Branch 1: positive sentiment routes to the thank-you handler ---
 await Case("positive routes to thank-you",

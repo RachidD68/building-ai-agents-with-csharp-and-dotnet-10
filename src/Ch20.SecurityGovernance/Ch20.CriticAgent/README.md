@@ -1,4 +1,4 @@
-# Ch15.CriticAgent — Critic Agent for Output Validation
+# Ch20.CriticAgent — Critic Agent for Output Validation
 
 This project demonstrates the "critic agent" pattern where a second agent
 validates the output of a primary agent before it reaches the user.

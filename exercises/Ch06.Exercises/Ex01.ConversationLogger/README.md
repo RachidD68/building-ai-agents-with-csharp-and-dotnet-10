@@ -6,7 +6,7 @@ Extend the `Ch06.AgentSessionDemo` program to write every turn to a log file in 
 
 ## Hints
 
-- `File.AppendAllTextAsync` in a helper method invoked after each turn. You don't need a real logger for this — `ILogger<Program>` with a file provider is Chapter 15's job.
+- `File.AppendAllTextAsync` in a helper method invoked after each turn. You don't need a real logger for this — `ILogger<Program>` with a file provider is the observability chapter's job.
 - `AgentSession` has no built-in id for client-side history, so assign each session a short id of your own — the log then distinguishes session 1's turns from session 2's.
 - Append to a fixed file name so the log accumulates across runs.
 

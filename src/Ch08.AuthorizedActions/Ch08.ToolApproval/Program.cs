@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 8 — Tool approval (human-in-the-loop)
+// Tool approval (human-in-the-loop)
 // ----------------------------------------------------------------------------
 // Some tools are too dangerous to fire on the model's say-so alone. Refunding
 // an order, deleting a record, sending money — you want a human (or a policy)
@@ -49,7 +49,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 8: Tool Approval (human-in-the-loop) ===\n");
+Console.WriteLine("=== Tool Approval (human-in-the-loop) ===\n");
 
 // ── Tools ───────────────────────────────────────────────────────────
 // One sensitive write tool (RefundOrder) and one harmless read tool

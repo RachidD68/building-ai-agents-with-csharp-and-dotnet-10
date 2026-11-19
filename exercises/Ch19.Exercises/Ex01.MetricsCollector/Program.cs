@@ -44,7 +44,7 @@ using IHost host = builder.Build();
 
 // Start the host so the OpenTelemetry hosted service installs its
 // MeterListener. Without this, the counter records into the void and the
-// exporter stays silent — the empty-dashboard failure Chapter 15 warns about.
+// exporter stays silent — the empty-dashboard failure the observability chapter warns about.
 await host.StartAsync();
 
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();

@@ -7,7 +7,7 @@
 //
 // Note: the instructions constructor accepts any string, so the user's text
 // goes into the system prompt verbatim. That is an injection vector — fine
-// for this exercise; Chapter 16 shows how to sanitize.
+// for this exercise; the security chapter shows how to sanitize.
 // ============================================================================
 
 using System.ClientModel;

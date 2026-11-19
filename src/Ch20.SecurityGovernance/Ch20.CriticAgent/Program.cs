@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Safety and Guardrails (Critic Agent)
+// Safety and Guardrails (Critic Agent)
 // Demonstrates using a second "critic" agent to validate the output of a
 // primary agent. The critic evaluates responses for:
 //   - Factual consistency
@@ -28,7 +28,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 16: Safety — Critic Agent ===\n");
+Console.WriteLine("=== Safety — Critic Agent ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

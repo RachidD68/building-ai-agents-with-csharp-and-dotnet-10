@@ -1,4 +1,4 @@
-# Chapter 10 -- Introduction to RAG (FAQ Agent -- Part III Capstone)
+# Introduction to RAG (FAQ Agent -- Part III Capstone)
 
 The Contoso FAQ agent, grounded in a Markdown knowledge base. RAG is wired with
 MAF's built-in **`TextSearchProvider`**: it runs a search before every agent call

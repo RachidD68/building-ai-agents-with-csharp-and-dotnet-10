@@ -1,7 +1,7 @@
 // ============================================================================
-// Chapter 10 — Hosted RAG with Foundry (file search over a vector store)
+// Hosted RAG with Foundry (file search over a vector store)
 // ----------------------------------------------------------------------------
-// In the rest of Chapter 10 you built a RAG pipeline by hand: chunk documents,
+// In the rest of the RAG chapter you built a RAG pipeline by hand: chunk documents,
 // embed each chunk, store the embeddings in a vector index, retrieve the
 // top-K matches at query time, stuff them into the prompt. That pattern is
 // portable — every provider supports it — and it gives you full control.
@@ -48,7 +48,7 @@ string? vectorStoreId = config["LlmProvider:Foundry:VectorStoreId"];
 if (string.IsNullOrWhiteSpace(settings.Foundry.ProjectEndpoint) ||
     string.IsNullOrWhiteSpace(vectorStoreId))
 {
-    Console.WriteLine("Hosted RAG requires Microsoft Foundry — see Chapter 4.");
+    Console.WriteLine("Hosted RAG requires Microsoft Foundry — see the development-environment chapter.");
     Console.WriteLine("1. Configure LlmProvider:Foundry:ProjectEndpoint in appsettings.json.");
     Console.WriteLine("2. In your Foundry project, create a vector store and upload the");
     Console.WriteLine("   files in this project's data/ folder into it.");
@@ -60,7 +60,7 @@ if (string.IsNullOrWhiteSpace(settings.Foundry.ProjectEndpoint) ||
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 10: Hosted RAG with Foundry ===");
+Console.WriteLine("=== Hosted RAG with Foundry ===");
 Console.WriteLine($"Project endpoint: {settings.Foundry.ProjectEndpoint}");
 Console.WriteLine($"Vector store:     {vectorStoreId}");
 Console.WriteLine();

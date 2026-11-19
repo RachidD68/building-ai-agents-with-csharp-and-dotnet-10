@@ -1,11 +1,11 @@
 // ============================================================================
-// Chapter 16 — Injecting safety context mid-run with AIContextProvider
+// Injecting safety context mid-run with AIContextProvider
 // ----------------------------------------------------------------------------
 // Middleware (DelegatingChatClient) wraps the raw IChatClient call. It is
 // position-agnostic: it sees one request and one response and does not know it
 // is the third model turn of a tool-calling run. To add a message into the
 // agent's INVOCATION LIFECYCLE — before each model invocation in a multi-step
-// turn — the real hook is AIContextProvider, the same abstraction Chapter 6
+// turn — the real hook is AIContextProvider, the same abstraction the conversations and memory chapter
 // used for memory, here turned to safety.
 //
 //   DelegatingChatClient (middleware)
@@ -38,7 +38,7 @@ hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration);
 using IHost host = hostBuilder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 16: AIContextProvider mid-run injection demo ===");
+Console.WriteLine("=== AIContextProvider mid-run injection demo ===");
 Console.WriteLine();
 
 // ── A toy tool to make the function-call loop interesting ─────────────
@@ -62,7 +62,7 @@ AuditReminderProvider reminder = new(
 // EnableMessageInjection opts this agent into mid-run message injection;
 // AIContextProviders registers the provider; ChatOptions.Tools carries the
 // tool (ChatClientAgentOptions has no Tools/Instructions of its own — the
-// provider supplies the instructions, the same way Chapter 6 does).
+// provider supplies the instructions, the same way the conversations and memory chapter does).
 // EnableMessageInjection graduated to GA in MAF 1.14 — the deliberate
 // #pragma earlier builds carried around this block is gone with it.
 ChatClientAgentOptions options = new()
@@ -107,7 +107,7 @@ Console.WriteLine("=== Done ===");
 /// An <see cref="AIContextProvider"/> that supplies the agent's standing
 /// instructions on every model invocation and injects an audit reminder as a
 /// system message on every Nth invocation. Compare with the memory-focused
-/// provider in Chapter 6 — same hook, different job.
+/// provider in the conversations and memory chapter — same hook, different job.
 /// </summary>
 public sealed class AuditReminderProvider(int everyN, string reminder)
     : AIContextProvider

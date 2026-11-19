@@ -1,4 +1,4 @@
-# Chapter 11 -- Streaming Pipeline
+# Streaming Pipeline
 
 Demonstrates real pipeline UX: show **intermediate progress** while early stages run silently, then **stream the final stage's tokens** live. A three-agent chain (Outliner -> Drafter -> Polisher) runs the first two stages with blocking `RunAsync` (progress lines only) and streams the last stage with `RunStreamingAsync`.
 
@@ -13,7 +13,7 @@ Demonstrates real pipeline UX: show **intermediate progress** while early stages
 ## Running
 
 ```bash
-dotnet run --project src/Ch11.MultiAgent/Ch11.StreamingPipeline
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.StreamingPipeline
 ```
 
 Requires Ollama running locally with `llama3.2` (see `appsettings.json`).

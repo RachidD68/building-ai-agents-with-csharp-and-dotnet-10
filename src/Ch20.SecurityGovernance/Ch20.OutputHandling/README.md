@@ -1,4 +1,4 @@
-# Ch15.OutputHandling — The model's output is untrusted input (OWASP LLM05)
+# Ch20.OutputHandling — The model's output is untrusted input (OWASP LLM05)
 
 The chapter redacts PII **out** of a response. This demo covers the other
 direction: an LLM's output is **untrusted input** to whatever consumes it. The

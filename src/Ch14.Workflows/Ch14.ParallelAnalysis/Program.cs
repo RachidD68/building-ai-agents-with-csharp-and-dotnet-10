@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Parallel Analysis: idiomatic fan-out / fan-in
+// Parallel Analysis: idiomatic fan-out / fan-in
 // ----------------------------------------------------------------------------
 // A dispatcher fans a product review out to three analyzer agents that run
 // concurrently — sentiment, topic, and a one-line summary. A fan-in barrier
@@ -37,7 +37,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 13: Parallel Analysis (fan-out / fan-in) ===\n");
+Console.WriteLine("=== Parallel Analysis (fan-out / fan-in) ===\n");
 
 string review =
     "I bought this espresso machine three weeks ago. The build quality is " +

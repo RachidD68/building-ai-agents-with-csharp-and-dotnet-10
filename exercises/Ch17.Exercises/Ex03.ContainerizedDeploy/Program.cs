@@ -1,5 +1,5 @@
 // ============================================================================
-// Exercise 04 — Containerize, Secure, and Deploy (Challenge)
+// Exercise 03 — Containerize, Secure, and Deploy (Challenge)
 // A production-shaped, deployable agent API. FULLY STANDALONE.
 //
 // This is the runnable base for the capstone exercise. It already wires the
@@ -138,7 +138,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Chapter 14 — Ex04: Containerized, secured, deployable agent API",
+    service = "Ex03: Containerized, secured, deployable agent API",
     endpoints = new
     {
         chat = "POST /chat { \"message\": \"...\" }  (auth)",
@@ -147,7 +147,7 @@ app.MapGet("/", () => Results.Ok(new
     }
 }));
 
-Console.WriteLine("=== Exercise 04: Containerize, Secure, Deploy ===");
+Console.WriteLine("=== Exercise 03: Containerize, Secure, Deploy ===");
 Console.WriteLine("Endpoints: POST /chat (auth), POST /chat/stream (auth, SSE), GET /health");
 
 app.Run();

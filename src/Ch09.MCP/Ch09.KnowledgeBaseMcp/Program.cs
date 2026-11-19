@@ -1,13 +1,13 @@
 // ============================================================================
-// Chapter 9 — The Model Context Protocol (Knowledge Base MCP Server)
+// The Model Context Protocol (Knowledge Base MCP Server)
 // An MCP server that reads Markdown files from a docs/ folder and exposes
-// a SearchKnowledgeBase tool. This bridges to Chapter 10 (RAG) by showing
+// a SearchKnowledgeBase tool. This bridges to the RAG chapter by showing
 // simple keyword-based document retrieval.
 //
 // Key concepts:
 //   - MCP server reading from the file system
 //   - Simple keyword-based search over Markdown documents
-//   - Foundation for the semantic search shown in Chapter 10
+//   - Foundation for the semantic search shown in the RAG chapter
 // ============================================================================
 
 using Microsoft.Extensions.DependencyInjection;

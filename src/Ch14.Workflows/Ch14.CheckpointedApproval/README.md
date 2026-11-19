@@ -1,4 +1,4 @@
-# Chapter 13 -- Checkpointed Approval
+# Checkpointed Approval
 
 A **durable** human-in-the-loop approval workflow. The workflow runs with a `CheckpointManager`; it pauses on a `RequestPort` for human approval, captures a checkpoint at that superstep, "crashes," then resumes from the checkpoint in a second run and completes. A stateful `RevisionTracker` executor persists its counter across the restart.
 

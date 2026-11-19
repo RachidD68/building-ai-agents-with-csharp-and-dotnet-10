@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Safety and Guardrails (Middleware Pipeline)
+// Safety and Guardrails (Middleware Pipeline)
 // Demonstrates the IChatClient middleware pipeline from Microsoft.Extensions.AI.
 //
 // The ChatClientBuilder composes middleware in a Russian-doll wrapping pattern:
@@ -32,7 +32,7 @@ IChatClient baseChatClient = host.Services.GetRequiredService<IChatClient>();
 ILoggerFactory loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
 ILogger logger = loggerFactory.CreateLogger("Ch20.MiddlewarePipeline");
 
-Console.WriteLine("=== Chapter 16: Safety — Middleware Pipeline ===\n");
+Console.WriteLine("=== Safety — Middleware Pipeline ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -1,10 +1,10 @@
 // ============================================================================
-// Chapter 5 — Hello, Agent! (Basic Agent)
+// Hello, Agent! (Basic Agent)
 // Your first agent using the Microsoft Agent Framework (MAF).
 // We create a ChatClientAgent with a fun pirate persona, send it a message,
 // and get a complete (non-streaming) response.
 //
-// FORWARD REFERENCE: In Chapter 15, we'll see how to add middleware to this
+// FORWARD REFERENCE: In the security chapter, we'll see how to add middleware to this
 // agent pipeline for logging, timing, and content filtering.
 // ============================================================================
 
@@ -25,7 +25,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 5: Hello, Agent! (Basic Agent) ===\n");
+Console.WriteLine("=== Hello, Agent! (Basic Agent) ===\n");
 
 // Wire Ctrl-C to a CancellationTokenSource. Two reasons:
 //   1. The app shuts down gracefully instead of being hard-killed.
@@ -87,7 +87,7 @@ catch (OperationCanceledException)
 }
 // A failed first call is the single most common thing a new reader hits. These
 // are the real errors the provider surfaces through IChatClient — not just
-// cancellation. We log something useful and stop; Chapter 14 adds real
+// cancellation. We log something useful and stop; the hosting chapter adds real
 // resilience (retries, backoff, circuit breakers) around this exact call.
 catch (ClientResultException ex)
 {

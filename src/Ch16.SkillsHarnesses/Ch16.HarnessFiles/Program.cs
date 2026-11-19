@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 19 — Files in the harness: memory versus access
+// Files in the harness: memory versus access
 // ----------------------------------------------------------------------------
 // The harness has two different file stories and they are easy to confuse:
 //
@@ -34,7 +34,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 19: Harness files — memory vs access ===");
+Console.WriteLine("=== Harness files — memory vs access ===");
 Console.WriteLine();
 
 // ── A small workspace the agent is allowed to read ────────────────────

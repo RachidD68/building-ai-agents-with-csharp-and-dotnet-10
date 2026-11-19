@@ -1,5 +1,5 @@
 // ============================================================================
-// Exercise 05 — Consumption Limits (Challenge)
+// Exercise 04 — Consumption Limits (Challenge)
 // ----------------------------------------------------------------------------
 // Cap a deliberately looping agent (OWASP LLM10, Unbounded Consumption), then
 // enforce PER-SESSION budgets. A deterministic RunawayClient asks to call the

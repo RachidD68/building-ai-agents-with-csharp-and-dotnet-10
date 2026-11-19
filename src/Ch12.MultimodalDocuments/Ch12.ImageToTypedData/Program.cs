@@ -1,9 +1,9 @@
 // ============================================================================
-// Chapter 11 — Multimodal Agents (FLAGSHIP: Image -> typed C# record)
+// Multimodal Agents (FLAGSHIP: Image -> typed C# record)
 // ----------------------------------------------------------------------------
 // This is the payoff of the chapter. We take an INVOICE IMAGE and get back a
 // strongly-typed Invoice record — no OCR library, no regex, no parsing code.
-// The vision model reads the picture; structured output (Chapter 7) maps the
+// The vision model reads the picture; structured output (the typed-responses chapter) maps the
 // result onto our C# types.
 //
 // Two ideas combine:
@@ -12,7 +12,7 @@
 //      ChatResponseFormat.ForJsonSchema<Invoice>() so the model must return
 //      JSON matching our schema, which MAF deserializes into Invoice.
 //
-// X-REF Chapter 7: everything about RunAsync<T>, the typed AgentResponse<T>.Result,
+// X-REF the typed-responses chapter: everything about RunAsync<T>, the typed AgentResponse<T>.Result,
 // and JSON-schema response formats is taught there. Here we just feed it a picture.
 //
 // Needs a VISION model (Ollama llava / llama3.2-vision, or cloud gpt-5.6-terra), configured
@@ -36,7 +36,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 11: Image -> Typed Data (invoice extraction) ===\n");
+Console.WriteLine("=== Image -> Typed Data (invoice extraction) ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -88,7 +88,7 @@ ChatMessage message = new(ChatRole.User,
 ]);
 
 // Force a JSON shape that matches Invoice. ForJsonSchema<T>() builds the schema
-// from the record + [Description] attributes (Chapter 7). We pass it via ChatOptions
+// from the record + [Description] attributes (the typed-responses chapter). We pass it via ChatOptions
 // on a per-run options object; RunAsync<Invoice> deserializes the JSON for us.
 ChatClientAgentRunOptions runOptions = new(new ChatOptions
 {

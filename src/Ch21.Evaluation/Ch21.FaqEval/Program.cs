@@ -1,7 +1,7 @@
 // ============================================================================
-// Chapter 18 — Evaluating a RAG agent: grounding the Contoso FAQ agent
+// Evaluating a RAG agent: grounding the Contoso FAQ agent
 // ----------------------------------------------------------------------------
-// This is the evaluation companion to Chapter 10's FAQ agent. It rebuilds the
+// This is the evaluation companion to the RAG chapter's FAQ agent. It rebuilds the
 // exact same RAG pipeline (embed -> vector search -> inject context via the
 // built-in TextSearchProvider) and then runs an evaluation suite over a small
 // GOLDEN SET of HR questions whose answers live in the knowledge base.
@@ -23,7 +23,7 @@
 //      with a printed note, so the suite stays runnable with zero cloud setup.
 //
 // Exit code 0 when every local value check passes; 1 otherwise — so this
-// drops into CI as the nightly evaluation gate Chapter 15 points at. The
+// drops into CI as the nightly evaluation gate the observability chapter points at. The
 // groundedness score itself comes from the gated LLM judge in step 4.
 // ============================================================================
 
@@ -51,10 +51,10 @@ IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 18: Grounding the Contoso FAQ agent ===");
+Console.WriteLine("=== Grounding the Contoso FAQ agent ===");
 Console.WriteLine();
 
-// ── Step 1: rebuild the Chapter 10 RAG pipeline ───────────────────
+// ── Step 1: rebuild the FAQ agent's RAG pipeline ───────────────────
 string provider = config["LlmProvider:Provider"] ?? "ollama";
 IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLowerInvariant() switch
 {

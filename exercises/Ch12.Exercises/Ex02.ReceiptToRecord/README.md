@@ -10,7 +10,7 @@ invoice total includes tax; that's the lesson).
 
 ## Key Concepts
 
-- Multimodal input (image) + structured output (`RunAsync<T>`) — Chapter 7 + Chapter 11
+- Multimodal input (image) + structured output (`RunAsync<T>`) — the typed-responses chapter + the multimodal chapter
 - `ChatResponseFormat.ForJsonSchema<Receipt>()` to force a typed JSON shape
 - Validating model output against an independent computation (don't trust a single number)
 

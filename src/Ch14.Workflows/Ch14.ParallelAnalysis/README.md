@@ -1,4 +1,4 @@
-# Chapter 12 -- Parallel Analysis
+# Parallel Analysis
 
 Idiomatic **fan-out / fan-in**. A dispatcher fans a product review out to three analyzer agents (sentiment, topics, summary) that run concurrently; a fan-in barrier holds their results until all three finish, then an aggregator assembles the report. Prints the Mermaid graph at startup.
 
@@ -16,7 +16,7 @@ The barrier delivers branch results **one message at a time** (not as a list), s
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.ParallelAnalysis
+dotnet run --project src/Ch14.Workflows/Ch14.ParallelAnalysis
 ```
 
 Requires a running model provider. Defaults to Ollama (`llama3.2`); configure others in `appsettings.json`.

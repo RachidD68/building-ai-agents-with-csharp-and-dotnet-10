@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Checkpointed Approval: durable human-in-the-loop
+// Checkpointed Approval: durable human-in-the-loop
 // ----------------------------------------------------------------------------
 // Ch14.ApprovalWorkflow paused on a RequestPort and waited for a human decision
 // in the same process. That is fine for a CLI, but a real approval can take
@@ -125,7 +125,7 @@ switch (mode)
         return 2;
 }
 
-Console.WriteLine("=== Chapter 13: Checkpointed Approval (durable HITL) ===\n");
+Console.WriteLine("=== Checkpointed Approval (durable HITL) ===\n");
 
 // One CheckpointManager, shared by both the first run and the resumed run.
 CheckpointManager checkpoints = CheckpointManager.CreateInMemory();
@@ -225,7 +225,7 @@ return 0;
 // ---------------------------------------------------------------
 async Task<int> PrepareAsync()
 {
-    Console.WriteLine("=== Chapter 13: Checkpointed Approval — prepare ===\n");
+    Console.WriteLine("=== Checkpointed Approval — prepare ===\n");
 
     Directory.CreateDirectory(storePath);
     using FileSystemJsonCheckpointStore store = new(new DirectoryInfo(storePath));
@@ -277,7 +277,7 @@ async Task<int> PrepareAsync()
 // ---------------------------------------------------------------
 async Task<int> ResumeAsync(string session, string decision)
 {
-    Console.WriteLine("=== Chapter 13: Checkpointed Approval — resume ===\n");
+    Console.WriteLine("=== Checkpointed Approval — resume ===\n");
 
     if (!ApprovalDecisions.TryParse(decision, out ApprovalDecision choice))
         return Fail($"unknown decision \"{decision}\" (use approve or reject).", 2);
@@ -540,7 +540,7 @@ internal static class CrossProcessSelfTest
 
     public static int Run()
     {
-        Console.WriteLine("=== Chapter 13: Checkpointed Approval — cross-process self-test ===\n");
+        Console.WriteLine("=== Checkpointed Approval — cross-process self-test ===\n");
         string root = Path.Combine(Path.GetTempPath(), $"ch13-checkpoint-selftest-{Guid.NewGuid():N}");
 
         try

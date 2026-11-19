@@ -1,5 +1,5 @@
 // ============================================================================
-// Exercise 03 — Conversation Cost Simulator (Challenge)
+// Exercise 01 — Conversation Cost Simulator (Challenge)
 // ----------------------------------------------------------------------------
 // Takes a message array and a daily volume, then prints monthly cost three ways:
 //   1. Uncached            — the whole history re-sent fresh every turn.
@@ -13,7 +13,7 @@
 // No network calls — everything is arithmetic over a token-counted message array.
 // ============================================================================
 
-Console.WriteLine("=== Exercise 03: Conversation Cost Simulator ===\n");
+Console.WriteLine("=== Exercise 01: Conversation Cost Simulator ===\n");
 
 const int PerMessageOverhead = 4; // approximate role/delimiter framing per message
 

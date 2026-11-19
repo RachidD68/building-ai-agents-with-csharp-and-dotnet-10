@@ -1,13 +1,13 @@
-# Chapter 18 -- Evaluating a RAG agent (FaqEval)
+# Evaluating a RAG agent (FaqEval)
 
-Checks the Chapter 10 Contoso FAQ agent against a **golden set**. This is the
-nightly evaluation gate Chapter 15 points at, and the payoff for the chapter's
+Checks the RAG chapter's Contoso FAQ agent against a **golden set**. This is the
+nightly evaluation gate the observability chapter points at, and the payoff for the chapter's
 opening PTO-confabulation anecdote: the failure becomes a test that fails loudly
 whenever an answer drifts off the source.
 
 ## What it shows
 
-- Rebuilds the exact Chapter 10 RAG pipeline (embed -> vector search -> inject
+- Rebuilds the exact FAQ agent RAG pipeline (embed -> vector search -> inject
   context via the built-in `TextSearchProvider`).
 - A golden set pairing each question with the exact policy value a grounded
   answer must contain. Questions are curated against the source wording so a

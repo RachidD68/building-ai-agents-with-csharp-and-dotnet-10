@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 8 — Tools and Function Calling (Database Lookup Tool with DI)
+// Tools and Function Calling (Database Lookup Tool with DI)
 // Demonstrates tools backed by dependency-injected services.
 // The tool class receives an IProductRepository via constructor injection.
 //
@@ -30,7 +30,7 @@ using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 ProductTools productTools = host.Services.GetRequiredService<ProductTools>();
 
-Console.WriteLine("=== Chapter 8: Database Lookup Tool — DI-Backed Tools Demo ===\n");
+Console.WriteLine("=== Database Lookup Tool — DI-Backed Tools Demo ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

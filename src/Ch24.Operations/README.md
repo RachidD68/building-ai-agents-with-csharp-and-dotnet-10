@@ -1,4 +1,4 @@
-# Chapter 20 — Your Next Steps
+# Your Next Steps
 
 Congratulations on completing the book! You now have a solid foundation in
 building agentic AI applications with .NET. Here are resources and areas
@@ -9,12 +9,12 @@ to explore as you continue your journey.
 ### Agent-to-Agent (A2A) Protocol
 Standardizes how AI agents discover and communicate with each other over HTTP.
 - Specification: https://a2a-protocol.org/latest/
-- See Chapter 14 (Ch17.A2APreview) for integration using the official SDK
+- See the hosting chapter (Ch17.A2APreview) for integration using the official SDK
 
 ### Model Context Protocol (MCP)
 Enables AI agents to access external tools, data sources, and services.
 - Specification: https://modelcontextprotocol.io/
-- See Chapter 9 (Ch09.MCP) for server and client implementations
+- See the MCP chapter (Ch09.MCP) for server and client implementations
 
 ### AG-UI (Agent-Generated User Interfaces)
 An emerging pattern where agents dynamically generate UI components
@@ -27,7 +27,7 @@ As you bring agents to production, consider these governance areas:
 - **Cost management** — Token budgets, rate limiting, model tiering
 - **Audit logging** — Record all agent interactions for compliance
 - **Access control** — Role-based permissions for agent capabilities
-- **Content policies** — Automated moderation and safety guardrails (Chapter 15)
+- **Content policies** — Automated moderation and safety guardrails (the security chapter)
 - **Model versioning** — Pin model versions, test before upgrading
 - **Data residency** — Ensure data stays in required geographic regions
 - **Responsible AI** — Fairness testing, bias detection, transparency
@@ -62,11 +62,11 @@ The Microsoft Agent Framework is open source and welcomes contributions:
 - `ModelContextProtocol` — MCP client and server
 
 ### Architecture Patterns
-- Retrieval Augmented Generation (RAG) — Chapter 10
-- Multi-agent orchestration — Chapter 11
-- Workflow-based agents — Chapter 12
-- Middleware pipelines — Chapter 15
-- Observability and tracing — Chapter 14
+- Retrieval Augmented Generation (RAG) — the RAG chapter
+- Multi-agent orchestration — the multi-agent chapter
+- Workflow-based agents — the workflows chapter
+- Middleware pipelines — the security chapter
+- Observability and tracing — the observability chapter
 
 ## What's Next for You
 

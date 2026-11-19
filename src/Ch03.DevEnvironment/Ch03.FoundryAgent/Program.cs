@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 4 — Microsoft Foundry: the 5th provider
+// Microsoft Foundry: the 5th provider
 // ----------------------------------------------------------------------------
 // Microsoft Foundry is Microsoft's recommended path for new MAF projects. The
 // canonical pattern is to build an AIProjectClient against your
@@ -37,7 +37,7 @@ if (string.IsNullOrWhiteSpace(settings.Foundry.ProjectEndpoint))
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 4: Microsoft Foundry agent ===");
+Console.WriteLine("=== Microsoft Foundry agent ===");
 Console.WriteLine($"Project endpoint: {settings.Foundry.ProjectEndpoint}");
 Console.WriteLine($"Model:            {settings.Foundry.Model}");
 Console.WriteLine();

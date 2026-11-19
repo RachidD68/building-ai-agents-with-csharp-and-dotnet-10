@@ -7,7 +7,7 @@
 // flag whether it reconciles with the model-extracted total — a cheap, useful
 // guard you'd want in any real "read a receipt" pipeline.
 //
-// X-REF Chapter 7 for RunAsync<T> and JSON-schema response formats.
+// X-REF the typed-responses chapter for RunAsync<T> and JSON-schema response formats.
 //
 // Needs a vision model under "VisionModel" (ollama llava / cloud gpt-5.6-terra). If none
 // is configured, prints "[skipped]" and exits 0.

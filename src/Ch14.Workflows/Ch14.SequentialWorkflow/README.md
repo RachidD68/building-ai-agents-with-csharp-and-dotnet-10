@@ -1,4 +1,4 @@
-# Chapter 12 -- Sequential Workflow
+# Sequential Workflow
 
 Demonstrates the Workflow engine from `Microsoft.Agents.AI.Workflows`. Two class-based executor nodes (Uppercase and Reverse) are wired in sequence using `WorkflowBuilder` and executed with both `RunAsync` (batch) and `RunStreamingAsync` (streaming).
 
@@ -17,5 +17,5 @@ Demonstrates the Workflow engine from `Microsoft.Agents.AI.Workflows`. Two class
 ## Running
 
 ```bash
-dotnet run --project src/Ch12.Workflows/Ch12.SequentialWorkflow
+dotnet run --project src/Ch14.Workflows/Ch14.SequentialWorkflow
 ```

@@ -1,4 +1,4 @@
-# Chapter 3 -- How LLMs Work: A Developer's Mental Model (Token Explorer)
+# How LLMs Work: A Developer's Mental Model (Token Explorer)
 
 An interactive console app that builds intuition for how large language models work under the hood. No API keys required -- everything is simulated locally.
 

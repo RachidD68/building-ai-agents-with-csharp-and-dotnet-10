@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 13 — Agents as Workflow Executors
+// Agents as Workflow Executors
 // ----------------------------------------------------------------------------
 // Earlier samples wired plain string-transform executors into a graph. The
 // real payoff of workflows in an agent framework is orchestrating *agents*.
@@ -34,7 +34,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 13: Agents as Workflow Executors ===\n");
+Console.WriteLine("=== Agents as Workflow Executors ===\n");
 
 // ---------------------------------------------------------------
 // Two agents. Each is an ordinary ChatClientAgent — nothing about

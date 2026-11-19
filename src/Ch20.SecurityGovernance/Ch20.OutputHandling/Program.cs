@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 16 — Improper Output Handling (OWASP LLM05)
+// Improper Output Handling (OWASP LLM05)
 // ----------------------------------------------------------------------------
 // The chapter already redacts PII *out* of a response. This demo covers the
 // other direction: an LLM's output is UNTRUSTED INPUT to whatever consumes it.
@@ -16,7 +16,7 @@
 
 using System.Text.Encodings.Web;
 
-Console.WriteLine("=== Chapter 16: Improper Output Handling (LLM05) ===");
+Console.WriteLine("=== Improper Output Handling (LLM05) ===");
 Console.WriteLine();
 
 // A model answer that LOOKS like a normal helpful response but carries an

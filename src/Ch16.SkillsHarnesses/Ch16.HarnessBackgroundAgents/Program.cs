@@ -1,7 +1,7 @@
 // ============================================================================
-// Chapter 19 — Background agents: delegating work and collecting it later
+// Background agents: delegating work and collecting it later
 // ----------------------------------------------------------------------------
-// Chapter 12 composed agents synchronously: the orchestrator called a
+// The multi-agent chapter composed agents synchronously: the orchestrator called a
 // specialist and waited. BackgroundAgentsProvider is the asynchronous form.
 // You hand the harness a set of named agents; it injects tools the model uses
 // to start work, then carry on and collect results later:
@@ -36,7 +36,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 19: Background agents ===");
+Console.WriteLine("=== Background agents ===");
 Console.WriteLine();
 
 // ── Two specialists, as plain agents ──────────────────────────────────

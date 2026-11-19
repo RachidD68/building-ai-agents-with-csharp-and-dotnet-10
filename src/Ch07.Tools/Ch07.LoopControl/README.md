@@ -1,4 +1,4 @@
-# Chapter 8 -- Loop Control (FunctionInvokingChatClient)
+# Loop Control (FunctionInvokingChatClient)
 
 Supports the chapter's "Inside the loop" section. Shows the guardrails on the tool-calling loop engine, `FunctionInvokingChatClient`, configured to low limits so they fire visibly.
 

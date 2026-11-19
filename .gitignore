@@ -11,7 +11,7 @@
 *.sln.docstates
 
 # Local credential overrides — never commit real keys.
-# appsettings.local.json is the gitignored override the companion code documents (Chapter 4).
+# appsettings.local.json is the gitignored override the companion code documents (the development-environment chapter).
 appsettings.local.json
 appsettings.*.local.json
 **/appsettings.local.json

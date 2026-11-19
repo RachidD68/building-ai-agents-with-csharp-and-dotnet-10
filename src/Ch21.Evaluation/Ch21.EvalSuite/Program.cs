@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 18 — Evaluation: LocalEvaluator + FunctionEvaluator + (optional)
+// Evaluation: LocalEvaluator + FunctionEvaluator + (optional)
 // FoundryEvals against a small weather agent
 // ----------------------------------------------------------------------------
 // This sample evaluates a single agent equipped with one tool (get_weather)
@@ -41,7 +41,7 @@ IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 18: Evaluation suite ===");
+Console.WriteLine("=== Evaluation suite ===");
 Console.WriteLine();
 
 // ── The agent under test ──────────────────────────────────────────
@@ -109,7 +109,7 @@ if (string.IsNullOrWhiteSpace(foundryEndpoint))
     Console.WriteLine();
     Console.WriteLine("[Foundry layer skipped] To enable LLM-as-judge scoring with");
     Console.WriteLine("FoundryEvals, set LlmProvider:Foundry:ProjectEndpoint in");
-    Console.WriteLine("appsettings.json and run `az login`. See Chapter 4 for setup.");
+    Console.WriteLine("appsettings.json and run `az login`. See the development-environment chapter for setup.");
 }
 else
 {
@@ -118,7 +118,7 @@ else
 
     // The real wiring: FoundryEvals takes an AIProjectClient, the judge
     // deployment name, then the evaluator names to run. The project client is
-    // the same Microsoft Foundry handle the rest of the book uses (Chapter 4).
+    // the same Microsoft Foundry handle the rest of the book uses (the development-environment chapter).
     AIProjectClient projectClient = new(new Uri(foundryEndpoint), new DefaultAzureCredential());
     string judgeModel = config["LlmProvider:Foundry:Model"] ?? "gpt-5.6-terra";
 

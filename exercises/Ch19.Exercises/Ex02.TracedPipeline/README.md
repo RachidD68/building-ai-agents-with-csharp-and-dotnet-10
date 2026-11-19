@@ -2,7 +2,7 @@
 
 ## Prompt
 
-Take Chapter 12's Content Pipeline (Researcher → Writer → Editor). Wrap each stage in
+Take the multi-agent chapter's Content Pipeline (Researcher → Writer → Editor). Wrap each stage in
 a custom `Activity` span named `pipeline.researcher`, `pipeline.writer`,
 `pipeline.editor`. Tag each with the stage's input length and output length. Run a
 sample topic through the pipeline and export the trace to the console. Verify the

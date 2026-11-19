@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 10 — Introduction to RAG (Embeddings Demo)
+// Introduction to RAG (Embeddings Demo)
 // Generates embeddings for sample sentences and displays a cosine similarity
 // matrix, showing that semantically similar sentences score higher.
 //
@@ -23,7 +23,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== Chapter 10: Embeddings Demo — Semantic Similarity ===\n");
+Console.WriteLine("=== Embeddings Demo — Semantic Similarity ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

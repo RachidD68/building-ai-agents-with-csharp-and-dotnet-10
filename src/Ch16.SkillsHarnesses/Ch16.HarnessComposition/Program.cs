@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 19 — Composing the harness: instructions, switches, your own tools
+// Composing the harness: instructions, switches, your own tools
 // ----------------------------------------------------------------------------
 // The harness is opinionated, not closed. This project shows the three ways
 // you shape it:
@@ -35,7 +35,7 @@ IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("=== Chapter 19: Composing the harness ===");
+Console.WriteLine("=== Composing the harness ===");
 Console.WriteLine();
 
 // ── 1. The instruction layers ─────────────────────────────────────────

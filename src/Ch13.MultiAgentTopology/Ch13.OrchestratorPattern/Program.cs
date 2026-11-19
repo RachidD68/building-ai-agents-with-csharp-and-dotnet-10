@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 12 — Multi-Agent Systems (Orchestrator Pattern)
+// Multi-Agent Systems (Orchestrator Pattern)
 // Demonstrates the hub-and-spoke pattern: an orchestrator agent decides
 // which specialist to call using function calling (agents-as-tools).
 //
@@ -27,7 +27,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 12: Orchestrator Pattern — Hub-and-Spoke ===\n");
+Console.WriteLine("=== Orchestrator Pattern — Hub-and-Spoke ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

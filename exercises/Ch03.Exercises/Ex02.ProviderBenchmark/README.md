@@ -8,7 +8,7 @@ Write a program that takes the **same 10 questions**, asks **each of your config
 
 - Swap `AddLlmChatClient` for a **loop that registers each provider under a different keyed service name** (`AddKeyedSingleton<IChatClient>(providerName, ...)`), then resolve with `GetRequiredKeyedService<IChatClient>(providerName)`.
 - `Stopwatch` gives you latency.
-- The Chapter 3 cost formula gives you the dollar figure: `tokens × rate / 1M`, input and output priced separately, summed over the run.
+- The per-token cost formula gives you the dollar figure: `tokens × rate / 1M`, input and output priced separately, summed over the run.
 - A provider counts as *configured* when its section carries the field it cannot work without: `Ollama:Endpoint`, `GitHub:Token`, `OpenAI:ApiKey`, or `AzureOpenAI:Endpoint`.
 
 ## Setup
@@ -47,5 +47,5 @@ Fastest provider: openai (450 ms average)
 - Keyed DI services: one named `IChatClient` registration per provider
 - Discovering configured providers from configuration instead of hardcoding
 - Benchmarking with `Stopwatch`; averaging latency and token counts
-- The Chapter 3 cost formula applied to real usage data
+- The per-token cost formula applied to real usage data
 - Distinguishing user cancellation (Ctrl+C) from provider failure

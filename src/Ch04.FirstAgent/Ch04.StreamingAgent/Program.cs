@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// Chapter 5 — Hello, Agent! (Streaming Agent)
+// Hello, Agent! (Streaming Agent)
 // The same pirate agent, but now using streaming to see tokens arrive in
 // real-time. Streaming is essential for chat UIs where users expect to see
 // the response being "typed out" rather than waiting for the full response.
@@ -25,7 +25,7 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Chapter 5: Hello, Agent! (Streaming) ===\n");
+Console.WriteLine("=== Hello, Agent! (Streaming) ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 9 — The Model Context Protocol (MCP Server)
+// The Model Context Protocol (MCP Server)
 // A console app MCP server that exposes product catalog tools over stdio.
 //
 // Key concepts:

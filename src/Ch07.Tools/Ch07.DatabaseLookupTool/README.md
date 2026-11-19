@@ -1,4 +1,4 @@
-# Chapter 8 -- Tools and Function Calling (Database Lookup Tool)
+# Tools and Function Calling (Database Lookup Tool)
 
 Demonstrates tools backed by dependency-injected services. The tool class receives an `IProductRepository` via constructor injection, showing how real-world tools connect to data stores.
 

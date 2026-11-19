@@ -1,4 +1,4 @@
-# Chapter 17 -- Eval as a test suite (EvalTests)
+# Eval as a test suite (EvalTests)
 
 A deterministic, offline assertion harness — "treat your eval suite like your
 test suite" made concrete. It is a plain console harness (no xUnit, matching the
@@ -27,5 +27,5 @@ Exit code `0` when every assertion holds, `1` otherwise.
 
 ```bash
 # Fully offline and deterministic — no model, no network.
-dotnet run --project src/Ch17.EvalTests/Ch17.EvalTests
+dotnet run --project src/Ch21.Evaluation/Ch21.EvalTests
 ```

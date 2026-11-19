@@ -1,6 +1,6 @@
 // ============================================================================
 // Exercise 02 — Traced Pipeline (Intermediate)
-// Chapter 12's Content Pipeline (Researcher -> Writer -> Editor) wrapped in
+// the multi-agent chapter's Content Pipeline (Researcher -> Writer -> Editor) wrapped in
 // custom Activity spans: pipeline.researcher, pipeline.writer, pipeline.editor
 // as SIBLINGS under one pipeline.run root span, each tagged with the stage's
 // input length and output length. Each stage's actual output feeds the next
@@ -44,7 +44,7 @@ using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 // ---------------------------------------------------------------
-// The Content Pipeline agents (Chapter 12)
+// The Content Pipeline agents (the multi-agent chapter)
 // ---------------------------------------------------------------
 ChatClientAgent researcher = new(chatClient,
     instructions: "You are a researcher. List 4-5 key facts or points about the " +

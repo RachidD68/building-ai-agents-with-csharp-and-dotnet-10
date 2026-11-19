@@ -1,5 +1,5 @@
 // ============================================================================
-// Chapter 7 — Structured Output (Robust Extraction)
+// Structured Output (Robust Extraction)
 // The production counterpart to the happy path. Three ideas, together:
 //   1. [Description] attributes carry schema hints independent of build config.
 //   2. TryRunStructuredAsync<T>() wraps RunAsync<T>() with a single stricter
@@ -33,7 +33,7 @@ using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 ILogger logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RobustExtraction");
 
-Console.WriteLine("=== Chapter 7: Structured Output — Robust Extraction ===\n");
+Console.WriteLine("=== Structured Output — Robust Extraction ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
