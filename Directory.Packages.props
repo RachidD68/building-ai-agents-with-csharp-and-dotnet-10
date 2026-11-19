@@ -47,6 +47,12 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <!-- SQLite: the one pin for every sample that keeps state in a SQLite file
+         (operation store, outbox and delivery journal of the authorized-actions chapter
+         and its Contoso snapshot). Microsoft.Data.Sqlite.Core 10.0.13 needs
+         SQLitePCLRaw.core 2.1.13, so the native bundle is pinned at the same 2.1.13. -->
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.13" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
     <!-- Hosting -->
     <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
