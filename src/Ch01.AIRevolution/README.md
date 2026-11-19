@@ -32,8 +32,10 @@ This is a **theory chapter** with no companion code project. Use the checklist b
 - [ ] **Ch 2-4 (Foundations)** -- C# essentials, LLM mental model, first API call
 - [ ] **Ch 5-8 (Core Agent Skills)** -- agents, conversations, structured output, tool calling
 - [ ] **Ch 9-10 (Knowledge)** -- MCP integration, RAG pipelines
-- [ ] **Ch 11-12 (Multi-Agent & Workflows)** -- orchestration, sequential and conditional pipelines
-- [ ] **Ch 13-16 (Production)** -- hosting, observability, safety guardrails, next steps
+- [ ] **Ch 11 (Multimodal)** -- agents that read images
+- [ ] **Ch 12-13 (Multi-Agent & Workflows)** -- orchestration, sequential and conditional pipelines
+- [ ] **Ch 14-19 (Production)** -- hosting, observability, safety guardrails, agent skills, evaluation, the agent harness
+- [ ] **Ch 20 (Next Steps)** -- where to go after the book
 
 ## Key Takeaways
 1. Agentic AI is not a fad -- it is a fundamental shift in how software is designed.

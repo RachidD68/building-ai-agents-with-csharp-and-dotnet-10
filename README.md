@@ -34,8 +34,8 @@ Corrections in the companion code, with what to change in the printed listings, 
 | Ch10, Ch18 · vector size (R13b) | B | 1536 dimensions declared, 768 produced | 768, checked at startup | v1.1.0 (companion code) |
 | Ch07 · confidence (R14) | B | Model confidence trusted and used as a gate | Self-reported, range-checked, never a gate on its own | v1.1.0 (companion code) |
 | Repository · Aspire, CI (R15) | B | Aspire behind Chapter 14, `ServiceDefaults` unused, no CI, no lock files | Aligned and wired; lock files and CI workflow | v1.1.0 (companion code) |
-| Security pins | A | Aspire < 13.6.5, MessagePack 3.1.7 and System.Text.Json 11 previews failed NuGet audit, so restore failed | Aspire 13.6.5, MessagePack 3.1.12, Microsoft.Extensions.* 10.0.13 | v1.1.0 (companion code); MessagePack in v1.0.1 |
-| `global.json` | A | A machine with only a newer SDK could not build | `rollForward: latestMajor` | v1.1.0 (companion code) |
+| Security pins | A | Aspire < 13.6.5, MessagePack 3.1.7 and System.Text.Json 11 previews failed NuGet audit, so restore failed | Aspire 13.6.5, MessagePack 3.1.12, Microsoft.Extensions.* 10.0.13 | MessagePack in v1.0.1; Aspire and System.Text.Json in v1.0.2 (with Microsoft.Extensions.* 11.0.0); v1.1.0 uses Microsoft.Extensions.* 10.0.13 |
+| `global.json` | A | A machine with only a newer SDK could not build | `rollForward: latestMajor` | v1.0.2 (companion code); carried into v1.1.0 |
 | All · MAF 1.28 | B | Pinned to an earlier Agent Framework release | MAF 1.28.0, MCP 2.4.0 | v1.1.0 (companion code) |
 | README · exercise solutions | B | Claimed a worked answer for every exercise | Says which exercises have solutions | v1.1.0 (companion code) |
 | Ch04 · project count | B | "50+ projects"; README sub-totals ambiguous | 127 projects: 125 runnable + 2 libraries | v1.1.0 (companion code) |
@@ -92,7 +92,7 @@ Plus five appendices — a NuGet package reference, a Semantic Kernel to MAF mig
 ### Target stack
 
 - **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.28.0** (the first paperback printing was verified against 1.20.0; every listing it prints builds and runs unchanged on 1.28.0)
+- **Microsoft Agent Framework 1.28.0** (the first paperback printing was verified against 1.20.0; a few printed listings changed for 1.28.0, and [ERRATA.md](./ERRATA.md) says what to change in each)
 - **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
 - Visual Studio 2026, or VS Code with the C# Dev Kit
 
@@ -117,6 +117,8 @@ git clone https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet
 cd building-ai-agents-with-csharp-and-dotnet-10
 dotnet build AgenticAI.slnx
 ```
+
+On Windows, if the clone fails with "Filename too long", run `git config --global core.longpaths true` and clone again.
 
 Open `AgenticAI.slnx` once and every chapter's projects load together.
 
