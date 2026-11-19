@@ -2,25 +2,6 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
-      "Azure.AI.OpenAI": {
-        "type": "Direct",
-        "requested": "[2.9.0-beta.1, )",
-        "resolved": "2.9.0-beta.1",
-        "contentHash": "CgIYDuCSOFx+yPuCdK7iz71OW2envfVeIE/YoNYK+mhr6bxgIJV6jfBF+mV9aHDQ6KVQjeSL6OZ7x90XrvsoRg==",
-        "dependencies": {
-          "Azure.Core": "1.51.1",
-          "OpenAI": "2.9.1"
-        }
-      },
-      "Azure.Identity": {
-        "type": "Direct",
-        "requested": "[1.21.0, )",
-        "resolved": "1.21.0",
-        "contentHash": "GeFv8sGwRKvDKwI2WFy8r0mhmlxEVZg24Sit2NogTjiSO8RVjllWM65OT6e1sKjOvG8V74y7hAbaELUUPjZQSw==",
-        "dependencies": {
-          "Azure.Core": "1.53.0"
-        }
-      },
       "Microsoft.Agents.AI": {
         "type": "Direct",
         "requested": "[1.28.0, )",
@@ -124,38 +105,10 @@
           "ModelContextProtocol.Core": "[2.4.0]"
         }
       },
-      "OllamaSharp": {
-        "type": "Direct",
-        "requested": "[5.4.25, )",
-        "resolved": "5.4.25",
-        "contentHash": "EqkPM1gbkE+RbHgKUMzp4lYjpFymWUIgJntx3u4uDXAfAIFUXJ0MGklNFCi/PdCaxNAPRpcf205yx+g6jLLhZg==",
-        "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.4.1"
-        }
-      },
-      "Azure.Core": {
-        "type": "Transitive",
-        "resolved": "1.53.0",
-        "contentHash": "x9c/toFMOtRrlTdFuE7rlGCVAduQzWVfKmLz5juj41zJAXEhYD5hluiUyyAEzJ6OxpBnKtiaBztzwpZITAVjtg==",
-        "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "10.0.3",
-          "Microsoft.Extensions.Configuration.Abstractions": "10.0.3",
-          "Microsoft.Extensions.Hosting.Abstractions": "10.0.3",
-          "Microsoft.Identity.Client": "4.83.1",
-          "Microsoft.Identity.Client.Extensions.Msal": "4.83.1",
-          "System.ClientModel": "1.10.0",
-          "System.Memory.Data": "10.0.3"
-        }
-      },
       "Google.Protobuf": {
         "type": "Transitive",
         "resolved": "3.30.2",
         "contentHash": "Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw=="
-      },
-      "Microsoft.Bcl.AsyncInterfaces": {
-        "type": "Transitive",
-        "resolved": "10.0.3",
-        "contentHash": "TV62UsrJZPX6gbt3c4WrtXh7bmaDIcMqf9uft1cc4L6gJXOU07hDGEh+bFQh/L2Az0R1WVOkiT66lFqS6G2NmA=="
       },
       "Microsoft.Extensions.AmbientMetadata.Application": {
         "type": "Transitive",
@@ -464,28 +417,6 @@
           "Microsoft.Extensions.Options": "10.0.9"
         }
       },
-      "Microsoft.Identity.Client": {
-        "type": "Transitive",
-        "resolved": "4.83.1",
-        "contentHash": "jOLIrZ3cynoqHLLO1cXplFFabrhrMEYs/EuKHvmCyrOm1axqiVFT6nCSnHxk7w5+d2BeQfCdM12Yf/0X7OeS1g==",
-        "dependencies": {
-          "Microsoft.IdentityModel.Abstractions": "8.14.0"
-        }
-      },
-      "Microsoft.Identity.Client.Extensions.Msal": {
-        "type": "Transitive",
-        "resolved": "4.83.1",
-        "contentHash": "I3k4J4Hj4KbLEFanjeUzzDOVecukETaTgEkJ7h2pP/Yazs6SLp6TVUTo/Eo+ptPXMwvc+iX7rBFtMSUrA7R+Mg==",
-        "dependencies": {
-          "Microsoft.Identity.Client": "4.83.1",
-          "System.Security.Cryptography.ProtectedData": "4.5.0"
-        }
-      },
-      "Microsoft.IdentityModel.Abstractions": {
-        "type": "Transitive",
-        "resolved": "8.14.0",
-        "contentHash": "iwbCpSjD3ehfTwBhtSNEtKPK0ICun6ov7Ibx6ISNA9bfwIyzI2Siwyi9eJFCJBwxowK9xcA1mj+jBWiigeqgcQ=="
-      },
       "OpenAI": {
         "type": "Transitive",
         "resolved": "2.14.0",
@@ -543,11 +474,6 @@
         "type": "Transitive",
         "resolved": "10.0.13",
         "contentHash": "E4JC7KcY4j1yx9uy8tVsHlGThnwLdUWtUz6aLHCqbN/jbtwbwbZgnVEF9atUr/7ynFCbo8Rbij056Y9bWM9ALg=="
-      },
-      "System.Security.Cryptography.ProtectedData": {
-        "type": "Transitive",
-        "resolved": "4.5.0",
-        "contentHash": "wLBKzFnDCxP12VL9ANydSYhk59fC4cvOr9ypYQLPnAj48NQIhqnjdD2yhP8yEKyBJEjERWS9DisKL7rX5eU25Q=="
       },
       "System.Threading.RateLimiting": {
         "type": "Transitive",
@@ -684,6 +610,15 @@
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.11.0",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.14"
+        }
+      },
+      "OllamaSharp": {
+        "type": "CentralTransitive",
+        "requested": "[5.4.25, )",
+        "resolved": "5.4.25",
+        "contentHash": "EqkPM1gbkE+RbHgKUMzp4lYjpFymWUIgJntx3u4uDXAfAIFUXJ0MGklNFCi/PdCaxNAPRpcf205yx+g6jLLhZg==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.4.1"
         }
       }
     }

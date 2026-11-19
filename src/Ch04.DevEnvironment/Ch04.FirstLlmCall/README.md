@@ -17,8 +17,12 @@ Your first real conversation with an AI model. This project connects to an LLM p
 | **OpenAI** | Pay-as-you-go | Direct access, latest models |
 | **Azure OpenAI** | Pay-as-you-go | Enterprise, managed deployments |
 
+> **Azure OpenAI** comes from `AgenticAI.Common.Azure`, which this project references: `AddAzureOpenAIProvider()`
+> plugs the `azure` arm into `AddLlmChatClient`. The other samples reference only the GA core, so add the
+> same reference and line to run one of them on Azure OpenAI.
+
 > **Anthropic (Claude)** is also wired up, but it returns an `AIAgent` (not an `IChatClient`), so it
-> registers through `AddAnthropicAgent(...)` rather than `AddLlmChatClient(...)`. Set
+> registers through `AddAnthropicAgent(...)` (in `AgenticAI.Common.Anthropic`) rather than `AddLlmChatClient(...)`. Set
 > `LlmProvider:Anthropic:ApiKey` (or the `ANTHROPIC_API_KEY` environment variable). See Appendix A
 > for the full Anthropic treatment.
 

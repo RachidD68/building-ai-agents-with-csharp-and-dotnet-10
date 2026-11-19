@@ -19,6 +19,7 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 // Register the IChatClient using the multi-provider factory from Common.
 // This reads the "LlmProvider" section from appsettings.json to decide which
 // provider to use (azure, openai, or ollama).
+builder.Services.AddAzureOpenAIProvider();   // the azure arm, from AgenticAI.Common.Azure
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();

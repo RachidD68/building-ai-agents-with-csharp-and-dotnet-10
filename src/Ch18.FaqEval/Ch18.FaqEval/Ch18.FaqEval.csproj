@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../Common/AgenticAI.Common.Azure/AgenticAI.Common.Azure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

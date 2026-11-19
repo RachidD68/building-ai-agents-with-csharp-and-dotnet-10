@@ -33,6 +33,7 @@ using Ch10.FaqAgent.CustomProvider;
 if (args.Contains("--self-test")) return await RagSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddAzureOpenAIProvider();   // the azure arm, from AgenticAI.Common.Azure
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();

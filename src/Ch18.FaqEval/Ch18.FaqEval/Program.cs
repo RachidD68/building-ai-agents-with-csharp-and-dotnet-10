@@ -41,6 +41,7 @@ using AgenticAI.Common.Extensions;
 using Ch18.FaqEval;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddAzureOpenAIProvider();   // the azure arm, from AgenticAI.Common.Azure
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();

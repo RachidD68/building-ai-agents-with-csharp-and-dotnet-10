@@ -603,6 +603,14 @@
           "OllamaSharp": "[5.4.25, )"
         }
       },
+      "agenticai.common.azure": {
+        "type": "Project",
+        "dependencies": {
+          "AgenticAI.Common": "[1.0.0, )",
+          "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
+          "Azure.Identity": "[1.21.0, )"
+        }
+      },
       "Microsoft.Agents.AI.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[1.28.0, )",
