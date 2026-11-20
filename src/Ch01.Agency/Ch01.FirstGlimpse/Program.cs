@@ -19,26 +19,27 @@ using AgenticAI.Common.Extensions;
 
 if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
-// 1. Wire up an LLM chat client. The provider is chosen in appsettings.json /
-//    User Secrets and works across Azure OpenAI, OpenAI, or
-//    Ollama without changing this code — all set up in the development-environment chapter.
+// Wire up an LLM chat client. The provider is chosen in appsettings.json / User Secrets:
+// openai or ollama; Azure OpenAI through AgenticAI.Common.Azure (see the development-environment chapter).
+// --offline registers no provider at all, so it needs no model settings.
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddLlmChatClient(builder.Configuration);
+bool offline = args.Contains("--offline");
+if (!offline) builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();
-IChatClient chatClient = args.Contains("--offline")
+IChatClient chatClient = offline
     ? new OfflineChatClient()
     : host.Services.GetRequiredService<IChatClient>();
 
 Console.WriteLine("=== Your First Glimpse of an Agent ===\n");
 
-// 2. Create an agent. The instructions are its persona, applied to every call.
+// Create an agent. The instructions are its persona, applied to every call.
 ChatClientAgent agent = new(
     chatClient,
     instructions: "You are a friendly assistant for .NET developers. Be concise.",
     name: "FirstGlimpse");
 
-// 3. Give it a session to remember the conversation, then ask one question.
+// Give it a session to remember the conversation, then ask one question.
 AgentSession session = await agent.CreateSessionAsync();
 
 AgentResponse response = await agent.RunAsync(

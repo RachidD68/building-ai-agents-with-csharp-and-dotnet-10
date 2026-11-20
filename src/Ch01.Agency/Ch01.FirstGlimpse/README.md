@@ -6,8 +6,9 @@ question. You are **not** expected to understand every line yet; it's here to ma
 abstract concrete. Every piece is explained in full by the first-agent chapter (the host and DI come
 in the development-environment chapter).
 
-The provider is chosen in `appsettings.json` (or User Secrets) and works across Azure
-OpenAI, OpenAI, and Ollama without touching the code — see the development-environment chapter.
+The provider is chosen in `appsettings.json` (or User Secrets): openai or ollama;
+Azure OpenAI through `AgenticAI.Common.Azure` (see the development-environment chapter).
+`--offline` registers no provider, so it runs with no model settings at all.
 
 ## Run it
 
