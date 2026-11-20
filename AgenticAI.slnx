@@ -120,6 +120,13 @@
     <Project Path="src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj" />
     <Project Path="src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj" />
   </Folder>
+  <Folder Name="/src/Ch18.StreamingInterfaces/">
+    <Project Path="src/Ch18.StreamingInterfaces/Ch18.AguiClient/Ch18.AguiClient.csproj" />
+    <Project Path="src/Ch18.StreamingInterfaces/Ch18.AguiServer/Ch18.AguiServer.csproj" />
+    <Project Path="src/Ch18.StreamingInterfaces/Ch18.ApprovalUi/Ch18.ApprovalUi.csproj" />
+    <Project Path="src/Ch18.StreamingInterfaces/Ch18.InterfaceTests/Ch18.InterfaceTests.csproj" />
+    <Project Path="src/Ch18.StreamingInterfaces/Ch18.SseStatusStream/Ch18.SseStatusStream.csproj" />
+  </Folder>
   <Folder Name="/src/Ch19.Observability/">
     <Project Path="src/Ch19.Observability/Ch19.IncidentDiagnosis/Ch19.IncidentDiagnosis.csproj" />
     <Project Path="src/Ch19.Observability/Ch19.OpenTelemetryAgent/Ch19.OpenTelemetryAgent.csproj" />
