@@ -1,6 +1,6 @@
 # code a199e94 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
 # note: printed in the book as a failure: step 1 is "Answered" with a citation, but the cited excerpt expense-policy-8 lists ride-sharing as reimbursable and the answer says it is not mentioned
-# note: this run is the handbook desk alone, at a199e94; on main, v3's dotnet run continues with the permissions scenario (PolicyFaq) that the RAG-with-permissions chapter adds, published as Contoso.FaqEvidence.policy.txt
+# note: this run is the handbook desk alone, at a199e94, against the handbook before its expense policy moved to EUR (86b5076; expense-policy-8, the chunk at issue, is unchanged); on main, v3's dotnet run continues with the permissions scenario (PolicyFaq) that the RAG-with-permissions chapter adds, published as Contoso.FaqEvidence.policy.txt
 $ dotnet run
 
 === Contoso: FAQ with evidence ===
@@ -10,6 +10,33 @@ Handbook indexed: 60 chunks.
   E-1001 (contoso): Are ride-sharing costs reimbursable on business travel?
   -> Answered: According to the handbook excerpt [expense-policy], ride-sharing costs are not explicitly mentioned as reimbursable.
      evidence [expense-policy-8 0.80, expense-policy-6 0.60, expense-policy-2 0.59] cited [expense-policy]
+  as expected  answered, citing the expense policy that was retrieved
+
+-- 2. Bob asks about something the handbook does not cover --
+  E-2002 (contoso): What is the policy on cryptocurrency investments?
+  -> NoEvidence: I don't have information about that in our knowledge base. Please contact HR.
+     evidence [] cited []
+  as expected  abstained: nothing scored at or above the threshold, the model was not called
+
+-- 3. A caller of another tenant --
+  mallory (fabrikam): How many PTO days do new employees get?
+  -> NotPermitted: This assistant answers questions from Contoso employees only.
+     evidence [] cited []
+  as expected  refused before any search: the handbook is Contoso's
+
+Evidence log: 3 records.
+
+# second run: code 86b5076 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
+# note: same question, same top chunk (expense-policy-8 0.80); this time the answer matches its evidence. The failure above does not repeat on every run. Only the handbook desk block is shown; the PolicyFaq block that follows on main is in Contoso.FaqEvidence.policy.txt
+$ dotnet run
+
+=== Contoso: FAQ with evidence ===
+Handbook indexed: 60 chunks.
+
+-- 1. Alice asks before she files her taxi claim --
+  E-1001 (contoso): Are ride-sharing costs reimbursable on business travel?
+  -> Answered: Yes, ride-sharing costs are reimbursable on business travel, as stated in the expense-policy excerpt [Source: expense-policy].
+     evidence [expense-policy-8 0.80, expense-policy-2 0.59, expense-policy-12 0.58] cited [expense-policy]
   as expected  answered, citing the expense policy that was retrieved
 
 -- 2. Bob asks about something the handbook does not cover --

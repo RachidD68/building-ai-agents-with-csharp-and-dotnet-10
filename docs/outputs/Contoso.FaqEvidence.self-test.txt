@@ -1,4 +1,4 @@
-# code ffe9eae | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code 86b5076 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run differs only in the order of the two tied handbook chunks in step 1)
 # note: the first block (RESULT 11/11) is the grounded RAG baseline's handbook desk; the second block is the permissions scenario (PolicyFaq) that the RAG-with-permissions chapter adds to the same project
 $ dotnet run -- --self-test
 

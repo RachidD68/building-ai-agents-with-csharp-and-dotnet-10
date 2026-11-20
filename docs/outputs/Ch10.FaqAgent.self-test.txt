@@ -1,4 +1,4 @@
-# code ffe9eae | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code 86b5076 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === Contoso FAQ agent: self-test (fake model, keyword embeddings) ===
