@@ -1,4 +1,4 @@
-# code 6a7f86b | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run differs only in the order of the two concurrent-activation outcomes, which follows thread timing)
+# code ca4d8bd | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run can differ only in the order of the two concurrent-activation outcomes, which follows thread timing)
 $ dotnet run -- --self-test
 
 === Versioned ingestion: self-test ===
@@ -8,12 +8,13 @@ $ dotnet run -- --self-test
   PASS  v2 activated: notice retires v1, activates v2; v1 is Superseded
   PASS  search returns v2 chunks only
   PASS  the management draft is indexed, not activated: Indexed, never in search
+  PASS  activating it on 20 November, before its effective date 2027-01-01 -> not_yet_effective; it stays Indexed, v2 stays Active
 
 -- Re-ingestion, conflicts and concurrency --
   PASS  same bytes again: created False, state Active; one active version, chunk count unchanged
   PASS  same version number, other bytes -> version_conflict
   PASS  8 concurrent ingestions of one source: 1 row, 1 active, 1 activation
-  PASS  v1 and v2 activated at the same time: v2 Active, v1 Superseded (older_than_active / activated)
+  PASS  v1 and v2 activated at the same time: v2 Active, v1 Superseded (activated / activated)
   PASS  a late retry of an older version after v2 is active -> older_than_active; v2 stays active
   PASS  unknown tenant -> unknown_tenant; it stays Discovered, activation -> not_indexed
 
@@ -30,6 +31,7 @@ $ dotnet run -- --self-test
 -- Deletion: tombstone and every index --
   PASS  delete: found before True; notice retires v1; chunks left 0; on a date -> deleted
   PASS  the same bytes ingested again -> deleted: a retry does not resurrect it
+  PASS  delete during indexing: index -> deleted, state Deleted, chunks left 0
 
 -- A new embedding model is a new index version --
   PASS  DEFECT REPRODUCED: same text, two models, both 768 dimensions: cosine 0.00 (same model: 1.00)
@@ -37,4 +39,4 @@ $ dotnet run -- --self-test
   PASS  index 2 built beside index 1 and switched: top hit contoso-taxi@v2#0; index 1 keeps 10 chunks for rollback
   PASS  rollback: index 1 (hashing-0) answers again
 
-RESULT 22/22
+RESULT 24/24

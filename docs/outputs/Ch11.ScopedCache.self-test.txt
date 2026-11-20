@@ -1,4 +1,4 @@
-# code f189941 (Ch11 files as committed in e6baaf6) | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code ca4d8bd | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === Scoped cache: self-test ===

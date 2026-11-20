@@ -1,4 +1,4 @@
-# code a8a9a3d | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted models; the Linux container run is identical)
+# code ca4d8bd | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted models; the Linux container run differs only in the order of two tied handbook chunks in the first block)
 # note: the first RESULT is the handbook desk of the RAG-baseline chapter, the second the PolicyFaq scenario
 $ dotnet run -- --self-test
 
@@ -34,11 +34,12 @@ $ dotnet run -- --self-test
 -- 5. 6 questions at the same moment on one desk --
   PASS  all 6 searches were in flight at the same time
   PASS  each reply holds only its own evidence and citation (6/6)
+  PASS  detector: 2 questions asked one after the other are not reported as in flight together
 
 -- 6. The evidence log --
   PASS  one record per question, each with its own id (9 records)
 
-RESULT 10/10
+RESULT 11/11
 
 === Policies with permissions, freshness and evidence ===
 

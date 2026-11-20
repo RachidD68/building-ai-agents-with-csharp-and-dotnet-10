@@ -1,5 +1,6 @@
 # code a8a9a3d | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
 # note: the book uses steps 1-3 of the PolicyFaq half; in step 4 the warning is right but the model reads 10 November as a time of day; in step 6 nothing of Alice's was cached (her first hotel answer was withheld as no_citation), so the revoke-under-cache claim rests on the self-test
+# note: re-checked against the evidence check of ca4d8bd (every id-shaped token): no answer here carries an id outside [...], so the verdicts are the same
 $ dotnet run
 
 === Contoso: FAQ with evidence ===

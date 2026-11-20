@@ -1,5 +1,6 @@
 # code a8a9a3d | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
 # note: printed in the book as a grounding failure, not a retrieval failure: every caller received only its own tenant and level; for E-1001 and M-3003 the model calls a 23:30 taxi outside 22:00-06:00 and the evidence check accepts it, because it checks provenance, not support
+# note: re-checked against the evidence check of ca4d8bd (every id-shaped token): no answer here carries an id outside [...], so the verdicts are the same
 $ dotnet run
 
 === Authorized search (live: Ollama) ===

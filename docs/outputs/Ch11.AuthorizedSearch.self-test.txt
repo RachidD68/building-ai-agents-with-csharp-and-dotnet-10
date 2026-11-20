@@ -1,4 +1,4 @@
-# code f189941 (Ch11 files as committed in e6baaf6) | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code ca4d8bd | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === Authorized search: self-test ===
@@ -9,6 +9,7 @@ Indexed 17 document versions (all states) from the two-organization corpus.
   PASS  ... and the same entries reach the chat client's ChatOptions.AdditionalProperties
   PASS  OllamaSharp leaves them out of the /api/chat request body (other connectors may not)
   PASS  with a ContextFormatter, the injected context is the formatter's text alone
+  PASS  the in-memory filter runs before the top K: top 1 unfiltered fabrikam-taxi@v1#0 (not Frank's to read), top 1 for Frank fabrikam-taxi@v2#0
 
 -- Where it fails: first attempts --
   post-filter log: fabrikam-taxi@v1#0, contoso-taxi@v1#0, fabrikam-taxi@v2#0, contoso-supplier-annex@v1#0, contoso-taxi@v2#0
@@ -41,6 +42,9 @@ Indexed 17 document versions (all states) from the two-organization corpus.
   PASS  nothing authorized matches -> no_authorized_evidence
   PASS  an answer with no citation -> no_citation
   PASS  a citation of the superseded version, never supplied -> citation_not_supplied
+  PASS  DEFECT REPRODUCED: a check that reads only [id] accepts 4 of 4 answers that plant contoso-exec-travel@v1#0
+  PASS  every id-shaped token is checked: 4 of 4 -> citation_not_supplied
+  PASS  LIMIT: Xavier (restricted) was given contoso-exec-travel@v1#0, so the planted citation is accepted (accepted); the action boundary must hold
   PASS  a caller with no subject gets no evidence -> no_authorized_evidence
 
-RESULT 22/22
+RESULT 26/26
