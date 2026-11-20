@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contoso snapshot v4, "Receipts": the employee photographs a receipt instead
+       of typing a claim. The receipt is read, validated after extraction and turned
+       into a proposal; an unreadable or doubtful receipt waits for a person; a
+       ready one enters the v2 reimbursement desk, whose policy, review, commit and
+       payment run unchanged. Simulated effects only. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The previous snapshot, used as it is: ReimbursementDesk, PermissionDirectory, the Ch08 projects. -->
+    <ProjectReference Include="../v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The receipt reading and validation of Ch12.ReceiptExtraction, compiled in as
+         linked files (not a reference to that console app, so its appsettings.json
+         and corpus are not copied twice). -->
+    <Compile Include="../../src/Ch12.MultimodalDocuments/Ch12.ReceiptExtraction/ReceiptModels.cs" Link="Extraction/ReceiptModels.cs" />
+    <Compile Include="../../src/Ch12.MultimodalDocuments/Ch12.ReceiptExtraction/ReceiptValidator.cs" Link="Extraction/ReceiptValidator.cs" />
+    <Compile Include="../../src/Ch12.MultimodalDocuments/Ch12.ReceiptExtraction/ReceiptReader.cs" Link="Extraction/ReceiptReader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../assets/receipts/*.png" LinkBase="assets/receipts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

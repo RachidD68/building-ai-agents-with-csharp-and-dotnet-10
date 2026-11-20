@@ -2,27 +2,27 @@
 
 ## Prompt
 
-Send a local image to a vision agent with `DataContent` and print the description. Then add a second run that sends the same image question as a `UriContent` hosted URL, and compare what each path returns on your configured model. The lesson is in the difference.
+Send a local image to a vision agent with `DataContent` and print the description. Then add a second run that sends the same question with the image as a `UriContent` URL, and compare what each path returns on your configured model. The lesson is in the difference.
 
 ## What it does
 
-- **Run 1 — local bytes**: loads the image from disk with `File.ReadAllBytesAsync` and attaches it as a `DataContent` part (the bytes are inlined into the request). Works on every vision provider, including local Ollama `llava`.
-- **Run 2 — hosted URL**: attaches a stable public image URL as a `UriContent` part. The **model** fetches the bytes itself — this requires a provider that fetches URLs server-side (cloud `gpt-5.6-terra` does; local Ollama does not), so on Ollama this run prints a clear `[skipped]` message instead of crashing.
-- Both runs use the **same question**, are timed with `Stopwatch`, and the outputs are printed side by side at the end.
+- **Run 1 — local bytes**: loads the image from disk and attaches it as a `DataContent` part (the bytes are inlined into the request). Works on every vision provider, including local Ollama `llava`. Default image: the clean taxi receipt from `assets/receipts`.
+- **Run 2 — hosted URL**: attaches an image URL as a `UriContent` part. The provider must fetch it. The Ollama connector (OllamaSharp 5.4.25) drops the part without an error, so a local model answers the question without seeing any image. The program prints that note next to the answer instead of passing the answer off as a description.
+- Both runs use the same question, are timed, and are printed side by side.
 
-## Key Concepts
+For a fair comparison on a cloud provider, pass the URL of the same image you pass as a file: `dotnet run -- photo.png https://.../photo.png`.
 
-- Multimodal `ChatMessage` with `TextContent` + `DataContent` / `UriContent`
-- `DataContent`: bytes inlined into the request (local files, air-gapped images)
-- `UriContent`: the model fetches the URL (cloud providers only)
-- Timing and comparing the two content paths on the same agent
+## Acceptance
+
+- Both outputs are shown.
+- The URL run's behavior on a local model is explained in the output, not hidden.
+- `dotnet run -- --self-test` passes offline: it sends both runs through the real Ollama connector into a recording handler and checks that run 1 carries the bytes and run 2 carries neither an image nor the URL.
 
 ## Run
 
 ```
-dotnet run -- "C:\path\to\image.png"
+dotnet run -- [image path] [image URL]
+dotnet run -- --self-test
 ```
 
-Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`,
-or cloud `gpt-5.6-terra`). Local: `ollama pull llava`. On Ollama, expect the `UriContent`
-run to be reported as skipped — that asymmetry is the point of the exercise.
+Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`, or OpenAI).

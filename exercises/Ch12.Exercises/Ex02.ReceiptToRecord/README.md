@@ -2,23 +2,25 @@
 
 ## Prompt
 
-Extend the flagship `Ch12.ImageToTypedData`: read the invoice image and extract a
-typed `Receipt` record with `RunAsync<T>()` and `ChatResponseFormat.ForJsonSchema<T>()`.
-Then add a **reconciliation guard** — sum the line items yourself and report whether
-the sum matches the model-extracted total (it won't match exactly here, because the
-invoice total includes tax; that's the lesson).
+Extend `Ch12.ImageToTypedData`: read the invoice image into a typed `Receipt` record with `RunAsync<T>()` and `ChatResponseFormat.ForJsonSchema<T>()`. Then add a **reconciliation guard** after extraction: the items plus the tax must equal the total. A mismatch marks the total `ToVerify` for a person; the guard never replaces the number the model read.
+
+## Acceptance
+
+- The output shows the sum of the lines (plus tax) next to the total read.
+- A mismatch yields `ToVerify` and keeps the total as read; nothing is "corrected".
+- `dotnet run -- --self-test` passes offline (scripted replies: one that adds up, one misread total, one with the tax line dropped).
 
 ## Key Concepts
 
-- Multimodal input (image) + structured output (`RunAsync<T>`) — the typed-responses chapter + the multimodal chapter
-- `ChatResponseFormat.ForJsonSchema<Receipt>()` to force a typed JSON shape
-- Validating model output against an independent computation (don't trust a single number)
+- Multimodal input (image) + structured output (`RunAsync<T>`)
+- Validation after extraction: an independent computation checks a single number
+- Reporting a mismatch instead of repairing it
 
 ## Run
 
 ```
 dotnet run
+dotnet run -- --self-test
 ```
 
-Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`,
-or cloud `gpt-5.6-terra`). Local: `ollama pull llava`. A frontier model gives crisper numbers.
+Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`, or OpenAI).

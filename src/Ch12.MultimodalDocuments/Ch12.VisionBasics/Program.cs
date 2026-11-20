@@ -5,13 +5,19 @@
 // ChatMessage is richer. Instead of a string, we build a message whose content
 // is a list of AIContent parts: a TextContent (the question) plus an image part.
 //
-// We send an image TWO ways, both reaching the vision model unchanged:
-//   1. HOSTED URL   -> UriContent(url, mediaType)          (model fetches it)
+// We send an image TWO ways:
+//   1. HOSTED URL   -> UriContent(url, mediaType)          (the PROVIDER must fetch it)
 //   2. LOCAL FILE   -> DataContent(File.ReadAllBytes, ...) (bytes inlined)
 //
 // DOC GAP worth knowing: the official MAF multimodal page shows only UriContent.
 // The local-file/bytes path is DataContent — and it is the one you need for
-// images that never leave your machine. This sample proves both work.
+// images that never leave your machine.
+//
+// Whether a URL works depends on the connector. A cloud API that accepts image
+// URLs fetches the image server-side. The Ollama connector (OllamaSharp 5.4.25)
+// DROPS a UriContent part without an error: the model receives only the text,
+// so its "description" of a URL image is written without the image.
+// Ch12.Multimodal.Tests (test 4) shows this on the request body.
 //
 // Vision needs a VISION model. Configure it under "VisionModel" in
 // appsettings.json (separate from the chat "LlmProvider" so your default
@@ -81,7 +87,8 @@ AgentSession session = await agent.CreateSessionAsync(cts.Token);
 try
 {
     // -----------------------------------------------------------
-    // Way 1: HOSTED URL -> UriContent. The model fetches the bytes itself.
+    // Way 1: HOSTED URL -> UriContent. The provider must fetch the bytes;
+    // the Ollama connector drops this part (see the header).
     // A stable public domain image (Wikimedia "example" test JPEG).
     // -----------------------------------------------------------
     Console.WriteLine("--- Way 1: hosted URL (UriContent) ---");
@@ -97,7 +104,10 @@ try
 
     AgentResponse urlResponse = await agent.RunAsync(urlMessage, session, cancellationToken: cts.Token);
     Console.WriteLine($"Image : {imageUrl}");
-    Console.WriteLine($"Agent : {urlResponse.Text}\n");
+    Console.WriteLine($"Agent : {urlResponse.Text}");
+    if (chatClient is OllamaSharp.OllamaApiClient)
+        Console.WriteLine("Note  : the Ollama connector dropped the URL part; this answer was written without the image.");
+    Console.WriteLine();
 
     // -----------------------------------------------------------
     // Way 2: LOCAL FILE -> DataContent from bytes. Nothing leaves the box;

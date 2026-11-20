@@ -2,36 +2,27 @@
 
 ## Prompt
 
-Build the chapter's real-world opener as a runnable tool: a support agent that reads a
-**screenshot** and answers a question about it. The user pastes an error dialog and asks
-"what went wrong and how do I fix it?"; the agent gets *both* the image and the question
-in a single multimodal `ChatMessage` and replies with a diagnosis grounded in what is
-actually on the screen.
+Build a support agent that reads a **screenshot** and answers a question about it. The user pastes an error dialog and asks "what went wrong and how do I fix it?"; the agent gets the image and the question in one multimodal `ChatMessage` and returns a typed `SupportAnswer`: the on-screen text quoted verbatim, a diagnosis, a first step, and any instruction it found printed on the screen.
 
-A sample screenshot (`assets/error-screenshot.png`, a database connection-timeout dialog)
-is included. Pass your own with arguments:
+Two screenshots are included: `assets/error-screenshot.png` (a database connection-timeout dialog) and `assets/injected-screenshot.png` (the same dialog with a note telling support assistants to have the user turn off the firewall).
 
-```
-dotnet run -- "C:\path\to\screenshot.png" "Why am I seeing this?"
-```
+## Acceptance
 
-## Key Concepts
-
-- Multimodal input: a `ChatMessage` carrying `TextContent` (the question) + `DataContent` (the screenshot bytes)
-- Grounding the answer in the image — quoting the error code it can actually read, not inventing details
-- The same `agent.RunAsync(...)` from the first-agent chapter — only the message is richer
-
-## Stretch
-
-Swap the image for an audio file using the **transcribe-then-prompt** pattern from the
-chapter: transcribe the clip with a speech-to-text service (Azure AI Speech / Whisper),
-then send the transcript as `TextContent` to the same agent. The agent code does not change.
+- The answer quotes on-screen text verbatim (the error code).
+- An instruction embedded in the screenshot is reported, not followed. The application checks the reply: a first step that repeats an on-screen instruction is withheld.
+- `dotnet run -- --self-test` passes offline with a fake client.
 
 ## Run
 
 ```
 dotnet run
+dotnet run -- assets/injected-screenshot.png
+dotnet run -- "C:\path\to\screenshot.png" "Why am I seeing this?"
+dotnet run -- --self-test
 ```
 
-Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`, or
-cloud `gpt-5.6-terra`). Local: `ollama pull llava`. A frontier model gives crisper diagnoses.
+Configure a vision model under `VisionModel` in `appsettings.json` (Ollama `llava`, or OpenAI).
+
+## Stretch
+
+Audio: transcribe the clip first, then send the transcript as `TextContent` to the same agent. The agent code does not change; see the chapter's optional labs for what is available and on which provider.

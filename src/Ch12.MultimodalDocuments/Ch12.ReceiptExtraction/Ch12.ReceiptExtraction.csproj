@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Receipt photo -> typed reading -> validation after extraction -> typed
+       proposal for the reimbursement policy (Ch08.ActionPolicy, used as it is).
+       GA packages only: Ollama (llava by default) or OpenAI for the live run;
+       the self-test needs no model, no network and no key. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- The synthetic receipt corpus (CC0, versioned in corpus.json). -->
+    <Content Include="../../../assets/receipts/*.png;../../../assets/receipts/corpus.json" LinkBase="assets/receipts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

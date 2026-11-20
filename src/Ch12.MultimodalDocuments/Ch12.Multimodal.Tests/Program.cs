@@ -12,6 +12,11 @@
 //   2. The typed-extraction path deserializes — when the model returns JSON,
 //      RunAsync<Invoice>() yields a populated Invoice record.
 //
+//   3. What the Ollama connector really sends: DataContent travels as inline
+//      base64, UriContent is dropped without an error (a local model never
+//      sees, let alone fetches, a remote URL), and a JSON schema becomes
+//      Ollama's "format". Checked on the request body, without a server.
+//
 // Same plain console assertion harness as the multi-agent chapter's tests: Check(...) throws
 // nothing, just tallies; a non-zero exit code if anything failed, so CI catches it.
 // NO real model calls anywhere in this file.
@@ -132,9 +137,36 @@ Console.WriteLine("Test 3: typed-extraction path deserializes into Invoice");
     Check("total deserialized", invoice.Total == 779.76m);
 }
 
+// ── Test 4: what the Ollama connector puts on the wire ───────────────────────
+// A probe of the connector, not of the abstraction: OllamaSharp's IChatClient
+// talks to a recording HttpMessageHandler instead of a server, and we read the
+// JSON body it would have sent to /api/chat. Version-specific (OllamaSharp
+// 5.4.25): re-run this test after a package update.
+Console.WriteLine();
+Console.WriteLine("Test 4: the Ollama connector's request body (OllamaSharp 5.4.25)");
+{
+    RecordingHandler wire = new();
+    using HttpClient http = new(wire) { BaseAddress = new Uri("http://localhost:11434") };
+    using IChatClient ollama = new OllamaSharp.OllamaApiClient(http, "llava");
+
+    await ollama.GetResponseAsync([new ChatMessage(ChatRole.User,
+        [new TextContent("q"), new DataContent(new byte[] { 1, 2, 3 }, "image/png")])]);
+    Check("DataContent is sent inline as base64 in \"images\"", wire.Body.Contains("\"images\":[\"AQID\"]"));
+
+    await ollama.GetResponseAsync([new ChatMessage(ChatRole.User,
+        [new TextContent("q"), new UriContent("https://example.com/cat.jpg", "image/jpeg")])]);
+    Check("UriContent is dropped: no \"images\", no URL in the request, no error",
+        !wire.Body.Contains("images") && !wire.Body.Contains("example.com"));
+
+    await ollama.GetResponseAsync([new ChatMessage(ChatRole.User, "q")],
+        new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema<Invoice>(), Temperature = 0f });
+    Check("ForJsonSchema<T> becomes Ollama's \"format\" schema", wire.Body.Contains("\"format\":{"));
+}
+
 // ── Summary / exit code ──────────────────────────────────────────────────────
 Console.WriteLine();
 Console.WriteLine($"=== {passed} passed, {failed} failed ===");
+Console.WriteLine($"RESULT {passed}/{passed + failed}");
 return failed == 0 ? 0 : 1;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -166,6 +198,23 @@ public sealed record InvoiceLine
     public string Description { get; init; } = "";
     public int Quantity { get; init; }
     public decimal Amount { get; init; }
+}
+
+// A stand-in for the Ollama server: records the request body and answers with
+// one finished, non-streaming /api/chat reply.
+sealed class RecordingHandler : HttpMessageHandler
+{
+    public string Body { get; private set; } = "";
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        Body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+        const string reply = """{"model":"llava","created_at":"2026-11-20T00:00:00Z","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}""";
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(reply + "\n", System.Text.Encoding.UTF8, "application/x-ndjson"),
+        };
+    }
 }
 
 // ============================================================================

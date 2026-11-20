@@ -8,6 +8,8 @@
     <PackageReference Include="Microsoft.Agents.AI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <!-- Test 4 probes the Ollama connector's request body (no server needed). -->
+    <PackageReference Include="OllamaSharp" />
   </ItemGroup>
 
   <ItemGroup>

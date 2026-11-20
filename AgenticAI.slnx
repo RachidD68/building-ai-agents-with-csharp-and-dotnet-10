@@ -65,6 +65,7 @@
   <Folder Name="/src/Ch12.MultimodalDocuments/">
     <Project Path="src/Ch12.MultimodalDocuments/Ch12.ImageToTypedData/Ch12.ImageToTypedData.csproj" />
     <Project Path="src/Ch12.MultimodalDocuments/Ch12.Multimodal.Tests/Ch12.Multimodal.Tests.csproj" />
+    <Project Path="src/Ch12.MultimodalDocuments/Ch12.ReceiptExtraction/Ch12.ReceiptExtraction.csproj" />
     <Project Path="src/Ch12.MultimodalDocuments/Ch12.VisionBasics/Ch12.VisionBasics.csproj" />
   </Folder>
   <Folder Name="/src/Ch13.MultiAgentTopology/">
@@ -225,5 +226,8 @@
   </Folder>
   <Folder Name="/contoso/v2-authorized-reimbursement/">
     <Project Path="contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
+  </Folder>
+  <Folder Name="/contoso/v4-receipts/">
+    <Project Path="contoso/v4-receipts/Contoso.Receipts.csproj" />
   </Folder>
 </Solution>
