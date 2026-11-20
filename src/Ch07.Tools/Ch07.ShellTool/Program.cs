@@ -12,11 +12,12 @@
 //      is allowed only for --version/--info/--list-sdks/--list-runtimes:
 //      `dotnet run` or `dotnet exec` would run arbitrary code, and `find`
 //      (dropped) can execute commands with -exec.
-//   2. Confine every path argument to a scratch folder: rooted paths, `..`
-//      escapes, UNC and drive-relative paths are refused, and flags must be
-//      plain letters (`-l`, `-la`), so a path cannot hide inside a flag.
-//      Paths through a symbolic link or junction are refused, and the folder
-//      test ignores case only on Windows. Hard links are NOT detected.
+//   2. Confine every path argument to a scratch folder: rooted paths, any `..`
+//      segment, UNC and drive-relative paths are refused, and flags must be
+//      short plain letters (`-l`, `-la`), so a path cannot hide inside a flag.
+//      Paths through a symbolic link or junction are refused, component by
+//      component, and `ls`/`dir` may not recurse (-R) or follow links (-L).
+//      The folder test ignores case only on Windows. Hard links are NOT detected.
 //      Shell metacharacters (& | < > ^ % ; , = ! ( ) quotes, backtick,
 //      control characters) are refused in every argument.
 //   3. Take structured arguments: the tool accepts an executable name plus a
@@ -340,23 +341,33 @@ internal static class ShellPolicy
                 return $"argument '{arg}' contains a shell metacharacter or control character.";
             if (arg.StartsWith('-'))
             {
-                // Flags must be plain letters (-l, -la, --all): no '=', no path inside a flag.
-                if (!System.Text.RegularExpressions.Regex.IsMatch(arg, "^--?[A-Za-z]+$"))
+                // Flags must be short plain letters (-l, -la): no '=', no path inside a flag, and
+                // no long options, which GNU tools accept abbreviated (--deref is --dereference).
+                if (!System.Text.RegularExpressions.Regex.IsMatch(arg, "^-[A-Za-z]+$"))
                     return $"flag '{arg}' is not allowed.";
+                // For ls and dir, -R recurses and -L follows links, into places no path argument named.
+                if (executable.ToLowerInvariant() is "ls" or "dir" && arg.IndexOfAny(['R', 'L']) >= 0)
+                    return $"flag '{arg}' is not allowed: it can recurse or follow links.";
                 continue;
             }
             // Rooted (C:\x, \x, /x), UNC (\\server\share) and drive-relative (D:x) paths are refused.
             if (Path.IsPathRooted(arg) || arg.Contains(':'))
                 return $"'{arg}' is outside the scratch folder.";
-            string full = Path.GetFullPath(Path.Combine(root, arg));
-            if (!full.StartsWith(root, PathComparison))
+            // No '..' at all: the OS resolves a link before the '..' after it, so link/../x can leave.
+            string[] parts = arg.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Contains(".."))
+                return $"'{arg}' contains '..', which can lead outside the scratch folder.";
+            if (!Path.GetFullPath(Path.Combine(root, arg)).StartsWith(root, PathComparison))
                 return $"'{arg}' is outside the scratch folder.";
             // A symbolic link or junction inside the folder can point anywhere: refuse any path through one.
-            if (ThroughLink(root, full))
+            if (ThroughLink(root, parts))
                 return $"'{arg}' goes through a link, which can lead outside the scratch folder.";
         }
         return null;
     }
+
+    // A backslash separates paths only on Windows; elsewhere it is a filename character.
+    static readonly char[] Separators = OperatingSystem.IsWindows() ? ['/', '\\'] : ['/'];
 
     /// <summary>
     /// Windows file systems ignore case; Linux file systems usually don't, so
@@ -365,13 +376,15 @@ internal static class ShellPolicy
     public static StringComparison PathComparison =>
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-    // Checks every existing component below the root. A hard link to a file is
-    // indistinguishable from the file itself, so this does not catch hard links.
-    static bool ThroughLink(string root, string full)
+    // Walks the argument's own components, in order, from the root. A hard link
+    // to a file is indistinguishable from the file itself, so this does not
+    // catch hard links.
+    static bool ThroughLink(string root, string[] parts)
     {
         string path = root.TrimEnd(Path.DirectorySeparatorChar);
-        foreach (string part in full[root.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string part in parts)
         {
+            if (part == ".") continue;
             path = Path.Combine(path, part);
             FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
             if (info.Exists && info.LinkTarget is not null) return true;
@@ -407,9 +420,16 @@ internal static class ShellPolicy
             ("cat", [@"\\server\share\file"], !windows),
             ("cat", ["//server/share/file"], false),
             ("cat", ["D:file.txt"], false),
-            // Same folder on Windows (case-insensitive); a different, outside folder on Linux.
-            ("cat", ["../SCRATCH/README.md"], windows),
+            // Any '..' is refused, even one that would land back inside the folder.
+            ("cat", ["notes/../README.md"], false),
+            ("cat", ["../SCRATCH/README.md"], false),
             ("cat", ["--file=../x"], false),
+            ("cat", ["--number"], false),
+            // ls must not recurse or follow links on its own.
+            ("ls", ["-R"], false),
+            ("ls", ["-RL"], false),
+            ("dir", ["-L"], false),
+            ("ls", ["--deref"], false),
             ("dotnet", ["run"], false),
             ("dotnet", ["exec", "a.dll"], false),
             ("dotnet", ["--version", "extra"], false),
@@ -449,7 +469,6 @@ internal static class ShellPolicy
             string call = $"{exe} {string.Join(' ', a)}".Trim().ReplaceLineEndings(" ");
             string verdict = refusal is not null ? "refused: " + refusal.ReplaceLineEndings(" ")
                 : a.Any(arg => arg.Contains('\\')) ? @"allowed: '\' is a filename character here, so it stays inside the scratch folder"
-                : a.Any(arg => arg.Contains("SCRATCH")) ? "allowed: Windows paths ignore case, so this is the scratch folder itself"
                 : "allowed";
             Report((refusal is null) == allowed && confined, $"{call,-34} -> {verdict}");
         }
@@ -485,6 +504,11 @@ internal static class ShellPolicy
             }
             string? viaLink = Check("cat", ["link-out/secrets.txt"], scratch);
             Report(Directory.Exists(link) && viaLink is not null, $"{"cat link-out/secrets.txt",-34} -> refused: {viaLink}");
+            // The OS follows link-out first and applies '..' to its target, an outside folder.
+            string? linkUp = Check("cat", ["link-out/../secrets.txt"], scratch);
+            Report(linkUp is not null, $"{"cat link-out/../secrets.txt",-34} -> refused: {linkUp}");
+            string? linkList = Check("ls", ["-l", "link-out"], scratch);
+            Report(linkList is not null, $"{"ls -l link-out",-34} -> refused: {linkList}");
             Directory.Delete(link);
 
             // A tool result is data. This file asks for a command; the policy, not
