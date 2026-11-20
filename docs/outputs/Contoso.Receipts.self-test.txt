@@ -1,4 +1,4 @@
-# code 5a70d58 | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted model replies; the Linux container run is identical)
+# code 1df8920 | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted model replies; the Linux container run is identical)
 $ dotnet <dll> --self-test
 === Contoso: receipts (self-test) ===
 
@@ -40,4 +40,14 @@ $ dotnet <dll> --self-test
   Delivered (exact_proposal_approved)
   PASS  approved and paid once by the v2 desk
 
-RESULT 10/10
+-- 9. A reply that is JSON but leaves out states, fields and a line --
+  AwaitingVerification (total:ToVerify, currency:Unreadable, date:Unreadable)
+  PASS  no exception: it waits for a person like any unreadable receipt
+
+-- 10. A reading that fails --
+  Rejected (intake_failed)
+  Rejected (intake_failed)
+  Rejected (intake_failed)
+  PASS  nothing is kept: the same pages are read again under the same id and a new one, never refused as a duplicate
+
+RESULT 12/12

@@ -1,4 +1,4 @@
-# code 5a70d58 | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted model replies; the Linux container run is identical)
+# code 1df8920 | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted model replies; the Linux container run is identical)
 $ dotnet <dll> --self-test
 === Receipt extraction (self-test) ===
 
@@ -36,6 +36,17 @@ $ dotnet <dll> --self-test
   currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
   -> needs a person: total:ToVerify
   PASS  a model that reports only 46.80 as the total is caught by the lines
+  total    64.80 [ToVerify, p.1, amount_charged_unchecked]   lines sum 64.80
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> needs a person: total:ToVerify
+  total    64.80 [ToVerify, p.1, amount_charged_unchecked]   lines sum 64.80
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> needs a person: total:ToVerify
+  PASS  an amount charged that is unreadable or '46,80' can't be compared: ToVerify (amount_charged_unchecked)
+  total    64.80 [Present, p.1]   lines sum 64.80
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> policy: RequireApproval approval_missing
+  PASS  LIMIT: an amount charged the model reports as absent can't be detected; the proposal is ready
 
 -- An instruction printed on the receipt --
   total    64.80 [Present, p.1]   lines sum 64.80
@@ -47,6 +58,10 @@ $ dotnet <dll> --self-test
   currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
   -> needs a person: total:ToVerify
   PASS  a model that obeyed it (total 950.00) is caught by the lines
+  total    45.00 [Present, p.1]   lines sum 45.00
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> policy: Allow low_value_policy
+  PASS  LIMIT: lines and total rewritten together (Fare 45.00, total 45.00) pass; the policy allows them
 
 -- Two pages --
   total    282.00 [Present, p.2]   lines sum 282.00
@@ -72,6 +87,18 @@ $ dotnet <dll> --self-test
   currency - [Unreadable, p.1]   date - [Unreadable, p.1]
   -> needs a person: total:Unreadable, currency:Unreadable, date:Unreadable
   PASS  a reply that is not a reading leaves every field Unreadable
+  total    - [ToVerify, p.1, not_a_number]   lines sum 64.80
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> needs a person: total:ToVerify
+  total    64.80 [ToVerify, p.1, lines_not_checkable]   lines sum -
+  currency EUR [Present, p.1]   date 2026-11-12 [Present, p.1]
+  -> needs a person: total:ToVerify
+  PASS  non-ASCII digits are not amounts: an Arabic-Indic total is ToVerify (not_a_number)
+  PASS  a full-width line amount leaves the lines uncheckable (lines_not_checkable)
+  total    64.80 [ToVerify, p.1, amount_charged_unchecked]   lines sum -
+  currency - [Unreadable, p.1]   date - [Unreadable, p.1]
+  -> needs a person: total:ToVerify, currency:Unreadable, date:Unreadable
+  PASS  valid JSON with a missing state, missing fields and a null line: no exception, not ready
 
 -- What reached the model --
   PASS  the page reached the model as image/png bytes (DataContent), unchanged in length
@@ -86,4 +113,4 @@ $ dotnet <dll> --self-test
   PASS  DEFECT REPRODUCED: an unreadable total becomes Total = 0, with nothing saying it was unreadable
   PASS  DEFECT REPRODUCED: an invented total (64.00) is an ordinary value; no rule looks at the lines
 
-RESULT 22/22
+RESULT 28/28
