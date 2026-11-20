@@ -2,36 +2,33 @@
 
 ## Prompt
 
-Host four keyed agents in one API — a translator, a summarizer, a formalizer,
-and a classifier — each at its own endpoint via `[FromKeyedServices]`, plus a
-`/agents` discovery endpoint that lists them. One agent also exposes a
-streaming endpoint: `POST /summarize/stream` returns the summary token by
-token via `TypedResults.ServerSentEvents` over `RunStreamingAsync`.
+Host four keyed agents (translator, summarizer, formalizer, classifier) in one
+API with `builder.AddAIAgent`, list them at `/agents`, and give each a
+single-turn route. Add one conversational route whose conversation id belongs
+to the caller who created it: the token's tenant (`tid`) and subject (`sub`)
+are part of the key.
 
-## Endpoints
+## Accepted when
 
-| Method | Path                | Description                              |
-|--------|---------------------|------------------------------------------|
-| POST   | `/translate`        | Translate text to English                |
-| POST   | `/summarize`        | Summarize text (JSON)                    |
-| POST   | `/summarize/stream` | Summarize text (SSE, token by token)     |
-| POST   | `/formalize`        | Rewrite text in formal business tone     |
-| POST   | `/classify`         | Classify text (sentiment + topic label)  |
-| GET    | `/agents`           | List registered agents                   |
+- an unknown agent key returns 404;
+- user B gets 404 on user A's `conversationId` (404, not 403: "not yours"
+  looks the same as "no such id");
+- A's second turn sees A's first turn.
 
-## Key Concepts
+## Routes
 
-- Keyed DI services: one registration per agent (four in total)
-- `[FromKeyedServices]` for endpoint resolution
-- `/agents` discovery endpoint
-- SSE streaming with `TypedResults.ServerSentEvents` + `RunStreamingAsync`
-  (`[EnumeratorCancellation]` local iterator, `eventType: "token"`)
-- Clean API design with record types
+| Method | Path                                   | Kind                         |
+|--------|----------------------------------------|------------------------------|
+| GET    | `/agents`                              | discovery (anonymous)        |
+| POST   | `/agents/{name}`                       | single-turn (bearer)         |
+| POST   | `/agents/{name}/conversations`         | issue an owned id (bearer)   |
+| POST   | `/agents/{name}/conversations/{id}`    | conversational (bearer)      |
 
-## Try the stream
+## Run
 
 ```bash
-curl -N -X POST http://localhost:5000/summarize/stream \
-  -H "Content-Type: application/json" \
-  -d '{"text":"<a few paragraphs to summarize>"}'
+dotnet run --project exercises/Ch17.Exercises/Ex02.MultiAgentApi -- --self-test
 ```
+
+The conversations live in memory, in one process. The chapter's host keeps
+them in the conversations chapter's SQLite store with a concurrency token.

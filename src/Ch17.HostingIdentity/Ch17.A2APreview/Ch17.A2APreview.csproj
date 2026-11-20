@@ -1,17 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <!-- One agent over A2A (JSON-RPC and HTTP+JSON bindings, message mode),
+       behind a bearer token, with a public agent card. PREVIEW: the A2A
+       hosting packages are 1.28.0-preview and AddA2AServer / MapA2A* are
+       experimental (MEAI001); the GA alternative is a plain minimal-API route
+       (Ch17.AspNetCoreHost). TestHost is used by the self-test only. -->
   <PropertyGroup>
+    <NoWarn>$(NoWarn);MEAI001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Agents.AI"      />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI"      />
-    <PackageReference Include="Microsoft.Agents.AI.Hosting"      />
-    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A"      />
-    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore"      />
-    <PackageReference Include="Microsoft.Extensions.AI"      />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI"      />
-    <PackageReference Include="OpenTelemetry.Api"      />
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="OpenTelemetry.Api" />
   </ItemGroup>
 
   <ItemGroup>

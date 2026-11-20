@@ -1,36 +1,23 @@
 # ============================================================================
-# Exercise 03 — multi-stage Dockerfile (the CUSTOM path)
+# Exercise 03 — the image, built from a published folder.
 #
-# The DEFAULT path in the chapter needs no Dockerfile at all:
+# The default path in the chapter needs no Dockerfile at all:
 #   dotnet publish -c Release --os linux --arch x64 /t:PublishContainer
 #
-# This Dockerfile is for teams that require one in source control. The build
-# context is the CodeSample repo root (it relies on Directory.Packages.props /
-# Directory.Build.props), so build from there:
-#   docker build -f exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/Dockerfile \
-#       -t ch14-ex04-agent-api .
+# This file is for teams that keep one in source control. It copies the output
+# of `dotnet publish` (the build context), so building the image needs no SDK
+# image and no network:
+#   dotnet publish exercises/Ch17.Exercises/Ex03.ContainerizedDeploy -c Release -o <dir>
+#   docker build --pull=false --network none -f exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/Dockerfile -t ch17-ex03-agent-api <dir>
+# check-image.ps1 runs those two steps and checks the result.
 # ============================================================================
 
-# ---- Build stage: full SDK ----
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /src
-
-# Central package-management files first, for layer-cached restores.
-COPY Directory.Packages.props Directory.Build.props ./
-COPY exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/Ex03.ContainerizedDeploy.csproj exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/
-RUN dotnet restore exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/Ex03.ContainerizedDeploy.csproj
-
-# Copy the rest and publish.
-COPY exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/ exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/
-RUN dotnet publish exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/Ex03.ContainerizedDeploy.csproj \
-    -c Release -o /app --no-restore
-
-# ---- Runtime stage: chiseled (no shell, no package manager, non-root) ----
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
+# Chiseled: no shell, no package manager, a non-root user by default.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
 WORKDIR /app
-COPY --from=build /app .
+COPY . .
 
-# Chiseled images already run as the non-root 'app' user. NEVER bake secrets
-# into a layer — inject the LLM provider key at runtime (-e / Key Vault / MI).
+# No ENV or ARG carries a key: the provider key and the token settings arrive at
+# run time (-e, a mounted secret or a managed identity), never in a layer.
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Ex03.ContainerizedDeploy.dll"]

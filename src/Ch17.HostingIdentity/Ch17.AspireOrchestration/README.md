@@ -1,51 +1,23 @@
-# Ch17.AspireOrchestration — .NET Aspire for Agent Orchestration
+# Ch17.AspireOrchestration — Aspire AppHost and ServiceDefaults
 
-This project demonstrates using .NET Aspire to orchestrate multi-agent services
-with built-in observability, health checks, and service discovery.
+- **AppHost** starts `Ch17.AspNetCoreHost` as the `agent-api` resource, opens
+  the Aspire dashboard, and marks the resource healthy when `/health/ready`
+  answers 200 (`WithHttpHealthCheck`). Neither health endpoint calls the model.
+- **ServiceDefaults** (`AddServiceDefaults`): OpenTelemetry tracing and metrics
+  (console exporter, plus OTLP when Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT`)
+  and the `self` liveness check. The observability chapter reuses it.
 
-## Prerequisites
+The Aspire version (13.6.5) is the one `Directory.Packages.props` pins for
+`Aspire.Hosting`; the AppHost opts out of central package management because
+the Aspire SDK adds its own references, so its `.csproj` repeats that version.
+Change them together.
 
-The Aspire AppHost requires the .NET Aspire workload or compatible tooling.
-If you do not have it installed, you can install it with:
-
-```bash
-dotnet workload install aspire
-```
-
-If the Aspire workload is not available for your SDK version, the AppHost
-project may not build. The ServiceDefaults project builds independently.
-
-## Project Structure
-
-```
-Ch17.AspireOrchestration/
-  ├── Ch17.AspireOrchestration.AppHost/       # Aspire orchestrator
-  │   └── Program.cs                          # Registers Ch17.AspNetCoreHost
-  └── Ch17.AspireOrchestration.ServiceDefaults/ # Shared service configuration
-      └── Extensions.cs                        # OpenTelemetry + health checks
-```
-
-## What It Shows
-
-- **AppHost** — The Aspire orchestrator that wires services together
-- **ServiceDefaults** — Shared OpenTelemetry, health checks, and resilience
-- **Project references** — How Aspire discovers and manages dependent services
-- **Dashboard** — The Aspire dashboard for monitoring traces, logs, and metrics
-
-## Running
+## Run
 
 ```bash
-cd Ch17.AspireOrchestration.AppHost
-dotnet run
+dotnet run --project src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.AppHost
 ```
 
-The Aspire dashboard will open automatically showing all registered services.
-
-## Architecture
-
-```
-Aspire AppHost (orchestrator)
-  └── agent-api (Ch17.AspNetCoreHost)
-        ├── POST /chat       → assistant agent
-        └── POST /summarize  → summarizer agent
-```
+The book's checks only build the AppHost: running it starts the dashboard and
+the orchestration binaries the Aspire SDK restores for each operating system.
+No Aspire workload is needed with Aspire 13 (the SDK is a NuGet package).

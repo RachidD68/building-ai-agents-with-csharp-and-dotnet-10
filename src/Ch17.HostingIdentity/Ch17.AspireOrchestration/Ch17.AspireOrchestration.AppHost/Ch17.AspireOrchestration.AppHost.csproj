@@ -1,10 +1,10 @@
-﻿<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Opt out of CPM for implicit Aspire packages. Keep the SDK and
-         Aspire.Hosting on the same version (the hosting chapter is written against
-         Aspire 13.5; 13.6.5 is the patched 13.x release). -->
+    <!-- Opt out of CPM for implicit Aspire packages. The SDK and Aspire.Hosting
+         stay on the version Directory.Packages.props pins for Aspire.Hosting
+         (13.6.5); change all three together. -->
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <!-- ASPIRE010 (13.5+): an advisory about the optional Aspire CLI bundle,
          which this sample does not use. -->

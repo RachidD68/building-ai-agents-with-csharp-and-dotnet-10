@@ -1,62 +1,28 @@
-# Ch17.A2APreview — Agent-to-Agent (A2A) Protocol Integration
+# Ch17.A2APreview — an agent over A2A, behind a token
 
-This project demonstrates how to expose an AI agent via the A2A protocol
-using the official `Microsoft.Agents.AI.Hosting.A2A.AspNetCore` library.
+One agent registered with `builder.AddAIAgent(...).AddA2AServer()` and mapped
+with both A2A bindings, JSON-RPC (`MapA2AJsonRpc`) and HTTP+JSON
+(`MapA2AHttpJson`), at `/a2a/expense-assistant`. Both bindings require a
+bearer token. The agent card (`MapWellKnownAgentCard`, from the A2A SDK) is
+public at `/.well-known/agent-card.json` and declares the bearer scheme.
 
-## What is A2A?
+Message mode only: the agent answers with a message. The A2A hosting of
+MAF 1.28 has no run-mode option on `A2AServerRegistrationOptions`; the SDK
+still maps its task routes (`/tasks`, `/tasks/{id}`...), and they sit behind
+the same token.
 
-The Agent-to-Agent (A2A) protocol, originally proposed by Google and now
-maintained by the Linux Foundation, defines a standard way for agents to:
+**Preview.** `Microsoft.Agents.AI.Hosting.A2A` and `.A2A.AspNetCore` are
+1.28.0-preview, the A2A SDK is 1.0.0-preview, and `AddA2AServer` and the
+`MapA2A*` methods are experimental (MEAI001). The GA alternative is a plain
+minimal-API route, as in `Ch17.AspNetCoreHost`.
 
-1. **Discover** each other via Agent Cards
-2. **Communicate** by sending messages via HTTP
-3. **Stream** responses using Server-Sent Events
-4. **Interoperate** across different agent frameworks
-
-## What This Shows
-
-- **Agent Registration** — Using `AddAIAgent()` to register the agent in DI
-- **A2A Mapping** — Using `MapA2A()` to expose the agent via the A2A protocol
-- **Agent Card** — Automatic discovery endpoint for agent metadata
-- **Session Management** — In-memory session store for multi-turn conversations
-
-## Endpoints
-
-| Method | Path                                          | Description                     |
-|--------|-----------------------------------------------|---------------------------------|
-| GET    | `/a2a/coding-assistant/v1/card`               | Agent Card (discovery)          |
-| POST   | `/a2a/coding-assistant/v1/message`            | Send a message to the agent     |
-| POST   | `/a2a/coding-assistant/v1/message:stream`     | Stream a response from the agent|
-| GET    | `/`                                           | Service info                    |
-
-## Example: Discover the Agent
+## Run
 
 ```bash
-curl http://localhost:5000/a2a/coding-assistant/v1/card
+dotnet run --project src/Ch17.HostingIdentity/Ch17.A2APreview -- --self-test
 ```
 
-## Example: Send a Message
-
-```bash
-curl -X POST http://localhost:5000/a2a/coding-assistant/v1/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": {
-      "kind": "message",
-      "role": "user",
-      "parts": [{ "kind": "text", "text": "How do I use LINQ?" }],
-      "messageId": null,
-      "contextId": "session-1"
-    }
-  }'
-```
-
-## Key Packages
-
-- `Microsoft.Agents.AI.Hosting.A2A.AspNetCore` — A2A protocol integration
-- `Microsoft.Agents.AI.Hosting` — Agent hosting and session management
-
-## Full A2A Specification
-
-See: https://a2a-protocol.org/latest/
-Docs: https://learn.microsoft.com/en-us/agent-framework/integrations/a2a
+The self-test starts the app on an in-memory TestServer with a fake model,
+prints the routes the A2A hosting maps, reads the card with `A2ACardResolver`,
+and sends one message over each binding with `A2AClient` and
+`A2AHttpJsonClient`, with and without a token. No model, no network.

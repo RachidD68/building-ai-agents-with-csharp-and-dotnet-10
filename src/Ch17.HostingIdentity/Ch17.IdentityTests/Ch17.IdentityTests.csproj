@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The hosting chapter's two-user proof: Ch17.AspNetCoreHost's own
+       composition on an in-memory TestServer (GA Microsoft.AspNetCore.TestHost),
+       tokens minted in process, a fake model. A console harness (RESULT n/n),
+       offline. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj" />
+  </ItemGroup>
+
+</Project>

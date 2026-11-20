@@ -2,84 +2,48 @@
 
 ## Prompt
 
-Take a hosted agent API all the way to a cloud deployment: protect it with JWT
-bearer authentication and a per-user rate limit, publish it as a container, and
-deploy it to Azure Container Apps with `azd up`. Confirm the deployed endpoint
-returns **401** without a token and **200** with one.
+Containerize an agent API that already has bearer authentication and a rate
+limit partitioned by tenant and subject. Keep every secret out of the image:
+the provider key and the token settings arrive at run time.
 
-This project is the **runnable base**. The auth, rate limiting, and SSE streaming
-are already wired (see `Program.cs`); the exercise is the containerize-and-deploy
-arc. The worked solution is in **Appendix E**.
+## Accepted when
 
-## Key Concepts
+- the image runs as a non-root user;
+- `docker history` shows no secret;
+- two tokens from one IP are limited independently;
+- a wrong-audience token returns 401.
 
-- JWT bearer authentication (`AddJwtBearer` + `RequireAuthorization`)
-- Per-user rate limiting (`AddRateLimiter` + `RequireRateLimiting`)
-- SSE streaming (`TypedResults.ServerSentEvents`)
-- SDK container publishing (`dotnet publish /t:PublishContainer`, no Dockerfile)
-- Deployment to Azure Container Apps with the Azure Developer CLI (`azd`)
+The first two are checked by `check-image.ps1`, the last two by the
+self-test, which the script also runs inside the image.
 
-## Run locally
+## Run
 
 ```bash
-# Default provider is Ollama (no cloud config). Start the API:
-dotnet run
-
-# Mint a local dev token (no identity provider needed) and call /chat:
-TOKEN=$(dotnet user-jwts create --output token)
-curl -i -X POST http://localhost:5000/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"What is dependency injection?"}'
-
-# Without the token you get 401:
-curl -i -X POST http://localhost:5000/chat \
-  -H "Content-Type: application/json" -d '{"message":"hi"}'
-
-# Stream tokens (note -N to disable buffering):
-curl -N -X POST http://localhost:5000/chat/stream \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Name three benefits of DI."}'
+dotnet run --project exercises/Ch17.Exercises/Ex03.ContainerizedDeploy -- --self-test
+pwsh exercises/Ch17.Exercises/Ex03.ContainerizedDeploy/check-image.ps1
 ```
 
-## 1. Containerize
+`check-image.ps1` publishes the project, builds the image from the published
+folder with `--pull=false --network none` (so it needs the local base image
+`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`), checks the user and
+the layer history, and runs `--self-test` in the container with no network.
+To prove the history check can fail, it first plants a key in an `ENV` layer
+of a throwaway image and looks for it.
 
-The default path needs **no Dockerfile** — the .NET 10 SDK builds the image:
+## The default path: SDK container publishing
 
 ```bash
 dotnet publish -c Release --os linux --arch x64 /t:PublishContainer
-docker run -p 8080:8080 -e LlmProvider__Provider=ollama ch14-ex04-agent-api:1.0.0
+docker run -p 8080:8080 -e LlmProvider__Provider=ollama ch17-ex03-agent-api:1.0.0
 ```
 
-The image shape is set by the `<Container*>` properties in the `.csproj`
-(chiseled base, OCI format, non-root). **Never** bake the provider key into a
-layer — pass it at runtime with `-e`, a mounted secret, or a managed identity.
+The `<Container*>` properties in the `.csproj` shape that image (chiseled
+base, OCI format). SDK publishing pulls the base image from the registry, so
+it needs network access; the book's checks use the Dockerfile path instead.
 
-A multi-stage `Dockerfile` is included for teams that require one in source
-control (build from the CodeSample repo root — see the file header).
+## Deploying to the cloud (not run in the book)
 
-## 2. Deploy to Azure Container Apps
-
-From the Aspire AppHost (`src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.AppHost`):
-
-```bash
-azd auth login          # authenticate once
-azd init                # detects the Aspire AppHost, generates azure.yaml
-azd up                  # package + provision + deploy
-# ... iterate ...
-azd deploy agent-api    # redeploy just the code (no re-provision)
-azd down                # tear it all down when finished
-```
-
-`azd up` builds the container (using the same SDK publishing as above),
-provisions an Azure Container Registry and a Container Apps environment, and
-deploys the app — printing a public `*.azurecontainerapps.io` URL.
-
-## Acceptance
-
-- `/chat` returns **401** without a bearer token, **200** with one (locally and
-  on the deployed endpoint).
-- The published image is chiseled and runs as a non-root user.
-- No secret appears in any image layer.
-- `azd up` produces a reachable `*.azurecontainerapps.io` endpoint.
+From the Aspire AppHost
+(`src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.AppHost`),
+the Azure Developer CLI packages and deploys the app (`azd init`, `azd up`).
+That path needs an Azure subscription; it was not run for the book.

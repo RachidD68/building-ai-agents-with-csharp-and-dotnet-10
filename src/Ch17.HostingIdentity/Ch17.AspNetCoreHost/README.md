@@ -1,57 +1,53 @@
-# Ch17.AspNetCoreHost — Hosting Multiple Agents in ASP.NET Core
+# Ch17.AspNetCoreHost — one agent behind a validated identity
 
-This project demonstrates how to host multiple AI agents in a single ASP.NET Core
-application using the Microsoft Agent Framework (MAF) Hosting package.
+The hosting chapter's minimal solution: an agent registered with
+`builder.AddAIAgent` (Microsoft.Agents.AI.Hosting, preview) behind an ASP.NET
+Core API in which every request carries a validated identity.
 
-## What It Shows
+## The identity key
 
-- **AddAIAgent()** — Register agents in DI using the MAF Hosting builder pattern
-- **WithInMemorySessionStore()** — Automatic per-agent session management
-- **Keyed Services** — Resolve specific agents by name with `[FromKeyedServices("name")]`
-- **Minimal API Endpoints** — Expose agents as HTTP services
+`CallerIdentity.From(user)` reads `tid` and `sub` from the principal the JWT
+bearer handler validated (signature, issuer, audience, lifetime), with
+`MapInboundClaims = false` so the names stay as they are in the token. The
+(tenant, subject) key feeds three consumers:
 
-## Endpoints
+- **authorization**: a conversational route without a key answers 403;
+- **the rate limit**: one partition per (tenant, subject), never `sub` alone
+  and never the IP for a signed-in caller;
+- **the conversation store**: the conversations chapter's `SqliteSessionStore`
+  (linked from `Ch06.SessionOwnership`), whose key carries both partitions.
 
-| Method | Path         | Description                    |
-|--------|------------- |--------------------------------|
-| POST   | `/chat`      | Chat with the assistant agent  |
-| POST   | `/summarize` | Summarize text                 |
-| GET    | `/agents`    | List registered agents         |
-| GET    | `/`          | Service info                   |
+## Routes
 
-## Running
+| Method | Path | Kind |
+|---|---|---|
+| POST | `/ask` | SINGLE-TURN: a fresh session per request, nothing stored |
+| POST | `/conversations` | issues an id owned by the caller |
+| POST | `/conversations/{id}/messages` | CONVERSATIONAL: load authorized, run, save versioned (409 on a lost race) |
+| DELETE | `/conversations/{id}` | owner only; a no-op for anyone else |
+| GET | `/agents`, `/health/live`, `/health/ready` | anonymous; no health probe calls the model |
+
+One retry owner: `AddLlmChatClient` (AgenticAI.Common) puts one resilience
+handler on the provider's HttpClient and turns the SDK's retries off.
+
+## Run
 
 ```bash
-# Set your API key via User Secrets
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
+dotnet run --project src/Ch17.HostingIdentity/Ch17.AspNetCoreHost -- --self-test
+dotnet run --project src/Ch17.HostingIdentity/Ch17.IdentityTests
 
-# Run the host
-dotnet run
+# A real run (Ollama llama3.2 by default). user-jwts writes the signing key to
+# user secrets and the issuer and audiences to appsettings.Development.json.
+cd src/Ch17.HostingIdentity/Ch17.AspNetCoreHost
+dotnet user-jwts create --name alice --claim tid=contoso --output token
+dotnet run --launch-profile Ch17.AspNetCoreHost
+curl -X POST http://localhost:56400/conversations -H "Authorization: Bearer <token>"
+curl -X POST http://localhost:56400/conversations/<id>/messages -H "Authorization: Bearer <token>" \
+     -H "Content-Type: application/json" -d '{"message":"What can I claim for a taxi?"}'
 ```
 
-## Example Request
+The self-test covers the identity key, the partitions (with the first
+edition's key as the reproduced defect) and the retry count. The two-user
+proof over HTTP is `Ch17.IdentityTests`.
 
-```bash
-curl -X POST http://localhost:5000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is dependency injection in .NET?"}'
-```
-
-## Configuration
-
-API keys are loaded from User Secrets (development) or environment variables
-(production). See `appsettings.json` for the configuration schema and the
-`LlmProvider` section for provider selection.
-
-## Architecture
-
-```
-WebApplication
-  ├── DI Container
-  │   ├── IChatClient (singleton, from AgenticAI.Common)
-  │   ├── AIAgent "assistant" (keyed singleton)
-  │   └── AIAgent "summarizer" (keyed singleton)
-  └── Minimal API
-      ├── POST /chat       → resolves "assistant" agent
-      └── POST /summarize  → resolves "summarizer" agent
-```
+`--self-test` and `Ch17.IdentityTests` need no model and no network.

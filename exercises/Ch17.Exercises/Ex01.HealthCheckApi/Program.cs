@@ -1,190 +1,116 @@
 // ============================================================================
-// Exercise 01 — Health Check API (Beginner)
-// Web API hosting an agent with TWO custom IHealthCheck implementations:
-//   "chat-client"   → verifies the IChatClient answers a minimal test prompt
-//                     (low MaxOutputTokens keeps the probe cost bounded)
-//   "session-store" → verifies a mock session-store dependency round-trips
-// Registered via AddHealthChecks().AddCheck<T>("name"), exposed at /healthz.
-// FULLY STANDALONE.
+// Exercise 01 — Health Check API (Basic)
+// Liveness and readiness are two questions with two endpoints:
+//   GET /health/live    is the process up? Runs only "self". Never calls the
+//                       model, so an orchestrator polling it costs no tokens.
+//   GET /health/ready   can it serve? Checks the session-store dependency.
+//                       Also no model call: a readiness probe that spends
+//                       tokens on every poll is a bill, not a check.
+//   POST /chat          the agent (the model is called here, and only here)
+//
+//   dotnet run                    Ollama by default (LlmProvider section)
+//   dotnet run -- --self-test     TestServer + a counting fake model, offline:
+//                                 100 liveness probes make 0 model calls; a failed
+//                                 store turns readiness Unhealthy (503), not liveness
 // ============================================================================
 
-using System.ClientModel;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
+using Ex01.HealthCheckApi;
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+if (args.Contains("--self-test")) return await HealthSelfTest.RunAsync();
 
-builder.Services.AddSingleton<IChatClient>(sp =>
-    CreateChatClient(sp.GetRequiredService<IConfiguration>()));
+HealthApi.Build(WebApplication.CreateBuilder(args), chatClient: null).Run();
+return 0;
 
-builder.Services.AddSingleton(sp =>
-    new ChatClientAgent(
-        sp.GetRequiredService<IChatClient>(),
-        instructions: "You are a helpful .NET assistant. Be concise.",
-        name: "HealthyAgent",
-        description: "An agent with health monitoring"));
-
-// The mock dependency the second health check probes.
-builder.Services.AddSingleton<MockSessionStore>();
-
-// Register both custom checks. Each name becomes one entry in the /healthz
-// report — and one row in the Aspire dashboard when hosted under an AppHost.
-builder.Services.AddHealthChecks()
-    .AddCheck<ChatClientHealthCheck>("chat-client")
-    .AddCheck<SessionStoreHealthCheck>("session-store");
-
-WebApplication app = builder.Build();
-
-// /healthz runs every registered check. The JSON response writer is optional —
-// the default writer returns plain-text "Healthy" — but per-check detail makes
-// the probe results visible with a simple curl.
-app.MapHealthChecks("/healthz", new HealthCheckOptions
+namespace Ex01.HealthCheckApi
 {
-    ResponseWriter = WriteJsonResponseAsync
-});
-
-app.MapPost("/chat", async (
-    ChatClientAgent agent,
-    ChatRequest request,
-    CancellationToken ct) =>
-{
-    AgentSession session = await agent.CreateSessionAsync(ct);
-    AgentResponse response = await agent.RunAsync(request.Message, session, cancellationToken: ct);
-    return Results.Ok(new ChatReply(agent.Name ?? "HealthyAgent", response.Text ?? string.Empty));
-})
-.WithName("Chat");
-
-Console.WriteLine("=== Exercise: Health Check API ===");
-Console.WriteLine("Endpoints: GET /healthz, POST /chat");
-
-app.Run();
-
-// ---------------------------------------------------------------
-// Health response writer (optional JSON detail)
-// ---------------------------------------------------------------
-
-/// <summary>Writes the health report as JSON with one entry per check.</summary>
-static Task WriteJsonResponseAsync(HttpContext context, HealthReport report)
-{
-    context.Response.ContentType = "application/json";
-    return context.Response.WriteAsJsonAsync(new
+    public static class HealthApi
     {
-        status = report.Status.ToString(),
-        totalDurationMs = report.TotalDuration.TotalMilliseconds,
-        checks = report.Entries.Select(entry => new
+        public static WebApplication Build(WebApplicationBuilder builder, IChatClient? chatClient)
         {
-            name = entry.Key,
-            status = entry.Value.Status.ToString(),
-            durationMs = entry.Value.Duration.TotalMilliseconds,
-            description = entry.Value.Description
-        })
-    });
-}
+            if (chatClient is not null) builder.Services.AddSingleton(chatClient);
+            else builder.Services.AddLlmChatClient(builder.Configuration);
+            builder.Services.AddSingleton(sp => new ChatClientAgent(sp.GetRequiredService<IChatClient>(),
+                instructions: "You are a helpful .NET assistant. Be concise.", name: "HealthyAgent"));
+            builder.Services.AddSingleton<SessionStore>();
 
-// ---------------------------------------------------------------
-// Provider factory
-// ---------------------------------------------------------------
+            builder.Services.AddHealthChecks()
+                .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
+                .AddCheck<SessionStoreHealthCheck>("session-store", tags: ["ready"]);
 
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration config)
-{
-    string provider = config["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(new Uri(config["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")), new DefaultAzureCredential())
-            .GetChatClient(config["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(config["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(config["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), config["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
-}
-
-// ---------------------------------------------------------------
-// Health checks
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Verifies the chat client is reachable by sending a minimal test prompt.
-/// MaxOutputTokens is kept tiny so the liveness probe costs almost nothing.
-/// </summary>
-sealed class ChatClientHealthCheck(IChatClient chatClient) : IHealthCheck
-{
-    /// <inheritdoc />
-    public async Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            Stopwatch sw = Stopwatch.StartNew();
-            await chatClient.GetResponseAsync(
-                "Reply with OK.",
-                new ChatOptions { MaxOutputTokens = 5 },
-                cancellationToken);
-            sw.Stop();
-
-            return HealthCheckResult.Healthy(
-                $"Chat client answered the test prompt in {sw.ElapsedMilliseconds} ms.");
+            WebApplication app = builder.Build();
+            app.MapHealthChecks("/health/live", new HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("live"), ResponseWriter = WriteJsonAsync,
+            });
+            app.MapHealthChecks("/health/ready", new HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("ready"), ResponseWriter = WriteJsonAsync,
+            });
+            app.MapPost("/chat", async (ChatClientAgent agent, ChatRequest request, CancellationToken ct) =>
+            {
+                AgentResponse response = await agent.RunAsync(request.Message, await agent.CreateSessionAsync(ct), cancellationToken: ct);
+                return Results.Ok(new ChatReply(agent.Name ?? "HealthyAgent", response.Text));
+            });
+            return app;
         }
-        catch (Exception ex)
+
+        private static Task WriteJsonAsync(HttpContext context, HealthReport report)
         {
-            return HealthCheckResult.Unhealthy("Chat client is unreachable.", ex);
+            context.Response.ContentType = "application/json";
+            return context.Response.WriteAsJsonAsync(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), e.Value.Description }),
+            });
         }
     }
-}
 
-/// <summary>
-/// Verifies the mock session-store dependency accepts a write and reads back
-/// the same value — the stand-in for a real Redis/Cosmos session store.
-/// </summary>
-sealed class SessionStoreHealthCheck(MockSessionStore store) : IHealthCheck
-{
-    /// <inheritdoc />
-    public Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context, CancellationToken cancellationToken = default)
+    /// <summary>Readiness: a write/read round trip against the store. No model call.</summary>
+    public sealed class SessionStoreHealthCheck(SessionStore store) : IHealthCheck
     {
-        string probeKey = $"healthz-{Guid.NewGuid():N}";
-
-        store.Put(probeKey, "probe");
-        bool roundTripped = store.TryGet(probeKey, out string? value) && value == "probe";
-        store.Remove(probeKey);
-
-        return Task.FromResult(roundTripped
-            ? HealthCheckResult.Healthy($"Session store round-trip OK ({store.Count} sessions held).")
-            : HealthCheckResult.Unhealthy("Session store failed the write/read round-trip."));
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            string key = $"probe-{Guid.NewGuid():N}";
+            bool ok = store.TryPut(key, "probe") && store.TryGet(key, out string? value) && value == "probe";
+            store.Remove(key);
+            return Task.FromResult(ok
+                ? HealthCheckResult.Healthy($"round trip OK ({store.Count} sessions held)")
+                : HealthCheckResult.Unhealthy("session store refused the round trip"));
+        }
     }
-}
 
-// ---------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------
+    public sealed record ChatRequest(string Message);
 
-/// <summary>Chat request payload.</summary>
-record ChatRequest(string Message);
+    public sealed record ChatReply(string Agent, string Response);
 
-/// <summary>Chat response payload.</summary>
-record ChatReply(string Agent, string Response);
+    /// <summary>In-memory stand-in for an external session store. <see cref="Down"/> simulates an outage.</summary>
+    public sealed class SessionStore
+    {
+        private readonly ConcurrentDictionary<string, string> _entries = new();
 
-/// <summary>In-memory stand-in for an external session store.</summary>
-sealed class MockSessionStore
-{
-    private readonly ConcurrentDictionary<string, string> _entries = new();
+        public bool Down { get; set; }
 
-    /// <summary>Number of entries currently stored.</summary>
-    public int Count => _entries.Count;
+        public int Count => _entries.Count;
 
-    /// <summary>Stores a value under the given key.</summary>
-    public void Put(string key, string value) => _entries[key] = value;
+        public bool TryPut(string key, string value)
+        {
+            if (Down) return false;
+            _entries[key] = value;
+            return true;
+        }
 
-    /// <summary>Attempts to read a value back.</summary>
-    public bool TryGet(string key, out string? value) => _entries.TryGetValue(key, out value);
+        public bool TryGet(string key, out string? value)
+        {
+            value = null;
+            return !Down && _entries.TryGetValue(key, out value);
+        }
 
-    /// <summary>Removes an entry if present.</summary>
-    public void Remove(string key) => _entries.TryRemove(key, out _);
+        public void Remove(string key) => _entries.TryRemove(key, out _);
+    }
 }

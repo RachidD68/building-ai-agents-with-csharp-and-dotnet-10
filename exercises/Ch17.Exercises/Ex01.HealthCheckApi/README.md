@@ -1,31 +1,33 @@
-# Exercise 01 — Health Check API (Beginner)
+# Exercise 01 — Health Check API (Basic)
 
 ## Prompt
 
-Extend Ch17.AspNetCoreHost with two custom health checks: one that verifies
-the IChatClient is reachable (by sending a minimal test prompt) and another
-that checks a mock dependency. Expose them at `/healthz`. Verify both show up
-in the Aspire dashboard.
+Split the agent API's health endpoint in two. `/health/live` answers "is the
+process up?" and `/health/ready` answers "can it serve?". Neither may call the
+model: an orchestrator polls them every few seconds, and a probe that sends a
+prompt turns every poll into a token bill.
 
-## Health checks
+## Accepted when
 
-| Name            | What it probes                                                    |
-|-----------------|-------------------------------------------------------------------|
-| `chat-client`   | Sends "Reply with OK." with `MaxOutputTokens = 5` to the IChatClient |
-| `session-store` | Write/read round-trip against a mock in-memory session store       |
+- liveness never calls the model: 100 probes, 0 model calls;
+- readiness reports a failed (fake) dependency as Unhealthy, with status 503;
+- the store outage does not fail liveness (the process is still alive).
 
-## Key Concepts
+## Checks
 
-- `IHealthCheck` implementations returning `HealthCheckResult.Healthy/Unhealthy`
-- `AddHealthChecks().AddCheck<T>("name")` registration
-- `MapHealthChecks("/healthz")` with an optional JSON response writer
-- Bounded-cost liveness probe (short prompt + low `MaxOutputTokens`)
+| Name            | Tag     | What it probes                                    |
+|-----------------|---------|---------------------------------------------------|
+| `self`          | `live`  | nothing: the process answers                      |
+| `session-store` | `ready` | a write/read round trip against the session store |
 
-## Try it
+## Run
 
 ```bash
-curl http://localhost:5000/healthz
+dotnet run --project exercises/Ch17.Exercises/Ex01.HealthCheckApi -- --self-test
+dotnet run --project exercises/Ch17.Exercises/Ex01.HealthCheckApi     # Ollama by default
+curl http://localhost:5000/health/live
+curl http://localhost:5000/health/ready
 ```
 
-Run the API under the Ch17.AspireOrchestration AppHost to see both checks as
-rows in the Aspire dashboard's health view.
+The self-test runs the API on an in-memory TestServer with a fake model that
+counts its calls, so it needs no model and no network.
