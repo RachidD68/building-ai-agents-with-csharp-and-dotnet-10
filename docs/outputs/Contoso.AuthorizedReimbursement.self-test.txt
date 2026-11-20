@@ -1,4 +1,4 @@
-# code 0e08540 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Contoso: authorized reimbursement (self-test) ===
@@ -31,12 +31,12 @@ $ dotnet run -- --self-test
   PASS  a resubmission returns the claim's state; no new proposal, no second commit
 
 -- 5. The process restarts and reconciles --
-   reconcile 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (found PAY-B7818A8EDB2B by reference)
-   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (exact_proposal_approved) payment PAY-B7818A8EDB2B
+   reconcile 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (found PAY-F2DAC6080359 by reference)
+   claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: Reconciled (exact_proposal_approved) payment PAY-F2DAC6080359
   PASS  reconciled by reference: one simulated payment, the same operation id
 
 -- 6. Bob's lunch claim is low value --
-   claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-CBF8F40CC1D6
+   claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-E351CF3466F1
   PASS  allowed by the low-value policy and delivered
 
 -- 7. A claim whose text asks to pay someone else --
@@ -50,9 +50,21 @@ $ dotnet run -- --self-test
 
 Simulated payments in the provider journal: 2
 
--- 9. The process crashes after Rita's review, then after the commit, and restarts --
+-- 9. The process crashes between the steps, and restarts --
    after_review: AwaitingReview (approval_missing) -> after restart Delivered (exact_proposal_approved)
   PASS  crash after_review: the restart finishes the claim, one operation, one payment
    after_commit: AwaitingReview (approval_missing) -> after restart Delivered (committed_before_restart)
   PASS  crash after_commit: the restart finishes the claim, one operation, one payment
-RESULT 20/20
+   after_intake: Submitted (received) -> after restart Rejected (proposal_failed)
+  PASS  crash after_intake: the restart marks it proposal_failed; the resubmit proposes again
+   after_proposal: Submitted (received) -> after restart AwaitingReview (approval_missing)
+  PASS  crash after_proposal: the restart decides the stored proposal; Rita's review then pays once
+   model outage: Rejected (proposal_failed) -> resubmit AwaitingReview (approval_missing)
+  PASS  model outage: recorded as proposal_failed, no effect; the resubmit proposes again
+   role revoked after review: AwaitingReview (approval_missing) -> after restart Rejected (reviewer_not_authorized)
+  PASS  the restart reloads Rita's role: denied (reviewer_not_authorized), nothing committed or paid
+
+-- 10. A fabrikam claim reuses the id of Bob's lunch claim --
+   claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-04B7BBAA8ACC
+  PASS  paid by its own payment: a third effect, a payment id unlike Bob's
+RESULT 25/25

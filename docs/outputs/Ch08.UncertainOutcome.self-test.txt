@@ -1,4 +1,4 @@
-# code a3f5b43 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Uncertain outcome: two-process self-test ===
@@ -11,7 +11,7 @@ $ dotnet run -- --self-test
   PASS  submit records OutcomeUnknown after the timeout
   PASS  the provider journal already holds one payment
     | === Uncertain outcome: resume ===
-    | Operation: 3f1c2b7e-8a4d-4e6f-9b0a-1c2d3e4f5a6b -> Reconciled (found PAY-E9EF8C1613D0 by reference)
+    | Operation: 3f1c2b7e-8a4d-4e6f-9b0a-1c2d3e4f5a6b -> Reconciled (found PAY-D353DDAB2DA0 by reference)
     | Provider effects: 1
   PASS  resume runs in a different process
   PASS  resume finds the payment by reference and reconciles it
@@ -28,7 +28,7 @@ $ dotnet run -- --self-test
     | Provider effects: 0
   PASS  submit records OutcomeUnknown and no payment exists yet
     | === Uncertain outcome: resume ===
-    | Operation: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d -> Delivered (not found; sent again as PAY-AFA79BABC22B)
+    | Operation: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d -> Delivered (not found; sent again as PAY-AAA0BCC5CEED)
     | Provider effects: 1
   PASS  resume finds no payment, sends again with the same reference: one effect
 
@@ -37,11 +37,18 @@ $ dotnet run -- --self-test
     |   [fault] the provider accepted the payment; the worker process dies now
   PASS  the worker died (exit 3) with the delivery still marked Sending
     | === Uncertain outcome: resume ===
-    | Operation: 5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e -> Reconciled (found PAY-52834CB1926D by reference)
+    | Operation: 5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e -> Reconciled (found PAY-9357D08160FB by reference)
     | Provider effects: 1
   PASS  resume reconciles the Sending row: one effect, same operation id
+
+-- same operation id in two tenants --
+    | contoso Delivered PAY-D12E5AD3B8CC; fabrikam Delivered PAY-36E6B1D2DAF1
+  PASS  each tenant's claim is paid by its own payment: two effects, two payment ids
+  PASS  a known reference with another payee and amount is refused, not answered as paid
+    | resume 22222222-3333-4444-8555-666666666666: Conflict (the reference holds a different payment)
+  PASS  resume finds the reference holding another payment: Conflict, no payment id
 
 -- Defect reproduction --
   PASS  DEFECT REPRODUCED: a blind retry with a new reference pays twice (2 effects)
 
-RESULT 11/11
+RESULT 14/14

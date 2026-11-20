@@ -1,4 +1,4 @@
-# code 0e08540 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
   PASS  ls                                 -> allowed
@@ -24,6 +24,9 @@ $ dotnet run -- --self-test
   PASS  ls -RL                             -> refused: flag '-RL' is not allowed: it can recurse or follow links.
   PASS  dir -L                             -> refused: flag '-L' is not allowed: it can recurse or follow links.
   PASS  ls --deref                         -> refused: flag '--deref' is not allowed.
+  PASS  dir ./s                            -> refused: './s' contains '/', which cmd reads as a switch.
+  PASS  dir notes/s                        -> refused: 'notes/s' contains '/', which cmd reads as a switch.
+  PASS  dir ./s ./b                        -> refused: './s' contains '/', which cmd reads as a switch.
   PASS  dotnet run                         -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  dotnet exec a.dll                  -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  dotnet --version extra             -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
@@ -55,5 +58,5 @@ $ dotnet run -- --self-test
   PASS  Windows: ls -la -> ls [-la]
   PASS  Linux: dir -l -> dir [-l]
   PASS  type README.md -> exit 0: hello from the scratch folder
-RESULT 54/54
+RESULT 57/57
 
