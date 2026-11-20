@@ -1,4 +1,4 @@
-# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 28f4d9e | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
   PASS  ls                                 -> allowed
@@ -45,6 +45,11 @@ $ dotnet run -- --self-test
   PASS  type a.txt,..\..\x                 -> refused: argument 'a.txt,..\..\x' contains a shell metacharacter or control character.
   PASS  cat a.txt;b                        -> refused: argument 'a.txt;b' contains a shell metacharacter or control character.
   PASS  dir a.txt del x                    -> refused: argument 'a.txt del x' contains a shell metacharacter or control character.
+  PASS  cat                                -> refused: cat needs a file name: without one it reads standard input.
+  PASS  wc -l                              -> refused: wc needs a file name: without one it reads standard input.
+  PASS  type CON                           -> refused: 'CON' names a Windows device, not a file.
+  PASS  type conin$                        -> refused: 'conin$' names a Windows device, not a file.
+  PASS  cat notes/aux.txt                  -> refused: 'notes/aux.txt' names a Windows device, not a file.
   PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'cat /etc/passwd'; this policy refuses it
   PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'dotnet run'; this policy refuses it
   PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'find . -exec rm {} ;'; this policy refuses it
@@ -57,6 +62,7 @@ $ dotnet run -- --self-test
   PASS  Windows: type README.md -> cmd.exe [/d, /c, type, README.md]
   PASS  Windows: ls -la -> ls [-la]
   PASS  Linux: dir -l -> dir [-l]
+  PASS  sort with no file -> exit 0: (no output; exit code 0)
   PASS  type README.md -> exit 0: hello from the scratch folder
-RESULT 57/57
+RESULT 63/63
 

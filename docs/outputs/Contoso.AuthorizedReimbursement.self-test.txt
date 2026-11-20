@@ -1,4 +1,4 @@
-# code 8c7e3f1 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 28f4d9e | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Contoso: authorized reimbursement (self-test) ===
@@ -68,14 +68,23 @@ Simulated payments in the provider journal: 2
    claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-04B7BBAA8ACC
   PASS  paid by its own payment: a third effect, a payment id unlike Bob's
 
--- 11. Claims of one employee meet; an account disappears --
+-- 11. Claims of one employee meet; an account disappears; one delivery and one repair fail --
    train Delivered (low_value_policy), then Rita approves the taxi: Delivered (exact_proposal_approved)
   PASS  another claim paid first: the review covers the current version, both paid once
-   approved, then the account moved: AwaitingReview (account_changed) -> second review Delivered (exact_proposal_approved)
+   approved at 450, then the account moved: AwaitingReview (account_changed) at 64.80, review of the old screen AwaitingReview (proposal_changed), second review Delivered (exact_proposal_approved)
   PASS  an approval for an older version is asked for again (account_changed), then paid once
+  PASS  inherit: the re-review starts from the proposed 64.80, a review of the old 450 screen stores nothing
    six parallel claims: 6 Delivered (low_value_policy)
   PASS  six parallel low-value claims of one employee: all six paid, balance 189, version 9
    no account: taxi Rejected (resource_scope), Bob's lunch OutcomeUnknown -> Reconciled, edited review Rejected (resource_scope)
   PASS  a stranded approval without an account is rejected (resource_scope); the restart still reconciles
   PASS  a review of a claim without an account: rejected (resource_scope), nothing committed
-RESULT 30/30
+   refused payee: lunch OutcomeUnknown -> OutcomeUnknown; lost response: train OutcomeUnknown -> Reconciled; unreadable claim: taxi Submitted (received)
+  PASS  a provider that refuses one payee: no exception, that row waits, the other unknown payment reconciles
+  PASS  a stranded claim whose repair throws: ResumeAsync completes, that claim is left as it was
+RESULT 33/33
+
+--- STDERR ---
+delivery of contoso/8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f failed, left for the next resume: InvalidOperationException: provider refused payee E-2002
+repair of claim contoso/4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e failed, left for the next restart: FormatException: The input string 'unreadable' was not in a correct format.
+reconcile of contoso:8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f failed, left for the next resume: InvalidOperationException: provider refused payee E-2002
