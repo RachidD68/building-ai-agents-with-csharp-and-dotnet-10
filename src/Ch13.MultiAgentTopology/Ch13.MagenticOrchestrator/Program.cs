@@ -12,9 +12,9 @@
 //   - Writer:     drafts the brief from the researcher's facts
 //   - Reviewer:   tightens the draft, fixes weak claims, ships final
 //
-// MagenticWorkflowBuilder ships in Microsoft.Agents.AI.Workflows. As of the
-// 1.9 release the agent orchestrations are stable (no longer [Experimental]),
-// so there is no diagnostic to suppress. You give the builder a manager
+// MagenticWorkflowBuilder ships in Microsoft.Agents.AI.Workflows. In 1.28 the
+// builder and the calls used here carry no [Experimental] attribute, so there
+// is no diagnostic to suppress. Optional: kept in the repo, not printed. You give the builder a manager
 // (orchestrator) agent, add the specialist participants, and Build() produces a
 // Workflow you run like any other. The manager plans, delegates, inspects each
 // result against the ledger, and decides when the goal is met — you do not wire
@@ -88,8 +88,7 @@ ChatClientAgent manager = new(
 // The manager runs the ledger (facts, plan, observations) and decides who
 // works next; MagenticWorkflowBuilder.Build() produces a Workflow we run
 // through the same in-process execution environment as any other workflow.
-// The orchestration is stable (since MAF 1.9), so nothing used here needs a
-// suppression. In 1.28 only the prompt-customisation extras are
+// Nothing used here needs a suppression. In 1.28 only the prompt-customisation extras are
 // [Experimental("MAAI001")]: WithPromptOverrides, WithResponseLanguage,
 // MagenticPromptOverrides and MagenticDefaultPrompts.
 // RequirePlanSignoff is TRUE by default: the manager would pause and emit a

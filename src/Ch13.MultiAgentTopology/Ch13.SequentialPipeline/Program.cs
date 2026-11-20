@@ -1,109 +1,129 @@
 // ============================================================================
-// Multi-Agent Systems (Sequential Pipeline)
-// Demonstrates the simplest multi-agent pattern: two agents in sequence.
-// Agent 1 (Translator) translates French text to English.
-// Agent 2 (Summarizer) summarizes the English translation.
+// Sequential pipeline: chain agents by hand, or with BuildSequential
+// ----------------------------------------------------------------------------
+//   dotnet run                Translator -> Summarizer, twice: a manual chain
+//                             (each agent sees only the previous output) and
+//                             AgentWorkflowBuilder.BuildSequential (each agent
+//                             sees the whole conversation so far)
+//   dotnet run -- --content   Researcher -> Writer -> Editor with BuildSequential;
+//                             the researcher looks up the Contoso travel policy
+//                             with a local tool, and the editor checks the draft
+//                             against the research because it sees it
 //
-// Key concepts:
-//   - Creating multiple ChatClientAgent instances with distinct personas
-//   - Manual sequential chaining: output of agent 1 feeds into agent 2
-//   - Each agent maintains its own session and instructions
-//
-// FORWARD REFERENCE: The workflows chapter introduces the Workflow engine that can
-// automate this chaining with AgentWorkflowBuilder.BuildSequential().
+// Absorbs the first edition's ContentPipeline. The offline proof (same final
+// text either way; what the second agent is shown) is in Ch13.MultiAgent.Tests.
 // ============================================================================
 
+using System.ComponentModel;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
-
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
-
-Console.WriteLine("=== Sequential Pipeline — Translator → Summarizer ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Step 1: Define the two agents with distinct personas
-// ---------------------------------------------------------------
-ChatClientAgent translatorAgent = new(
-    chatClient,
-    instructions: """
-        You are a professional French-to-English translator.
-        Translate the provided French text into fluent, natural English.
-        Preserve the meaning, tone, and nuance of the original.
-        Output ONLY the English translation, nothing else.
-        """,
-    name: "Translator",
-    description: "Translates French text into English");
+if (args.Contains("--content"))
+{
+    await ContentPipelineAsync();
+    return;
+}
 
-ChatClientAgent summarizerAgent = new(
-    chatClient,
-    instructions: """
-        You are a concise summarizer.
-        Take the provided English text and produce a brief summary
-        (2-3 sentences maximum) that captures the key points.
-        Output ONLY the summary, nothing else.
-        """,
-    name: "Summarizer",
-    description: "Summarizes English text into 2-3 sentences");
+Console.WriteLine("=== Sequential pipeline: Translator -> Summarizer ===\n");
 
-// ---------------------------------------------------------------
-// Step 2: French text to process through the pipeline
-// ---------------------------------------------------------------
-string frenchText = """
-    La technologie de l'intelligence artificielle a connu des avancées
-    remarquables au cours des dernières années. Les modèles de langage
-    de grande taille sont désormais capables de comprendre et de générer
-    du texte avec une précision impressionnante. Cette évolution ouvre
-    de nouvelles possibilités dans de nombreux domaines, notamment la
-    médecine, l'éducation et la recherche scientifique. Cependant, il
-    est essentiel de développer ces technologies de manière responsable,
-    en tenant compte des implications éthiques et sociales.
+ChatClientAgent translator = new(chatClient,
+    instructions: "Translate the French text into fluent English. Output only the translation.",
+    name: "Translator");
+ChatClientAgent summarizer = new(chatClient,
+    instructions: "Summarize the English text in two sentences. Output only the summary.",
+    name: "Summarizer");
+
+const string frenchMemo = """
+    Objet : notes de frais de novembre. À partir du 1er décembre, chaque note de
+    frais doit être accompagnée d'un justificatif dont le montant correspond
+    exactement au montant déclaré. Les nuits d'hôtel sont plafonnées à 150 EUR et
+    les repas à 60 EUR par note. Les notes incomplètes seront renvoyées à leur auteur.
     """;
+Console.WriteLine($"[Input]\n{frenchMemo.Trim()}\n");
 
-Console.WriteLine("[INPUT — French Text]");
-Console.WriteLine(frenchText);
-
-// ---------------------------------------------------------------
-// Step 3: Stage 1 — Translation
-// ---------------------------------------------------------------
-Console.WriteLine("--- Stage 1: Translation (French → English) ---\n");
-
-AgentSession translatorSession = await translatorAgent.CreateSessionAsync(cts.Token);
-
-AgentResponse translationResponse = await translatorAgent.RunAsync(
-    frenchText,
-    translatorSession,
+// ── A. Manual chain: you pass exactly what the next stage may see ───────
+AgentResponse english = await translator.RunAsync(frenchMemo, await translator.CreateSessionAsync(cts.Token),
     cancellationToken: cts.Token);
-
-string englishTranslation = translationResponse.Text;
-Console.WriteLine("[Translator Output]");
-Console.WriteLine(englishTranslation);
-Console.WriteLine();
-
-// ---------------------------------------------------------------
-// Step 4: Stage 2 — Summarization
-// ---------------------------------------------------------------
-Console.WriteLine("--- Stage 2: Summarization ---\n");
-
-AgentSession summarizerSession = await summarizerAgent.CreateSessionAsync(cts.Token);
-
-AgentResponse summaryResponse = await summarizerAgent.RunAsync(
-    englishTranslation,
-    summarizerSession,
+AgentResponse manualSummary = await summarizer.RunAsync(english.Text, await summarizer.CreateSessionAsync(cts.Token),
     cancellationToken: cts.Token);
+Console.WriteLine("--- A. Manual chain (the summarizer sees the translation only) ---");
+Console.WriteLine($"[Translator] {english.Text.Trim()}");
+Console.WriteLine($"[Summarizer] {manualSummary.Text.Trim()}\n");
 
-Console.WriteLine("[Summarizer Output]");
-Console.WriteLine(summaryResponse.Text);
-Console.WriteLine();
+// ── B. BuildSequential: the framework passes the conversation along ─────
+Workflow workflow = AgentWorkflowBuilder.BuildSequential(translator, summarizer);
+Console.WriteLine("--- B. BuildSequential (the summarizer sees the memo and the translation) ---");
+foreach (ChatMessage message in await RunAsync(workflow, frenchMemo))
+    Console.WriteLine($"[{message.AuthorName ?? message.Role.ToString()}] {message.Text.Trim()}");
 
-Console.WriteLine("=== Sequential Pipeline complete! ===");
+Console.WriteLine("\n=== Done ===");
+
+// ── The content pipeline: three stages, the editor sees the research ────
+async Task ContentPipelineAsync()
+{
+    Console.WriteLine("=== Content pipeline: Researcher -> Writer -> Editor ===\n");
+
+    ChatClientAgent researcher = new(chatClient,
+        instructions: """
+            You research a question for an employee FAQ. Call the policy lookup tool for each
+            topic you need, then list the facts you found as short bullets, each with its topic.
+            Output only the bullets.
+            """,
+        name: "Researcher",
+        tools: [AIFunctionFactory.Create(LookUpPolicy)]);
+    ChatClientAgent writer = new(chatClient,
+        instructions: """
+            You write a short FAQ answer (at most 120 words) for Contoso employees, using only
+            the researcher's bullets. Output only the answer.
+            """,
+        name: "Writer");
+    ChatClientAgent editor = new(chatClient,
+        instructions: """
+            You edit the writer's FAQ answer. Check every number against the researcher's bullets
+            earlier in this conversation. Output two sections: "Corrections" (or "None") and
+            "Final answer".
+            """,
+        name: "Editor");
+
+    const string question = "What can I claim for a hotel stay and a dinner on a business trip?";
+    Console.WriteLine($"[Question] {question}\n");
+
+    Workflow content = AgentWorkflowBuilder.BuildSequential(researcher, writer, editor);
+    foreach (ChatMessage message in await RunAsync(content, question))
+    {
+        if (message.Role != ChatRole.Assistant || message.Text.Length == 0) continue;
+        Console.WriteLine($"=== {message.AuthorName} ===\n{message.Text.Trim()}\n");
+    }
+    Console.WriteLine("=== Done ===");
+}
+
+async Task<List<ChatMessage>> RunAsync(Workflow pipeline, string input)
+{
+    await using Run run = await InProcessExecution.Default.RunAsync(pipeline, input, cancellationToken: cts.Token);
+    return run.OutgoingEvents.OfType<WorkflowOutputEvent>()
+        .Select(e => e.Data).OfType<List<ChatMessage>>().LastOrDefault() ?? [];
+}
+
+// A local lookup over the Contoso travel policy used across this chapter.
+[Description("Looks up one topic of the Contoso travel policy: hotel, meal, receipt, taxi, train or parking.")]
+static string LookUpPolicy([Description("The policy topic")] string topic) =>
+    topic.Trim().ToLowerInvariant() switch
+    {
+        "hotel" => "hotel: at most 150 EUR per night (the claimed amount divided by the nights).",
+        "meal" or "dinner" or "lunch" => "meal: at most 60 EUR per claim.",
+        "receipt" => "receipt: required for every claim; its amount must equal the claimed amount.",
+        "taxi" or "train" or "parking" => $"{topic}: no cap; a receipt is still required.",
+        _ => $"no policy entry for '{topic}'. Known topics: hotel, meal, receipt, taxi, train, parking.",
+    };

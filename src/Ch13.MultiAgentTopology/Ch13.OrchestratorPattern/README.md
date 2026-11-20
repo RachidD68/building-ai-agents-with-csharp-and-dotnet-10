@@ -1,18 +1,15 @@
-# Orchestrator Pattern
+# Orchestrator and specialists
 
-Demonstrates the hub-and-spoke multi-agent pattern. An orchestrator agent uses function calling to route queries to the right specialist: CodeExpert, DataExpert, or SecurityExpert.
+An orchestrator agent routes each question to one or more specialists (CodeExpert, DataExpert, SecurityExpert). Each specialist is exposed to it as a tool with `AsAIFunction()`; the tool takes the specialist's name and description and one `query` parameter.
 
-## Key Concepts
+Agents as tools is one composition style among several. A workflow (`BuildSequential`, `BuildConcurrent`, Handoff) passes messages between agents directly, with no tool call in between.
 
-| Concept | Description |
-|---------|-------------|
-| Agents-as-tools | Each specialist agent is wrapped as an `AIFunction` |
-| `AIFunctionFactory.Create()` | Creates tools that invoke specialist agents |
-| Orchestrator routing | The LLM decides which specialist(s) to consult |
-| Multi-domain queries | A single question can trigger multiple specialists |
+A counting client under each agent prints the model calls per question: at least two for the orchestrator (choose the tools, then write the answer) on top of the specialists' calls.
 
 ## Running
 
 ```bash
 dotnet run --project src/Ch13.MultiAgentTopology/Ch13.OrchestratorPattern
 ```
+
+The offline proof (two orchestrator calls and one specialist call for a single-domain question; what the specialist is shown) is in `Ch13.MultiAgent.Tests`.

@@ -120,8 +120,11 @@ Console.WriteLine();
 Console.WriteLine("Running three reviewers in parallel...");
 Console.WriteLine();
 
+// Pass a ChatMessage, not the bare string: in 1.28 BuildConcurrent hands a
+// string input to its agents as an empty conversation, so each reviewer would
+// answer its instructions alone (Ch13.MultiAgent.Tests reproduces it).
 Run run = await InProcessExecution.Default.RunAsync(
-    workflow, designDoc,
+    workflow, new ChatMessage(ChatRole.User, designDoc),
     sessionId: Guid.NewGuid().ToString(),
     cts.Token);
 

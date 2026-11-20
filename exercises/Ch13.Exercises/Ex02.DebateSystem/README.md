@@ -2,25 +2,18 @@
 
 ## Prompt
 
-Build a two-agent debate: a "Proponent" that argues for a position and a
-"Skeptic" that challenges it. Run three rounds (Proponent → Skeptic →
-Proponent → Skeptic → ...). Each agent sees the full history and responds to
-the prior argument. Topic: "Should all new web services use microservices?"
+A Proponent and a Skeptic debate "Should all new web services use microservices?" for three rounds. Build it twice:
 
-A Judge agent scores every round ("Proponent: X/10, Skeptic: Y/10"); the code
-parses the real scores and prints the totals and the winner at the end.
+- **A. Hand-rolled:** one shared `List<ChatMessage>`, appended after every turn, so each debater sees the whole debate.
+- **B. Group Chat:** `AgentWorkflowBuilder.CreateGroupChatBuilderWith(...)` with a `RoundRobinGroupChatManager` and `MaximumIterationCount = 6`. The manager owns the log.
 
-## Key Concepts
+A Judge scores each transcript once ("Proponent: X/10, Skeptic: Y/10"); the code parses the scores.
 
-- Hand-rolled group chat: ONE shared `List<ChatMessage>` conversation log
-- Every turn passes the full log, not just the previous argument
-- Judge/evaluator agent pattern with parsed "X/10" scores (regex, not proxies)
-- Round-based conversation management
+**Accepted when** version B stops at the turn cap, both transcripts have the same structure (Proponent, Skeptic, six turns), and the token totals of both versions are printed.
 
-## Follow-up (from the book)
+## Running
 
-Rebuild the same debate with the built-in Group Chat orchestration —
-`AgentWorkflowBuilder.CreateGroupChatBuilderWith(...)` plus a
-`RoundRobinGroupChatManager` — and compare lines of code, behavior, and token
-cost. See `src/Ch13.MultiAgentTopology/Ch13.GroupChatOrchestration` for the pattern;
-the message-list bookkeeping in this solution disappears entirely.
+```bash
+dotnet run --project exercises/Ch13.Exercises/Ex02.DebateSystem                  # configured model
+dotnet run --project exercises/Ch13.Exercises/Ex02.DebateSystem -- --self-test   # scripted model, RESULT n/n
+```

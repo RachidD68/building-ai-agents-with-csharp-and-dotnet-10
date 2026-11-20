@@ -1,15 +1,14 @@
-# Exercise 01 — Translation Chain (Beginner)
+# Exercise 01 — Translation Chain (Basic)
 
 ## Prompt
 
-Extend Ch13.SequentialPipeline from two agents to three: Translator (FR → EN) →
-Formalizer (rewrite in formal business tone) → Summarizer. Run a sample French
-memo through all three stages and compare to a single-agent version that does
-all three jobs in one prompt. Note differences in quality and latency.
+Run three agents in sequence (Translator FR -> EN, Formalizer, Summarizer) and one agent that does all three jobs in a single prompt, on the same three French memos.
 
-## Key Concepts
+**Accepted when** the report prints the model calls and the latency of the chain and of the single prompt, and the chain's output passes the same typed check as the single prompt's (`SummaryCheck`: 1 to 3 sentences, at most 80 words, every key fact of the memo present).
 
-- Sequential multi-agent pipeline: output of one agent feeds into the next
-- Single-purpose personas (the Formalizer is one sentence of instructions)
-- `Stopwatch` instrumentation per stage vs. the single-prompt baseline
-- Latency/quality trade-off: three round-trips vs. one
+## Running
+
+```bash
+dotnet run --project exercises/Ch13.Exercises/Ex01.TranslationChain                  # configured model
+dotnet run --project exercises/Ch13.Exercises/Ex01.TranslationChain -- --self-test   # scripted model, RESULT n/n
+```

@@ -10,6 +10,7 @@ Demonstrates the built-in **Concurrent** orchestration: one input fans out to N 
 | Aggregator | A `Func<IList<List<ChatMessage>>, List<ChatMessage>>` that combines the parallel results (here, a labelled merge) |
 | `InProcessExecution.Default.RunAsync(...)` | Runs the workflow; the merged result arrives as a `WorkflowOutputEvent` whose `Data` is a `List<ChatMessage>` |
 | Aggregation strategies | merge / vote / rank / pick-best |
+| Input type | Pass a `ChatMessage`, not a bare string: in 1.28 a string input reaches the agents as an empty conversation (reproduced in `Ch13.MultiAgent.Tests`) |
 
 ## Running
 
