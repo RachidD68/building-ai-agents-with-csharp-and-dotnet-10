@@ -1,0 +1,46 @@
+# code f189941 (Ch11 files as committed in e6baaf6) | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Authorized search: self-test ===
+Indexed 17 document versions (all states) from the two-organization corpus.
+
+-- Probes: where per-run data goes (MAF 1.28.0, OllamaSharp 5.4.25) --
+  PASS  AgentRunOptions.AdditionalProperties are readable in the search delegate (AIAgent.CurrentRunContext)
+  PASS  ... and the same entries reach the chat client's ChatOptions.AdditionalProperties
+  PASS  OllamaSharp leaves them out of the /api/chat request body (other connectors may not)
+  PASS  with a ContextFormatter, the injected context is the formatter's text alone
+
+-- Where it fails: first attempts --
+  post-filter log: fabrikam-taxi@v1#0, contoso-taxi@v1#0, fabrikam-taxi@v2#0, contoso-supplier-annex@v1#0, contoso-taxi@v2#0
+  PASS  DEFECT REPRODUCED: filter after ranking; the log saw 3 chunks Alice may not read
+  PASS  DEFECT REPRODUCED: without the state filter Maria gets the draft as evidence (contoso-taxi@v3#0)
+  PASS  with it, the draft is not evidence
+  PASS  DEFECT REPRODUCED: caller in a shared field; two concurrent requests, one gets the other tenant's evidence
+
+-- Access matrix: 2 organizations x 3 levels x {current, superseded, revoked, hostile} --
+  contoso  Staff       4 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  contoso/Staff: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+  contoso  Manager     5 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  contoso/Manager: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+  contoso  Restricted  6 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  contoso/Restricted: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+  fabrikam Staff       3 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  fabrikam/Staff: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+  fabrikam Manager     4 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  fabrikam/Manager: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+  fabrikam Restricted  5 ids | other tenant 0, above level 0, superseded 0, revoked/draft 0, forbidden text in prompts 0 | current taxi yes | annex as data yes, its citation rejected 1
+  PASS  fabrikam/Restricted: only authorized, current evidence in retrieval and prompts; hostile citation rejected
+
+-- Per-request agents under concurrency --
+  PASS  same interleaving, per-request agents: each ledger holds only its own tenant
+  PASS  40 concurrent requests from 6 callers: no evidence crosses a tenant or a level
+
+-- Evidence check and named abstentions --
+  PASS  cites an id this request received -> accepted (contoso-taxi@v2#0)
+  PASS  the model obeys the annex and cites contoso-exec-travel@v1#0 -> citation_not_supplied
+  PASS  nothing authorized matches -> no_authorized_evidence
+  PASS  an answer with no citation -> no_citation
+  PASS  a citation of the superseded version, never supplied -> citation_not_supplied
+  PASS  a caller with no subject gets no evidence -> no_authorized_evidence
+
+RESULT 22/22

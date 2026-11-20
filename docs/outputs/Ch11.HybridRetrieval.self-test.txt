@@ -1,0 +1,42 @@
+# code f189941 (Ch11 files as committed in e6baaf6) | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Hybrid retrieval: self-test ===
+
+-- Top 2 per question (candidates: 5 from each list) --
+  q1 (1 relevant) "Which form is EXP-7?"
+      lexical hotel@v1#0 lost-receipt@v1#0 | vector meals@v1#0 lost-receipt@v1#0 | hybrid lost-receipt@v1#0 hotel@v1#0 | reranked hotel@v1#0 lost-receipt@v1#0
+  q2 (1 relevant) "cab home late after a client dinner"
+      lexical - | vector taxi@v2#0 supplier-annex@v1#0 | hybrid taxi@v2#0 supplier-annex@v1#0 | reranked taxi@v2#0 supplier-annex@v1#0
+  q3 (2 relevant) "Does a 64.80 EUR night taxi need a reviewer?"
+      lexical hotel@v1#0 taxi@v2#1 | vector taxi@v2#0 taxi@v2#1 | hybrid taxi@v2#1 taxi@v2#0 | reranked hotel@v1#0 taxi@v2#1
+  q4 (2 relevant) "hotel booked outside the travel desk, and a customer meal"
+      lexical hotel@v1#0 meals@v1#0 | vector hotel@v1#0 meals@v1#0 | hybrid hotel@v1#0 meals@v1#0 | reranked hotel@v1#0 meals@v1#0
+  q5 (1 relevant) "I lost the receipt"
+      lexical lost-receipt@v1#0 meals@v1#0 | vector lost-receipt@v1#0 taxi@v2#1 | hybrid lost-receipt@v1#0 meals@v1#0 | reranked lost-receipt@v1#0 meals@v1#0
+  q6 (1 relevant) "how much for a customer lunch"
+      lexical meals@v1#0 | vector meals@v1#0 lost-receipt@v1#0 | hybrid meals@v1#0 lost-receipt@v1#0 | reranked meals@v1#0 lost-receipt@v1#0
+
+-- Measures on this set (K = 2; candidate set: all fused candidates) --
+  stage               HitRate@K  Recall@K
+  lexical                  0.83      0.75
+  vector                   0.83      0.83
+  hybrid candidates        1.00      1.00
+  hybrid                   1.00      1.00
+  hybrid + rerank          1.00      0.92
+
+-- What the measures show --
+  PASS  an identifier (EXP-7): lexical finds it, vector does not
+  PASS  a paraphrase (cab home late): vector finds it, lexical has 0 candidates
+  PASS  hybrid finds both
+  PASS  Recall@K <= HitRate@K for every stage
+  PASS  one-evidence questions (4): HitRate@K == Recall@K for every stage
+  PASS  two-evidence questions (2): HitRate@K != Recall@K for lexical, hybrid + rerank
+  PASS  on this set, hybrid Recall@K 1.00 >= lexical 0.75 and vector 0.83
+  PASS  per stage: 1 relevant chunks reach the candidates but not the final top 2; the reranker adds no id
+
+-- Where it fails: adding raw scores --
+  PASS  DEFECT REPRODUCED: score sum; BM25 scores divided by 100 (same order) changes the top result of 2 of 6 questions
+  PASS  reciprocal rank fusion under the same rescaling: 0 changed
+
+RESULT 10/10

@@ -1,0 +1,25 @@
+# code a8a9a3d | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
+# note: printed in the book as a grounding failure, not a retrieval failure: every caller received only its own tenant and level; for E-1001 and M-3003 the model calls a 23:30 taxi outside 22:00-06:00 and the evidence check accepts it, because it checks provenance, not support
+$ dotnet run
+
+=== Authorized search (live: Ollama) ===
+
+contoso/Staff E-1001: Can I expense a taxi home at 23:30 after a client dinner?
+  evidence: contoso-taxi@v2#0, contoso-hotel@v1#0, contoso-meals@v1#0
+  answer:   You cannot expense a taxi home at 23:30 after a client dinner. The policy states that Contoso reimburses a taxi or ride-hailing trip on business travel that starts or ends between 22:00 and 06:00 [contoso-taxi@v2#0]. Since the taxi ride ends at 23:30, which is outside the allowed time frame, you cannot claim it as an expense.
+  check:    accepted, cites contoso-taxi@v2#0
+
+fabrikam/Staff F-1: Can I expense a taxi home at 23:30 after a client dinner?
+  evidence: fabrikam-taxi@v2#0, fabrikam-hotel@v1#0, fabrikam-supplier-annex@v1#0
+  answer:   You can expense a taxi ride home at 23:30 after a client dinner, as long as the taxi ride was for a business trip and the total cost is within the limit of 30.00 EUR. [fabrikam-taxi@v2#0]
+  check:    accepted, cites fabrikam-taxi@v2#0
+
+contoso/Manager M-3003: Can I expense a taxi home at 23:30 after a client dinner?
+  evidence: contoso-taxi@v2#0, contoso-team-budget@v1#0, contoso-hotel@v1#0
+  answer:   You cannot expense a taxi home at 23:30 after a client dinner. The policy states that Contoso reimburses a taxi or ride-hailing trip on business travel that starts or ends between 22:00 and 06:00 [contoso-taxi@v2#0]. Since your taxi ride ends at 23:30, which is outside the allowed time frame, you cannot claim it as an expense.
+  check:    accepted, cites contoso-taxi@v2#0
+
+contoso/Staff E-1001: Which taxi suppliers are in Annex C and what do they charge?
+  evidence: contoso-supplier-annex@v1#0, contoso-taxi@v2#0, contoso-hotel@v1#0
+  answer:   I do not know which taxi suppliers are in Annex C, as the evidence only mentions that Annex C lists the taxi partners that Contoso has negotiated rates with for business trips, but it does not specify the names of the suppliers.
+  check:    no_citation

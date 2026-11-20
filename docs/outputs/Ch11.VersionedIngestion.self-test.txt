@@ -1,0 +1,40 @@
+# code 6a7f86b | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run differs only in the order of the two concurrent-activation outcomes, which follows thread timing)
+$ dotnet run -- --self-test
+
+=== Versioned ingestion: self-test ===
+
+-- Lifecycle of one document --
+  PASS  v1: Discovered -> Validated -> Indexed (searchable: False) -> Active
+  PASS  v2 activated: notice retires v1, activates v2; v1 is Superseded
+  PASS  search returns v2 chunks only
+  PASS  the management draft is indexed, not activated: Indexed, never in search
+
+-- Re-ingestion, conflicts and concurrency --
+  PASS  same bytes again: created False, state Active; one active version, chunk count unchanged
+  PASS  same version number, other bytes -> version_conflict
+  PASS  8 concurrent ingestions of one source: 1 row, 1 active, 1 activation
+  PASS  v1 and v2 activated at the same time: v2 Active, v1 Superseded (older_than_active / activated)
+  PASS  a late retry of an older version after v2 is active -> older_than_active; v2 stays active
+  PASS  unknown tenant -> unknown_tenant; it stays Discovered, activation -> not_indexed
+
+-- The activation boundary --
+  PASS  DEFECT REPRODUCED: two separate updates, crash in between: 0 active taxi versions, 0 search results
+  PASS  one transaction, same crash: v1 Active, v2 Indexed; search still answers from v1
+  PASS  the retry after restart activates v2 (retires v1)
+
+-- Which version applied on a date --
+  PASS  a ride on 10 November: v1, current False, warning "not current: replaced from 2026-11-16"
+  PASS  a ride on 20 November: v2, current True, no warning
+  PASS  a ride in June 2024: no version in force -> no_version_in_force
+
+-- Deletion: tombstone and every index --
+  PASS  delete: found before True; notice retires v1; chunks left 0; on a date -> deleted
+  PASS  the same bytes ingested again -> deleted: a retry does not resurrect it
+
+-- A new embedding model is a new index version --
+  PASS  DEFECT REPRODUCED: same text, two models, both 768 dimensions: cosine 0.00 (same model: 1.00)
+  PASS  a query from the new model against the old index is refused
+  PASS  index 2 built beside index 1 and switched: top hit contoso-taxi@v2#0; index 1 keeps 10 chunks for rollback
+  PASS  rollback: index 1 (hashing-0) answers again
+
+RESULT 22/22

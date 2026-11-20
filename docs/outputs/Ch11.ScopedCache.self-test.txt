@@ -1,0 +1,28 @@
+# code f189941 (Ch11 files as committed in e6baaf6) | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Scoped cache: self-test ===
+
+-- Where it fails: first attempts --
+  PASS  DEFECT REPRODUCED: question-only key; Frank (fabrikam) is served "answer from contoso-supplier-annex@v1#0, contoso-taxi@v2#0"
+  PASS  DEFECT REPRODUCED: TTL only, no revocation, no delivery check; 2 minutes later Alice still gets "answer from contoso-hotel@v1#0"
+
+-- Scoped, versioned keys --
+  PASS  Frank asks Alice's question: miss, "answer from fabrikam-taxi@v2#0, fabrikam-supplier-annex@v1#0"
+  PASS  Bob, same tenant and level, same question in other spacing and case: hit
+  PASS  Maria (manager) asks it: miss: another scope, another entry
+  PASS  the key carries no question text and no subject: answer:a0cb4eed3ce9a0f6...
+  PASS  a new corpus version is a new key: miss
+
+-- Revocation under a TTL --
+  PASS  revoke contoso-taxi with 9 minutes of TTL left: 5 entries removed (answers and chunks); Alice: miss, "answer from contoso-supplier-annex@v1#0"
+  PASS  Fabrikam's entries are untouched (2 of 2)
+  PASS  access raised to manager, no notice: the delivery check refuses the entry (dependency_not_readable); fresh answer "no_authorized_evidence"
+  PASS  Frank's entry after the TTL: expired
+
+-- Revocation during a computation (two threads) --
+  PASS  DEFECT REPRODUCED: token read at write time; the answer built from the revoked hotel policy is stored (True)
+  PASS  ... and the delivery check still refuses it: dependency_not_readable
+  PASS  token read before retrieval: the write is refused (True), nothing stored
+
+RESULT 14/14

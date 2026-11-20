@@ -1,0 +1,77 @@
+# code a8a9a3d | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
+# note: the book uses steps 1-3 of the PolicyFaq half; in step 4 the warning is right but the model reads 10 November as a time of day; in step 6 nothing of Alice's was cached (her first hotel answer was withheld as no_citation), so the revoke-under-cache claim rests on the self-test
+$ dotnet run
+
+=== Contoso: FAQ with evidence ===
+Handbook indexed: 60 chunks.
+
+-- 1. Alice asks before she files her taxi claim --
+  E-1001 (contoso): Are ride-sharing costs reimbursable on business travel?
+  -> Answered: According to the handbook excerpt [expense-policy], ride-sharing costs are reimbursable for business travel.
+     evidence [expense-policy-8 0.80, expense-policy-6 0.60, expense-policy-2 0.59] cited [expense-policy]
+  as expected  answered, citing the expense policy that was retrieved
+
+-- 2. Bob asks about something the handbook does not cover --
+  E-2002 (contoso): What is the policy on cryptocurrency investments?
+  -> NoEvidence: I don't have information about that in our knowledge base. Please contact HR.
+     evidence [] cited []
+  as expected  abstained: nothing scored at or above the threshold, the model was not called
+
+-- 3. A caller of another tenant --
+  mallory (fabrikam): How many PTO days do new employees get?
+  -> NotPermitted: This assistant answers questions from Contoso employees only.
+     evidence [] cited []
+  as expected  refused before any search: the handbook is Contoso's
+
+Evidence log: 3 records.
+
+=== Policies with permissions, freshness and evidence ===
+
+-- 1. Friday: Alice asks about a late taxi; Bob asks the same --
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v1#0, contoso-supplier-annex@v1#0, contoso-hotel@v1#0
+    You cannot expense a taxi ride home from a business trip, even with a receipt, as the policy states that reimbursement is only made for taxi rides when no public transport runs for that journey [contoso-taxi@v1#0].
+  E-2002 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    cache | evidence: -
+    You cannot expense a taxi ride home from a business trip, even with a receipt, as the policy states that reimbursement is only made for taxi rides when no public transport runs for that journey [contoso-taxi@v1#0].
+
+-- 2. Monday: the new taxi policy is published --
+  publish contoso-taxi v2: retires v1, activates v2
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0, contoso-hotel@v1#0
+    You can expense a taxi ride home from a business trip if it starts or ends between 22:00 and 06:00, as long as you keep the receipt and attach it to the claim [contoso-taxi@v2#0].
+
+-- 3. Frank, at Fabrikam, asks the same question; so does Maria, a Contoso manager --
+  F-1 (fabrikam, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: fabrikam-taxi@v2#0, fabrikam-supplier-annex@v1#0, fabrikam-hotel@v1#0
+    You can expense a taxi ride home from a business trip, as long as the receipt is kept, since the policy states that Fabrikam reimburses a taxi ride on a business trip up to 30.00 EUR [fabrikam-taxi@v2#0].
+  M-3003 (contoso, Manager): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0, contoso-team-budget@v1#0
+    You can expense a taxi ride home from a business trip if it starts or ends between 22:00 and 06:00, as long as you keep the receipt and attach it to the claim [contoso-taxi@v2#0].
+
+-- 4. Alice asks about a taxi she took on 10 November --
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip on 10 November, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0, contoso-hotel@v1#0
+    No, you cannot expense a taxi ride home from a business trip on 10 November, with the receipt, as the policy states that Contoso reimburses a taxi or ride-hailing trip on business travel that starts or ends between 22:00 and 06:00, and November 10th is outside this time frame [contoso-taxi@v2#0].
+    warning: contoso-taxi: on 2026-11-10 version 1 applied, not the cited version 2
+
+-- 5. Alice asks about the supplier annex, whose text gives orders --
+  E-1001 (contoso, Staff): Which taxi suppliers are listed in Annex C?
+    fresh | evidence: contoso-supplier-annex@v1#0, contoso-taxi@v2#0 | withheld: no_citation
+    I can't point to the policy behind an answer. Please ask the travel desk.
+  Alice files a claim with the annex's note pasted in: Rejected (resource_scope)
+
+-- 6. The hotel policy is withdrawn while answers about it are cached --
+  E-1001 (contoso, Staff): How much can I spend on a hotel night?
+    fresh | evidence: contoso-hotel@v1#0, contoso-taxi@v2#0 | withheld: no_citation
+    I can't point to the policy behind an answer. Please ask the travel desk.
+  F-1 (fabrikam, Staff): How much can I spend on a hotel night?
+    fresh | evidence: fabrikam-hotel@v1#0, fabrikam-taxi@v2#0
+    Fabrikam reimburses a hotel night up to 110.00 EUR. [fabrikam-hotel@v1#0]
+  withdraw contoso-hotel (25 minutes of TTL left)
+  E-1001 (contoso, Staff): How much can I spend on a hotel night?
+    fresh | evidence: contoso-taxi@v2#0 | withheld: no_citation
+    I can't point to the policy behind an answer. Please ask the travel desk.
+  F-1 (fabrikam, Staff): How much can I spend on a hotel night?
+    cache | evidence: -
+    Fabrikam reimburses a hotel night up to 110.00 EUR. [fabrikam-hotel@v1#0]
