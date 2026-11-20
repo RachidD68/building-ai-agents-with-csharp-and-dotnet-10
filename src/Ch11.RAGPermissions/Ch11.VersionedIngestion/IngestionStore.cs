@@ -68,11 +68,14 @@ public sealed class IngestionStore
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{doc.Tenant}\n{doc.DocId}\n{doc.Version}\n{(int)doc.Access}\n{doc.EffectiveFrom:yyyy-MM-dd}\n{doc.Title}\n{doc.Body}")));
         using SqliteConnection db = Open();
-        if (Scalar(db, null, "SELECT 1 FROM tombstones WHERE tenant = $t AND doc_id = $d", ("$t", doc.Tenant), ("$d", doc.DocId)) is not null)
+        // One write transaction from the first read: the tombstone check and the insert
+        // cannot interleave with a delete, and no reader has to upgrade to a writer.
+        using SqliteTransaction tx = db.BeginTransaction(deferred: false);
+        if (Scalar(db, tx, "SELECT 1 FROM tombstones WHERE tenant = $t AND doc_id = $d", ("$t", doc.Tenant), ("$d", doc.DocId)) is not null)
             return new IngestResult(0, VersionState.Deleted, false, "deleted");
         try
         {
-            int inserted = Execute(db, null, """
+            int inserted = Execute(db, tx, """
                 INSERT INTO versions(tenant, doc_id, version, content_hash, access, effective_from, title, body,
                                      source, state, ingestion_version)
                 VALUES($t, $d, $v, $h, $a, $e, $ti, $b, $s, 'Discovered', $iv)
@@ -81,8 +84,9 @@ public sealed class IngestionStore
                 ("$t", doc.Tenant), ("$d", doc.DocId), ("$v", doc.Version), ("$h", hash), ("$a", (int)doc.Access),
                 ("$e", doc.EffectiveFrom.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
                 ("$ti", doc.Title), ("$b", doc.Body), ("$s", doc.SourcePath), ("$iv", IngestionVersion));
-            (long id, VersionState state) = Row(db, "tenant = $t AND doc_id = $d AND content_hash = $h",
+            (long id, VersionState state) = Row(db, tx, "tenant = $t AND doc_id = $d AND content_hash = $h",
                 ("$t", doc.Tenant), ("$d", doc.DocId), ("$h", hash));
+            tx.Commit();
             return new IngestResult(id, state, inserted == 1);
         }
         catch (SqliteException e) when (e.SqliteErrorCode == 19)       // same version number, other bytes
@@ -95,17 +99,21 @@ public sealed class IngestionStore
     public IngestResult Validate(long id)
     {
         using SqliteConnection db = Open();
-        using SqliteCommand read = Command(db, null,
-            "SELECT tenant, title, body, state FROM versions WHERE id = $id", ("$id", id));
-        using SqliteDataReader r = read.ExecuteReader();
-        if (!r.Read()) return new IngestResult(id, VersionState.Discovered, false, "unknown_version");
-        string? error =
-            !s_tenants.Contains(r.GetString(0)) ? "unknown_tenant"
-            : r.GetString(1).Length == 0 || r.GetString(2).Length == 0 ? "empty_document"
-            : null;
-        Execute(db, null, "UPDATE versions SET state = CASE WHEN $err IS NULL THEN 'Validated' ELSE state END, error = $err " +
-                          "WHERE id = $id AND state = 'Discovered'", ("$id", id), ("$err", (object?)error ?? DBNull.Value));
-        return new IngestResult(id, Row(db, "id = $id", ("$id", id)).State, false, error);
+        using SqliteTransaction tx = db.BeginTransaction(deferred: false);
+        string? error;
+        using (SqliteCommand read = Command(db, tx, "SELECT tenant, title, body FROM versions WHERE id = $id", ("$id", id)))
+        using (SqliteDataReader r = read.ExecuteReader())
+        {
+            if (!r.Read()) return new IngestResult(id, VersionState.Discovered, false, "unknown_version");
+            error = !s_tenants.Contains(r.GetString(0)) ? "unknown_tenant"
+                : r.GetString(1).Length == 0 || r.GetString(2).Length == 0 ? "empty_document"
+                : null;
+        }                                                   // the reader is closed before the write
+        Execute(db, tx, "UPDATE versions SET state = CASE WHEN $err IS NULL THEN 'Validated' ELSE state END, error = $err " +
+                        "WHERE id = $id AND state = 'Discovered'", ("$id", id), ("$err", (object?)error ?? DBNull.Value));
+        VersionState state = Row(db, tx, "id = $id", ("$id", id)).State;
+        tx.Commit();
+        return new IngestResult(id, state, false, error);
     }
 
     // ---- indexed -------------------------------------------------------------
@@ -321,9 +329,13 @@ public sealed class IngestionStore
             : throw new InvalidOperationException($"no version row {id}");
     }
 
-    private static (long Id, VersionState State) Row(SqliteConnection db, string where, params (string Name, object Value)[] p)
+    private static (long Id, VersionState State) Row(SqliteConnection db, string where, params (string Name, object Value)[] p) =>
+        Row(db, null, where, p);
+
+    private static (long Id, VersionState State) Row(SqliteConnection db, SqliteTransaction? tx, string where,
+        params (string Name, object Value)[] p)
     {
-        using SqliteCommand cmd = Command(db, null, $"SELECT id, state FROM versions WHERE {where}", p);
+        using SqliteCommand cmd = Command(db, tx, $"SELECT id, state FROM versions WHERE {where}", p);
         using SqliteDataReader r = cmd.ExecuteReader();
         return r.Read() ? (r.GetInt64(0), Enum.Parse<VersionState>(r.GetString(1))) : (0, VersionState.Discovered);
     }
