@@ -105,13 +105,18 @@ public sealed class ChainTopology(AgentFactory agents) : Topology("explicit chai
 /// <summary>
 /// 3. An orchestrator with two specialists exposed as tools. With contracts on,
 /// a tool takes only a claim id (the code supplies the claim) and returns only
-/// the parsed verdict; with contracts off, the specialists are plain AsAIFunction
-/// tools and their raw text reaches the orchestrator.
+/// the parsed verdict; a broken contract ends the run and the claim fails closed.
+/// With contracts off, the specialists are plain AsAIFunction tools and their raw
+/// text reaches the orchestrator.
 /// </summary>
 public sealed class OrchestratorTopology : Topology
 {
+    // Per-run state flows with the async call, so two claims run at once on one
+    // instance never see each other's claim or violation.
+    sealed class RunState(ExpenseClaim claim) { public ExpenseClaim Claim => claim; public string? Violation; }
+
     readonly ChatClientAgent _orchestrator;
-    ExpenseClaim? _current;
+    readonly AsyncLocal<RunState?> _run = new();
 
     public OrchestratorTopology(AgentFactory agents, bool contracts) : base(contracts ? "orchestrator" : "orchestrator (raw tools)")
     {
@@ -132,18 +137,25 @@ public sealed class OrchestratorTopology : Topology
     AIFunction Checked<T>(ChatClientAgent specialist, string name, string description) where T : class =>
         AIFunctionFactory.Create(async (string claim_id, CancellationToken ct) =>
         {
-            if (_current is null || claim_id != _current.Id)
+            RunState? run = _run.Value;
+            if (run is null || claim_id != run.Claim.Id)
                 return """{"error":"unknown claim id"}""";
-            string reply = await AskAsync(specialist, TaskSet.Prompt(_current), ct);
-            return Contract.TryParse(reply, out T verdict, out string error)
-                ? JsonSerializer.Serialize(verdict)
-                : JsonSerializer.Serialize(new { error = "contract violation: " + error });
+            string reply = await AskAsync(specialist, TaskSet.Prompt(run.Claim), ct);
+            if (Contract.TryParse(reply, out T verdict, out string error))
+                return JsonSerializer.Serialize(verdict);
+            // The detail stays with the code; the model gets a fixed string, never
+            // the specialist's text, and the tool loop ends here.
+            run.Violation ??= $"{name} contract: {error}";
+            if (FunctionInvokingChatClient.CurrentContext is { } call) call.Terminate = true;
+            return """{"error":"contract_violation"}""";
         }, name, description);
 
     protected override async Task<Outcome> RunCoreAsync(ExpenseClaim claim, CancellationToken ct)
     {
-        _current = claim;
+        RunState run = new(claim);
+        _run.Value = run;
         string reply = await AskAsync(_orchestrator, TaskSet.Prompt(claim), ct);
+        if (run.Violation is not null) return FailClosed(claim, run.Violation);
         return Contract.TryParse(reply, out TriageResult result, out string error)
             ? new(result) : new(null, "contract: " + error);
     }

@@ -174,7 +174,8 @@ Console.WriteLine("\n-- 6. Handoff orchestration --");
     Check("billing, with no outgoing edge, is offered no handoff tool", billingTools.Count == 0);
     Check("the last reply comes from Billing",
         transcript.LastOrDefault(m => m.Role == ChatRole.Assistant && m.Text.Length > 0)?.AuthorName == "Billing");
-    Check("an instruction in Billing's reply does not reach the Supervisor", supervisorModel.Seen.Count == 0);
+    Check("with no edge, Billing's transfer instruction has no tool to call, and the Supervisor never runs",
+        billingTools.Count == 0 && supervisorModel.Seen.Count == 0);
 
     int seen = triageModel.Seen.Count;
     await Workflows.RunAsync(workflow, "I was charged twice.");

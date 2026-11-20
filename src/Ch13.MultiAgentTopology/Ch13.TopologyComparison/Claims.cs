@@ -12,12 +12,12 @@ public sealed record ExpenseClaim(
 /// <summary>The triage rules every topology applies. The model reads them; the code owns them.</summary>
 public static class TriagePolicy
 {
-    public const decimal HotelPerNight = 150m;
+    public const decimal HotelPerNight = 140m;
     public const decimal MealPerClaim = 60m;
 
     public const string Rules = """
         Contoso travel policy:
-        - hotel: at most 150 EUR per night (amount divided by nights).
+        - hotel: at most 140 EUR per night (amount divided by nights).
         - meal: at most 60 EUR per claim.
         - taxi, train, parking: no cap.
         A receipt is required for every claim and its amount must equal the claimed amount.
@@ -46,7 +46,7 @@ public static class TriagePolicy
         : ("approve", "none");
 }
 
-/// <summary>Five tasks, reusing the Contoso claims of the earlier snapshots.</summary>
+/// <summary>Five tasks; C-101 and C-104 reuse amounts from earlier Contoso snapshots.</summary>
 public static class TaskSet
 {
     public static readonly IReadOnlyList<ExpenseClaim> Claims =
@@ -95,15 +95,17 @@ public sealed record TriageResult(
 
 /// <summary>
 /// A specialist's reply re-enters the system as data: the first JSON object is
-/// parsed into the contract type, unknown fields are refused, enumerated values
-/// are checked, and everything else in the reply (prose, instructions) is dropped.
+/// parsed into the contract type, unknown, missing and duplicate fields are refused,
+/// enumerated values are checked, and everything else in the reply (prose,
+/// instructions) is dropped.
 /// </summary>
 public static class Contract
 {
     static readonly JsonSerializerOptions Strict = new()
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        NumberHandling = JsonNumberHandling.Strict,
+        RespectRequiredConstructorParameters = true,
+        AllowDuplicateProperties = false,
     };
 
     static readonly HashSet<string> Rules = ["none", "hotel_per_night", "meal_cap"];
@@ -121,6 +123,7 @@ public static class Contract
         {
             null => "null",
             PolicyVerdict p when !Rules.Contains(p.Rule) => $"unknown rule '{p.Rule}'",
+            PolicyVerdict p when p.WithinPolicy != (p.Rule == "none") => "within_policy and rule disagree",
             ReceiptVerdict r when !Problems.Contains(r.Problem) => $"unknown problem '{r.Problem}'",
             ReceiptVerdict r when r.ReceiptOk != (r.Problem == "none") => "receipt_ok and problem disagree",
             TriageResult t when !Decisions.Contains(t.Decision) => $"unknown decision '{t.Decision}'",
