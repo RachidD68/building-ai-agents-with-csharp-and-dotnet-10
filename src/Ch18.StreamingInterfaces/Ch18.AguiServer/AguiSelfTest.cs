@@ -46,7 +46,7 @@ internal static class AguiSelfTest
                 AguiWire.Body("t-alice", "r1", ("m1", "My hotel receipt: 412 EUR, room 18")));
             (int status, List<JsonElement> smuggled) = await AguiWire.RunAsync(loose.Http, "/agui/assistant", loose.Token("contoso", "E-2002"),
                 AguiWire.WithProperty(AguiWire.Body("t-bob-1", "r2", ("m2", "hello")), "ThreadId", "t-alice"));
-            Check($"DEFECT REPRODUCED: a case-sensitive guard checks 'threadId' (bob's t-bob-1), MAF reads the later 'ThreadId' (t-alice): {status}, \"{AguiWire.Text(smuggled).Trim()}\"",
+            Check($"DEFECT REPRODUCED: the guard checks 'threadId' (t-bob-1), MAF reads the later 'ThreadId' (t-alice): {status}, and the answer quotes alice's 412 EUR receipt",
                 status == 200 && AguiWire.Text(smuggled).Contains("412 EUR", StringComparison.Ordinal));
         }
         int[] spelled = [.. await Task.WhenAll(new[] { "ThreadId", "THREADID" }.Select(async name =>
@@ -55,7 +55,7 @@ internal static class AguiSelfTest
         (int onlyCased, _) = await AguiWire.RunAsync(http, "/agui/assistant", bob,
             AguiWire.Body("t-alice", "r2", ("m2", "hello")).Replace("\"threadId\"", "\"ThreadId\"", StringComparison.Ordinal));
         (_, List<JsonElement> own) = await AguiWire.RunAsync(http, "/agui/assistant", alice, AguiWire.Body("t-alice", "r4", ("m4", "hello")));
-        Check($"guarded: a second 'ThreadId' / 'THREADID' naming alice's thread: {spelled[0]} / {spelled[1]}; a lone 'ThreadId': {onlyCased}; alice's thread still holds only her messages: \"{AguiWire.Text(own).Trim()}\"",
+        Check($"guarded: a second 'ThreadId' / 'THREADID' naming alice's thread: {spelled[0]} / {spelled[1]}; a lone 'ThreadId': {onlyCased}; her thread holds only her 2 messages",
             spelled.All(s => s == 400) && onlyCased == 400 && AguiWire.Text(own).Contains("I see 2 user message(s)", StringComparison.Ordinal));
 
         Console.WriteLine("\n-- 2. Selection only after authorization (rights loaded per request)");
