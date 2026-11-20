@@ -36,15 +36,25 @@ public sealed class LeaseStore
     public Lease? TryAcquire(string key, string owner, DateTimeOffset now, TimeSpan duration)
     {
         using SqliteConnection db = Open();
-        using SqliteCommand cmd = Command(db, """
+        // BEGIN IMMEDIATE takes the write lock up front, and waits for it (DefaultTimeout) when
+        // another worker holds it. Without it, two workers starting together could get
+        // "database is locked" from the RETURNING row instead of a clean "lease held".
+        using SqliteTransaction tx = db.BeginTransaction(deferred: false);
+        Lease? lease = null;
+        using (SqliteCommand cmd = Command(db, """
             INSERT INTO leases (lease_key, owner, token, expires_at) VALUES ($key, $owner, 1, $expires)
             ON CONFLICT (lease_key) DO UPDATE SET owner = excluded.owner, token = leases.token + 1,
                                                   expires_at = excluded.expires_at
             WHERE leases.expires_at <= $now
             RETURNING token, expires_at
-            """, ("$key", key), ("$owner", owner), ("$expires", Iso(now + duration)), ("$now", Iso(now)));
-        using SqliteDataReader r = cmd.ExecuteReader();
-        return r.Read() ? new Lease(key, owner, r.GetInt64(0), Time(r.GetString(1))) : null;
+            """, ("$key", key), ("$owner", owner), ("$expires", Iso(now + duration)), ("$now", Iso(now))))
+        {
+            cmd.Transaction = tx;
+            using SqliteDataReader r = cmd.ExecuteReader();
+            if (r.Read()) lease = new Lease(key, owner, r.GetInt64(0), Time(r.GetString(1)));
+        }
+        tx.Commit();
+        return lease;
     }
 
     public Lease? Load(string key)
