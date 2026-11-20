@@ -1,4 +1,4 @@
-# code 0c1aa78 | SDK 11.0.100 | Windows 11 | none (scripted models)
+# code 419fb49 | SDK 11.0.100 | Windows 11 | none (scripted models)
 $ dotnet run
 
 === Testing multi-agent compositions ===
@@ -34,7 +34,7 @@ $ dotnet run
   PASS  triage is offered one handoff tool per declared edge
   PASS  billing, with no outgoing edge, is offered no handoff tool
   PASS  the last reply comes from Billing
-  PASS  an instruction in Billing's reply does not reach the Supervisor
+  PASS  with no edge, Billing's transfer instruction has no tool to call, and the Supervisor never runs
   PASS  a string input reaches the Handoff entry agent as a user message (unlike BuildConcurrent)
 
 -- 7. Group Chat orchestration --
