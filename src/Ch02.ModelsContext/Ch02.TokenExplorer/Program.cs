@@ -43,8 +43,9 @@ foreach (Sample sample in Samples.All)
 }
 
 Console.WriteLine();
-Console.WriteLine("  len/4 is a prose rule. Arabic and C# drift from it, and the two");
-Console.WriteLine("  encodings disagree with each other. Count with the model's tokenizer.");
+Console.WriteLine("  len/4 overcounts the English and C# samples and undercounts the Arabic one,");
+Console.WriteLine("  and cl100k_base needs about twice the tokens of o200k_base for the Arabic.");
+Console.WriteLine("  Estimate to plan; count with the model's own tokenizer before you send.");
 
 #endregion
 
@@ -152,7 +153,7 @@ static void PrintBudget(string label, ContextBudget budget)
 {
     string verdict = budget.Fits
         ? $"fits, {budget.Free:N0} free"
-        : $"OVER by {-budget.Free:N0}: trim history or evidence before the call";
+        : $"OVER by {-budget.Free:N0}: trim before the call";
     Console.WriteLine($"  {label,-13} input {budget.Input,6:N0} + reserve {budget.OutputReserve,5:N0} of {budget.Window:N0} -> {verdict}");
 }
 

@@ -1,0 +1,604 @@
+{
+  "RunAtUtc": "2026-11-20T10:55:19.1094436+00:00",
+  "Pins": {
+    ".NET": "10.0.15",
+    "Microsoft.Extensions.AI.Abstractions": "10.11.0",
+    "OllamaSharp": "5.4.25",
+    "OpenAI": "2.14.0"
+  },
+  "TrialsPerTask": 3,
+  "Configurations": [
+    {
+      "Name": "local-json",
+      "Provider": "ollama",
+      "Model": "llama3.2",
+      "Options": [
+        {
+          "Option": "MaxOutputTokens",
+          "Requested": "64",
+          "Evidence": "honored: max 6 output tokens, 0 truncated"
+        },
+        {
+          "Option": "ResponseFormat",
+          "Requested": "Json",
+          "Evidence": "15/15 answered replies met the JSON contract"
+        },
+        {
+          "Option": "Temperature",
+          "Requested": "0.0",
+          "Evidence": "sent; not observable from the response"
+        }
+      ],
+      "Counts": {
+        "Correct": 12,
+        "Wrong": 3,
+        "Invalid": 0,
+        "Refused": 0,
+        "Truncated": 0,
+        "TransportError": 0,
+        "ProviderError": 0
+      },
+      "Trials": [
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 1,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 149,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 2,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 149,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 3,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 149,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 1,
+          "Outcome": "Wrong",
+          "FinishReason": "stop",
+          "InputTokens": 153,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "expected review, got deny"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 2,
+          "Outcome": "Wrong",
+          "FinishReason": "stop",
+          "InputTokens": 153,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "expected review, got deny"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 3,
+          "Outcome": "Wrong",
+          "FinishReason": "stop",
+          "InputTokens": 153,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "expected review, got deny"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 1,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 148,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 2,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 148,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 3,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 148,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "allow"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 1,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 157,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 2,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 157,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 3,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 157,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 1,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 147,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 2,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 147,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 3,
+          "Outcome": "Correct",
+          "FinishReason": "stop",
+          "InputTokens": 147,
+          "OutputTokens": 6,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "deny"
+        }
+      ]
+    },
+    {
+      "Name": "local-reasoning",
+      "Provider": "ollama",
+      "Model": "llama3.2",
+      "Options": [
+        {
+          "Option": "MaxOutputTokens",
+          "Requested": "64",
+          "Evidence": "not observable: no usage reported"
+        },
+        {
+          "Option": "Reasoning",
+          "Requested": "Effort=Low",
+          "Evidence": "rejected: every call failed"
+        },
+        {
+          "Option": "ResponseFormat",
+          "Requested": "Json",
+          "Evidence": "0/0 answered replies met the JSON contract"
+        }
+      ],
+      "Counts": {
+        "Correct": 0,
+        "Wrong": 0,
+        "Invalid": 0,
+        "Refused": 0,
+        "Truncated": 0,
+        "TransportError": 0,
+        "ProviderError": 15
+      },
+      "Trials": [
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 1,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 2,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 3,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 1,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 2,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 3,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 1,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 2,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 3,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 1,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 2,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 3,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 1,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 2,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 3,
+          "Outcome": "ProviderError",
+          "FinishReason": null,
+          "InputTokens": null,
+          "OutputTokens": null,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "OllamaException: \u0022llama3.2\u0022 does not support thinking"
+        }
+      ]
+    },
+    {
+      "Name": "local-capped-text",
+      "Provider": "ollama",
+      "Model": "llama3.2",
+      "Options": [
+        {
+          "Option": "MaxOutputTokens",
+          "Requested": "4",
+          "Evidence": "honored: max 4 output tokens, 15 truncated"
+        },
+        {
+          "Option": "Temperature",
+          "Requested": "0.7",
+          "Evidence": "sent; not observable from the response"
+        }
+      ],
+      "Counts": {
+        "Correct": 0,
+        "Wrong": 0,
+        "Invalid": 0,
+        "Refused": 0,
+        "Truncated": 15,
+        "TransportError": 0,
+        "ProviderError": 0
+      },
+      "Trials": [
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 1,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 149,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 2,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 149,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "taxi-42",
+          "Attempt": 3,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 149,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 1,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 153,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 2,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 153,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "taxi-64",
+          "Attempt": 3,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 153,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 1,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 148,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 2,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 148,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "limit-50",
+          "Attempt": 3,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 148,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022allow"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 1,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 157,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 2,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 157,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "self-approval",
+          "Attempt": 3,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 157,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 1,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 147,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 2,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 147,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        },
+        {
+          "TaskId": "currency",
+          "Attempt": 3,
+          "Outcome": "Truncated",
+          "FinishReason": "length",
+          "InputTokens": 147,
+          "OutputTokens": 4,
+          "ReasoningTokens": null,
+          "ReasoningSeen": false,
+          "Detail": "cut at the output cap: {\u0022decision\u0022:\u0022deny"
+        }
+      ]
+    }
+  ],
+  "NotRun": [
+    "cloud-json (openai): not run; pass --include-cloud with LlmProvider:OpenAI:ApiKey set"
+  ]
+}
