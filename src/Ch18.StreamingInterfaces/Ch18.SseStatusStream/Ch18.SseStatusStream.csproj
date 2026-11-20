@@ -8,9 +8,6 @@
        one for the contract (OperationLog, StatusEvent, StatusView). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- No static files here. Without this, a Debug build on SDK 11 of a project that references
-         another Web SDK project fails (the Blazor hot-reload scoped-CSS bundle has no matching endpoint). -->
-    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <ItemGroup>

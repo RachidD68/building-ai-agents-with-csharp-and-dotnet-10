@@ -22,4 +22,11 @@
   <PropertyGroup Condition="!$(MSBuildProjectName.EndsWith('.AppHost'))">
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
+  <!-- No sample serves static files (no wwwroot). Without this, a Debug build on SDK 11 of a
+       Web SDK project that references another Web SDK project fails: "The following scoped css
+       bundles do not have matching endpoints: _framework/Microsoft.NET.Sdk.BlazorWeb.HotReload...".
+       Release builds are not affected. -->
+  <PropertyGroup Condition="!Exists('$(MSBuildProjectDirectory)/wwwroot')">
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
 </Project>
