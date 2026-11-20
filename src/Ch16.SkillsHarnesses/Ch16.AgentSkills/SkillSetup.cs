@@ -79,9 +79,11 @@ public static class SkillSetup
             output = await process.StandardOutput.ReadToEndAsync(timeout.Token);
             await process.WaitForExitAsync(timeout.Token);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+            // Timeout or the caller's cancellation: either way the process tree goes.
             try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { /* already gone */ }
+            if (cancellationToken.IsCancellationRequested) throw;
             return "Error: script timed out after 30 seconds and was terminated.";
         }
 

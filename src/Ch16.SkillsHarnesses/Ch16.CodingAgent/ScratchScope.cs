@@ -24,7 +24,12 @@ public sealed class ScratchScope(string root)
             refusal = "the path leaves the scratch repo"; return false;
         }
         string[] parts = rel.Split(Path.DirectorySeparatorChar);
-        if (parts.Any(p => p.Equals(".git", StringComparison.OrdinalIgnoreCase)))
+        // NTFS opens ".git::$INDEX_ALLOCATION" as .git, so no stream names, and no trailing dots or spaces.
+        if (parts.Any(p => p.Contains(':')))
+        {
+            refusal = "a path segment may not contain ':'"; return false;
+        }
+        if (parts.Any(p => p.TrimEnd('.', ' ').Equals(".git", StringComparison.OrdinalIgnoreCase)))
         {
             refusal = ".git is off limits"; return false;
         }

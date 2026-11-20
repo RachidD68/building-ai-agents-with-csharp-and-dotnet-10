@@ -52,6 +52,14 @@ static class SelfTest
                 onByDefault.SequenceEqual(["hosted web search", "to-do list", "agent modes", "skills", "file memory",
                                            "tool auto-approval", "OpenTelemetry"]));
 
+            // 5b. A tool no row claims is reported, not dropped.
+            bool noneByDefault = CapabilityReport.Build(new HarnessAgentOptions(), bare.ToolNames, [])
+                .All(c => c.Name != "unclassified tools");
+            Capability? stray = CapabilityReport.Build(configured, [.. noMemory.ToolNames, "mystery_tool"], ["mystery_tool"])
+                .SingleOrDefault(c => c.Name == "unclassified tools");
+            Check("every tool a default harness sends has a row; a tool no row claims shows as 'unclassified tools' (sent 1, called 1)",
+                noneByDefault && stray is { Advertised: 1, Called: 1 });
+
             // 6. Exercised means called: the script calls one to-do tool, once.
             (_, AgentResponse todoRun) = await RunOnceAsync(configured, callTool: "todos_add",
                 arguments: new Dictionary<string, object?> { ["title"] = "Check the carrier" });

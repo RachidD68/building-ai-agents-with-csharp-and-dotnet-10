@@ -35,7 +35,7 @@ public static class Composition
         DisableAgentSkillsProvider = true,
         DisableWebSearch = true,
         DisableFileMemory = true,
-        DisableToolAutoApproval = false,   // a smaller agent is not a less careful one
+        DisableToolAutoApproval = false,   // keep the auto-approval rules; approval-required tools stop either way
         MaximumIterationsPerRequest = 5,
     };
 }

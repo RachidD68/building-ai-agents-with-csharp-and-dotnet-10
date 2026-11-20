@@ -26,25 +26,35 @@ static class SelfTest
             // 1-2. The scope itself.
             Check("src/Discount.cs resolves inside the scratch repo",
                 scope.TryResolve("src/Discount.cs", out string full, out _) && full.StartsWith(scope.Root));
-            string[] hostile = ["../outside.txt", "src/../../outside.txt", Path.Combine(work, "outside.txt"), ".git/config", "src/.GIT/x", " "];
+            string[] hostile = ["../outside.txt", "src/../../outside.txt", Path.Combine(work, "outside.txt"), ".git/config", "src/.GIT/x", " ",
+                                ".git::$INDEX_ALLOCATION/config", ".git./config", "README.md:x"];
             Check("refused: ../outside.txt, src/../../outside.txt, an absolute path, .git/config, src/.GIT/x, a blank path",
-                hostile.All(p => !scope.TryResolve(p, out _, out _)));
+                hostile[..6].All(p => !scope.TryResolve(p, out _, out _)));
+            Check("refused: .git::$INDEX_ALLOCATION/config, .git./config and README.md:x (NTFS stream and trailing-dot names)",
+                hostile[6..].All(p => !scope.TryResolve(p, out _, out _)));
 
-            // 3. Links, where this machine lets a test create one.
+            // 3. Links. A symbolic link needs a privilege on Windows; a junction does not.
             string link = Path.Combine(root, "escape");
-            bool linkMade = false;
-            try { Directory.CreateSymbolicLink(link, work); linkMade = true; }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-            if (linkMade)
+            string kind = "symbolic link";
+            try { Directory.CreateSymbolicLink(link, work); }
+            catch (Exception ex) when (OperatingSystem.IsWindows() && ex is IOException or UnauthorizedAccessException)
             {
-                Check("refused: escape/outside.txt through a symbolic link inside the repo",
-                    !scope.TryResolve("escape/outside.txt", out _, out string why) && why.Contains("link"));
-                Directory.Delete(link);
+                kind = "junction";
+                Shell("cmd", "/c", "mklink", "/J", link, work);
             }
-            else
-            {
-                Console.WriteLine("  SKIP  symbolic-link case: the OS refused to create a link for this account");
-            }
+            Check($"refused: escape/outside.txt through a {kind} inside the repo",
+                Directory.Exists(link) && !scope.TryResolve("escape/outside.txt", out _, out string why) && why.Contains("link"));
+            Directory.Delete(link);
+
+            // 3b. A hard link is not a reparse point: the write must replace the name, not write through it.
+            string hardLink = Path.Combine(root, "src", "hl.txt");
+            if (OperatingSystem.IsWindows()) Shell("cmd", "/c", "mklink", "/H", hardLink, Path.Combine(work, "outside.txt"));
+            else Shell("ln", Path.Combine(work, "outside.txt"), hardLink);
+            string wrote = new CodingTools(scope).WriteFile("src/hl.txt", "changed by agent");
+            Check("a write to src/hl.txt, a hard link to a file outside the repo, replaces the name; the file outside is untouched",
+                wrote.StartsWith("Wrote") && File.ReadAllText(hardLink) == "changed by agent" &&
+                File.ReadAllText(Path.Combine(work, "outside.txt")) == "not yours");
+            File.Delete(hardLink);
 
             // 4. Reads run at once.
             (ChatClientAgent agent, AgentSession session, AgentResponse read, ScriptedToolChatClient client) =
@@ -86,6 +96,15 @@ static class SelfTest
 
         Console.WriteLine($"\nRESULT {passed}/{total}");
         return passed == total ? 0 : 1;
+    }
+
+    private static void Shell(string file, params string[] args)
+    {
+        System.Diagnostics.ProcessStartInfo psi = new(file) { RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string a in args) psi.ArgumentList.Add(a);
+        using System.Diagnostics.Process p = System.Diagnostics.Process.Start(psi)!;
+        p.WaitForExit();
+        if (p.ExitCode != 0) throw new InvalidOperationException($"{file} {string.Join(' ', args)} failed: {p.StandardError.ReadToEnd()}");
     }
 
     private static IEnumerable<ToolApprovalRequestContent> Requests(AgentResponse r) =>

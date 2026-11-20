@@ -48,6 +48,14 @@ public static class CapabilityReport
             report.Add(new($"your tool: {tool.Name}", false, true,
                 sent.Count(t => t == tool.Name), used.Count(t => t == tool.Name)));
         }
+        // The rows are a list you extend. A tool no row claims (a context provider's, or a new
+        // harness provider's after an upgrade) gets this row, so it can't go unreported.
+        bool Known(string tool) => (options.ChatOptions?.Tools ?? []).Any(t => t.Name == tool) ||
+            Rows.Any(r => r.ToolPrefixes.Any(p => tool.StartsWith(p, StringComparison.Ordinal)));
+        if (sent.Any(t => !Known(t)) || used.Any(t => !Known(t)))
+        {
+            report.Add(new("unclassified tools", false, true, sent.Count(t => !Known(t)), used.Count(t => !Known(t))));
+        }
         return report;
     }
 

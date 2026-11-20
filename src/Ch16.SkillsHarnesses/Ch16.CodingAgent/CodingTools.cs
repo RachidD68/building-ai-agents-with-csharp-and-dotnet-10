@@ -31,7 +31,11 @@ public sealed class CodingTools(ScratchScope scope)
     {
         if (!scope.TryResolve(path, out string full, out string refusal)) return $"Refused: {refusal}.";
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-        File.WriteAllText(full, content);
+        // Write a new file and rename it over the old name. Writing in place would follow a
+        // hard link to wherever its other name lives; a rename replaces only this name.
+        string temp = $"{full}.{Guid.NewGuid():N}.tmp";
+        File.WriteAllText(temp, content);
+        File.Move(temp, full, overwrite: true);
         return $"Wrote {path} ({content.Length} characters).";
     }
 

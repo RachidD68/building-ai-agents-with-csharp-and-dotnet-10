@@ -54,6 +54,12 @@ static class SelfTest
             File.Delete(Path.Combine(root, Skill, Resource));
             Check("a referenced file that does not exist fails validation (missing references/thresholds.md)",
                 (await ValidateAsync(root)).Problems.SequenceEqual([$"missing {Resource}"]));
+            root = CopySkills(work, "climb");
+            File.WriteAllText(Path.Combine(root, "outside.md"), "not part of the skill\n");
+            Edit(root, "1. Read `references/thresholds.md` before you answer.",
+                "1. Read `references/thresholds.md` and `references/../../outside.md` before you answer.");
+            Check("a reference that climbs out of the skill folder fails validation, although the file exists",
+                (await ValidateAsync(root)).Problems.SequenceEqual(["outside the skill folder: references/../../outside.md"]));
             root = CopySkills(work, "good");
             ValidationResult good = await ValidateAsync(root);
             Check("a valid skill yields owner policy-desk, version 1.0.0, its folder as origin and a 64-hex SHA-256",
@@ -123,6 +129,26 @@ static class SelfTest
             Check("a resource edited mid-run is refused (changed during the run), never served",
                 !mid.Contains("Over $50:") && gate.Log[^1] is { Detail: "changed during the run" });
 
+            // 11b. The gap between the guard and the provider's read: the read hashes the bytes it serves.
+            root = CopySkills(work, "window");
+            registry = new();
+            registry.Approve(await ValidateAsync(root), "reviewer");
+            gate = new(new AgentFileSkillsSource(root), registry);
+            AgentSkillsSourceContext context = await ContextAsync();
+            bool readRefused = false;
+            string served = "";
+            using (gate.BeginRun("G"))
+            {
+                AgentSkill pinnedSkill = (await gate.GetSkillsAsync(context)).Single();
+                AgentSkillResource resource = (await pinnedSkill.GetResourceAsync(Resource))!;
+                File.AppendAllText(Path.Combine(root, Skill, Resource), "- Over $50: a manager must approve.\n");
+                try { served = (await resource.ReadAsync(null))?.ToString() ?? ""; }
+                catch (InvalidOperationException) { readRefused = true; }
+            }
+            Check("a resource edited after the guard and before the provider reads it is refused, never served",
+                readRefused && !served.Contains("Over $50:") &&
+                gate.Log[^1] is { Operation: $"read {Resource} refused", Detail: "changed during the run" });
+
             // 12. Emergency withdrawal reaches a run already in flight.
             root = CopySkills(work, "withdraw");
             registry = new();
@@ -147,6 +173,20 @@ static class SelfTest
             File.WriteAllText(md, File.ReadAllText(md).Replace("\r\n", "\n").Replace("\n", "\r\n"));
             Check("the hash is the same for a CRLF and an LF checkout", (await ValidateAsync(root)).Record!.Sha256 == lf);
 
+            // 13b. The hash covers bytes, not decoded text.
+            root = CopySkills(work, "bytes");
+            string stamp = Path.Combine(root, Skill, "assets", "stamp.bin");
+            Directory.CreateDirectory(Path.GetDirectoryName(stamp)!);
+            File.WriteAllBytes(stamp, [0x41, 0xFF, 0x42]);
+            string withFF = (await ValidateAsync(root)).Record!.Sha256;
+            File.WriteAllBytes(stamp, [0x41, 0xFE, 0x42]);
+            string withFE = (await ValidateAsync(root)).Record!.Sha256;
+            string thresholds = Path.Combine(root, Skill, Resource);
+            File.WriteAllBytes(thresholds, [0xEF, 0xBB, 0xBF, .. File.ReadAllBytes(thresholds)]);
+            string withBom = (await ValidateAsync(root)).Record!.Sha256;
+            Check("a binary asset changed by one byte (41 FF 42 to 41 FE 42), or a BOM added to thresholds.md, changes the hash",
+                withFF != withFE && withFE != withBom);
+
             // 14. The harness asks the gate on every run.
             root = CopySkills(work, "harness");
             registry = new();
@@ -163,6 +203,23 @@ static class SelfTest
             using (gate.BeginRun("H2")) await harness.RunAsync("two", session);
             Check("HarnessAgentOptions.AgentSkillsSource: each run opened with BeginRun is evaluated once (H1, H2: one activation each)",
                 gate.Log.Where(e => e.Operation == "activated").Select(e => e.Run).SequenceEqual(["H1", "H2"]) && client.Turns[0].ToolNames.Contains("load_skill"));
+
+            // 15. Two gates in one flow (two agents, or a background agent) keep their own pins.
+            string rootA = CopySkills(work, "gate-a"), rootB = CopySkills(work, "gate-b");
+            SkillRegistry approvedA = new();
+            approvedA.Approve(await ValidateAsync(rootA), "reviewer");
+            GatedSkillsSource gateA = new(new AgentFileSkillsSource(rootA), approvedA);
+            GatedSkillsSource gateB = new(new AgentFileSkillsSource(rootB), new SkillRegistry());
+            int fromA, fromB;
+            using (gateA.BeginRun("RA"))
+            using (gateB.BeginRun("RB"))
+            {
+                fromA = (await gateA.GetSkillsAsync(context)).Count;
+                fromB = (await gateB.GetSkillsAsync(context)).Count;
+            }
+            Check("two gates in one scope: A serves its approved skill under run RA; B, with an empty registry, serves none under RB",
+                fromA == 1 && fromB == 0 && gateA.Log.Single() is { Run: "RA", Operation: "activated" } &&
+                gateB.Log.Single() is { Run: "RB", Operation: "refused", Detail: "not validated" });
         }
         finally
         {
@@ -191,6 +248,12 @@ static class SelfTest
         string text = File.ReadAllText(path);
         if (!text.Contains(from)) throw new InvalidOperationException($"Self-test edit target not found: {from}");
         File.WriteAllText(path, text.Replace(from, to));
+    }
+
+    private static async Task<AgentSkillsSourceContext> ContextAsync()
+    {
+        ChatClientAgent agent = new(new ScriptedToolChatClient(_ => ScriptedToolChatClient.Say("ok")));
+        return new AgentSkillsSourceContext(agent, await agent.CreateSessionAsync());
     }
 
     private static AgentSkillsProvider Builder(string root) =>

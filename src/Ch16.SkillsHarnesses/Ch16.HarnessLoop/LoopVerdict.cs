@@ -8,7 +8,8 @@ public enum LoopOutcome { Stopped, CapReached }
 /// Wraps a LoopEvaluator and remembers its last verdict. LoopAgent returns the last
 /// response whether an evaluator said Stop or the cap ran out (and in 1.28 it does not
 /// evaluate the iteration that hits the cap), so leaving the loop says nothing about
-/// success. This wrapper is how the caller tells the two apart.
+/// success. This wrapper is how the caller tells the two apart. Its state is one run's:
+/// build new recorders for every RunAsync, never share them between runs or sessions.
 /// </summary>
 public sealed class RecordingLoopEvaluator(LoopEvaluator inner) : LoopEvaluator
 {

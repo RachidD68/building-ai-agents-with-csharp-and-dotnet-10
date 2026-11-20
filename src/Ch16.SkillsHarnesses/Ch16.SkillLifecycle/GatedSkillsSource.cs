@@ -14,7 +14,7 @@ public sealed record SkillEvent(string Run, string Skill, string Operation, stri
 /// </summary>
 public sealed class GatedSkillsSource(AgentSkillsSource inner, SkillRegistry registry) : DelegatingAgentSkillsSource(inner)
 {
-    private static readonly AsyncLocal<RunPin?> CurrentRun = new();
+    private readonly AsyncLocal<RunPin?> _currentRun = new();   // per gate: two gates in one flow keep their own pins
     private readonly List<SkillEvent> _log = [];
     private readonly Lock _gate = new();
     private int _calls;
@@ -35,14 +35,14 @@ public sealed class GatedSkillsSource(AgentSkillsSource inner, SkillRegistry reg
     /// <summary>Starts one run (an operation): the first skill lookup in it pins, later ones reuse the pin.</summary>
     public IDisposable BeginRun(string runId)
     {
-        RunPin? previous = CurrentRun.Value;
-        CurrentRun.Value = new RunPin(runId);
-        return new Scope(() => CurrentRun.Value = previous);
+        RunPin? previous = _currentRun.Value;
+        _currentRun.Value = new RunPin(runId);
+        return new Scope(() => _currentRun.Value = previous);
     }
 
     public override async Task<IList<AgentSkill>> GetSkillsAsync(AgentSkillsSourceContext context, CancellationToken cancellationToken = default)
     {
-        if (CurrentRun.Value is not { } pin)
+        if (_currentRun.Value is not { } pin)
         {
             return await EvaluateAsync($"call-{Interlocked.Increment(ref _calls)}", context, cancellationToken);
         }
@@ -63,7 +63,8 @@ public sealed class GatedSkillsSource(AgentSkillsSource inner, SkillRegistry reg
         foreach (AgentSkill skill in await base.GetSkillsAsync(context, cancellationToken))
         {
             string name = skill.Frontmatter.Name;
-            string hash = await SkillRegistry.HashAsync(skill, cancellationToken);
+            SkillSnapshot snapshot = await SkillRegistry.SnapshotAsync(skill, cancellationToken);
+            string hash = snapshot.Sha256;
             SkillRecord? approved = registry.Find(name);
             string? refusal = approved switch
             {
@@ -80,16 +81,19 @@ public sealed class GatedSkillsSource(AgentSkillsSource inner, SkillRegistry reg
             // Snapshot the body now: an edit later in this run cannot change what it loads.
             string body = await skill.GetContentAsync(cancellationToken);
             Record(new(run, name, "activated", hash));
-            active.Add(new PinnedSkill(skill, body, hash, run, registry, this));
+            active.Add(new PinnedSkill(skill, body, snapshot, run, registry, this));
         }
         return active;
     }
 }
 
 /// <summary>A skill pinned to one run and one content hash. Every operation is logged with that hash.</summary>
-internal sealed class PinnedSkill(AgentSkill inner, string body, string hash, string run,
+internal sealed class PinnedSkill(AgentSkill inner, string body, SkillSnapshot snapshot, string run,
     SkillRegistry registry, GatedSkillsSource source) : AgentSkill
 {
+    private string Hash => snapshot.Sha256;
+    private SkillSnapshot Pinned => snapshot;
+
     public override AgentSkillFrontmatter Frontmatter => inner.Frontmatter;
 
     public override ValueTask<string> GetContentAsync(CancellationToken cancellationToken = default)
@@ -101,7 +105,11 @@ internal sealed class PinnedSkill(AgentSkill inner, string body, string hash, st
     public override async ValueTask<AgentSkillResource?> GetResourceAsync(string name, CancellationToken cancellationToken = default)
     {
         await GuardUnchangedAsync($"read {name}", cancellationToken);
-        return await inner.GetResourceAsync(name, cancellationToken);
+        AgentSkillResource? resource = await inner.GetResourceAsync(name, cancellationToken);
+        // The provider reads a file resource later. Serve the bytes the pin checked, not whatever is on disk by then.
+        return resource is not null && inner is AgentFileSkill folder
+            ? new PinnedFileResource(resource, Path.Combine(folder.Path, name), name.Replace('\\', '/'), this)
+            : resource;
     }
 
     public override async ValueTask<AgentSkillScript?> GetScriptAsync(string name, CancellationToken cancellationToken = default)
@@ -116,21 +124,39 @@ internal sealed class PinnedSkill(AgentSkill inner, string body, string hash, st
         SkillRecord? record = registry.Find(Frontmatter.Name);
         if (record is null || record.Withdrawn)
         {
-            source.Record(new(run, Frontmatter.Name, $"{operation} refused", hash, "withdrawn"));
+            source.Record(new(run, Frontmatter.Name, $"{operation} refused", Hash, "withdrawn"));
             throw new InvalidOperationException($"Skill '{Frontmatter.Name}' has been withdrawn.");
         }
-        source.Record(new(run, Frontmatter.Name, operation, hash));
+        source.Record(new(run, Frontmatter.Name, operation, Hash));
     }
 
     // Resources and scripts are read from disk, so check the folder still hashes as pinned.
     private async ValueTask GuardUnchangedAsync(string operation, CancellationToken ct)
     {
         string now = await SkillRegistry.HashAsync(inner, ct);
-        if (now != hash)
-        {
-            source.Record(new(run, Frontmatter.Name, $"{operation} refused", now, "changed during the run"));
-            throw new InvalidOperationException($"Skill '{Frontmatter.Name}' changed during the run; revalidate it.");
-        }
+        if (now != Hash) Refuse(operation, now);
         Guard(operation);
+    }
+
+    private void Refuse(string operation, string now)
+    {
+        source.Record(new(run, Frontmatter.Name, $"{operation} refused", now, "changed during the run"));
+        throw new InvalidOperationException($"Skill '{Frontmatter.Name}' changed during the run; revalidate it.");
+    }
+
+    /// <summary>Reads the file itself, compares its bytes with the activation snapshot, and serves exactly those bytes.</summary>
+    private sealed class PinnedFileResource(AgentSkillResource file, string fullPath, string relativePath, PinnedSkill owner)
+        : AgentSkillResource(file.Name, file.Description)
+    {
+        public override async Task<object?> ReadAsync(IServiceProvider? serviceProvider = null, CancellationToken cancellationToken = default)
+        {
+            byte[] raw = await File.ReadAllBytesAsync(fullPath, cancellationToken);
+            string now = SkillRegistry.FileHash(raw);
+            if (!owner.Pinned.Files.TryGetValue(relativePath, out string? pinned) || pinned != now)
+            {
+                owner.Refuse($"read {relativePath}", owner.Hash);
+            }
+            return SkillRegistry.DecodeText(raw);
+        }
     }
 }
