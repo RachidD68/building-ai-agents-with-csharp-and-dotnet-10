@@ -13,7 +13,11 @@
 //                                 a token, a message reply over both bindings
 //
 // Preview: Microsoft.Agents.AI.Hosting.A2A(.AspNetCore) 1.28.0-preview and the
-// A2A SDK 1.0.0-preview; AddA2AServer and MapA2A* are experimental (MEAI001).
+// A2A SDK 1.0.0-preview4; AddA2AServer and MapA2A* are experimental (MEAI001).
+//
+// Authentication only: the bindings need a valid token, but this sample has no
+// identity-key check and no per-caller quota (Ch17.AspNetCoreHost has both).
+// Message mode keeps no conversation between calls, so there is none to isolate.
 // ============================================================================
 
 using A2A;

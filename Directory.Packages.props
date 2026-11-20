@@ -96,7 +96,7 @@
     <PackageVersion Include="Azure.AI.ContentSafety" Version="1.0.0" />
     <!-- Ch19.OpenTelemetryAgent — Azure Monitor (Application Insights) OpenTelemetry exporter -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.1" />
-    <!-- Ch17.AspNetCoreHost — Microsoft Identity Web for securing the hosted agent endpoint -->
+    <!-- No project references Microsoft Identity Web any more (Ch17.AspNetCoreHost and Ex03 dropped it); no lock file resolves it -->
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.10.0" />
   </ItemGroup>
 </Project>

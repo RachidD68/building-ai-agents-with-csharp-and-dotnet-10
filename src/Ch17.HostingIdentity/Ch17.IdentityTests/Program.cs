@@ -49,6 +49,10 @@ try
             await h.Status(new Tokens().Mint("contoso", "alice"), HttpMethod.Post, "/conversations") == 401);
         Check("valid token without \"tid\": 403 (no identity key, no conversation)",
             await h.Status(tokens.Mint(null, "alice"), HttpMethod.Post, "/conversations") == 403);
+        Check("valid token without \"tid\" on the single-turn route: 403",
+            (await h.Ask(tokens.Mint(null, "alice"), "hello")).Status == 403);
+        Check("valid token without \"sub\" on the single-turn route: 403",
+            (await h.Ask(tokens.Mint("contoso", null), "hello")).Status == 403);
     }
     await using (TestHost h = await TestHost.StartAsync(root, tokens.Key, permits: 100, configureAudience: false))
     {
@@ -108,6 +112,14 @@ try
         Check("B, same IP, still has a quota (200)", (await h.Ask(bob, "hello")).Status == 200);
         Check("fabrikam/alice, same \"sub\", still has a quota (200)", (await h.Ask(fabrikamAlice, "hello")).Status == 200);
     }
+    await using (TestHost h = await TestHost.StartAsync(root, tokens.Key, permits: 3, mapInboundClaims: true))
+    {
+        List<int> statuses = [];
+        for (int i = 0; i < 4; i++) statuses.Add((await h.Ask(alice, "hello")).Status);
+        statuses.Add((await h.Ask(bob, "hello")).Status);
+        Check($"default claim mapping on the fixed host: A x4 then B on /ask: {string.Join(",", statuses)} (403, never a shared 429)",
+            statuses.All(s => s == 403));
+    }
 
     Console.WriteLine("\n-- 5. Health probes never reach the model");
     await using (TestHost h = await TestHost.StartAsync(root, tokens.Key, permits: 100))
@@ -138,9 +150,10 @@ namespace Ch17.IdentityTests
         public const string Audience = "contoso-expense-api";
         public byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
 
-        public string Mint(string? tenant, string subject, string audience = Audience, DateTime? expires = null)
+        public string Mint(string? tenant, string? subject, string audience = Audience, DateTime? expires = null)
         {
-            Dictionary<string, object> claims = new() { ["sub"] = subject };
+            Dictionary<string, object> claims = [];
+            if (subject is not null) claims["sub"] = subject;
             if (tenant is not null) claims["tid"] = tenant;
             DateTime exp = expires ?? DateTime.UtcNow.AddMinutes(10);
             return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
@@ -167,7 +180,8 @@ namespace Ch17.IdentityTests
 
         public HistoryEchoChatClient Model { get; }
 
-        public static async Task<TestHost> StartAsync(string root, byte[] signingKey, int permits, bool firstEdition = false, bool configureAudience = true)
+        public static async Task<TestHost> StartAsync(string root, byte[] signingKey, int permits, bool firstEdition = false,
+            bool configureAudience = true, bool mapInboundClaims = false)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
             builder.WebHost.UseTestServer();
@@ -185,9 +199,9 @@ namespace Ch17.IdentityTests
             if (!configureAudience) settings.Remove("Authentication:Schemes:Bearer:ValidAudiences:0");
             builder.Configuration.AddInMemoryCollection(settings);
             HistoryEchoChatClient model = new();
-            AgentHostOptions options = new() { ChatClient = model, ServiceDefaults = false };
+            AgentHostOptions options = new() { ChatClient = model, ServiceDefaults = false, MapInboundClaims = mapInboundClaims };
             if (firstEdition)
-                options = options with { MapInboundClaims = true, QuotaPartition = FirstEditionPartition };
+                options = options with { MapInboundClaims = true, RequireIdentityKey = false, QuotaPartition = FirstEditionPartition };
             AgentHost.Configure(builder, options);
             WebApplication app = builder.Build();
             app.Use((http, next) =>

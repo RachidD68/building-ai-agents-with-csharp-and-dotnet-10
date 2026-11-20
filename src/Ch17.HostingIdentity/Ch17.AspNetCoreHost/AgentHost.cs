@@ -5,6 +5,7 @@ using Ch17.AspireOrchestration.ServiceDefaults;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -19,6 +20,9 @@ public sealed record AgentHostOptions
 
     /// <summary>false keeps "sub" and "tid" as they are in the token. true is the framework default.</summary>
     public bool MapInboundClaims { get; init; }
+
+    /// <summary>false: any authenticated caller passes authorization (the first edition). A test reproduces it.</summary>
+    public bool RequireIdentityKey { get; init; } = true;
 
     /// <summary>The rate-limit partition of a request. A test swaps in the first edition's key.</summary>
     public Func<HttpContext, object> QuotaPartition { get; init; } = CallerIdentity.Partition;
@@ -69,7 +73,13 @@ public static class AgentHost
             jwt.TokenValidationParameters.ValidateAudience = true;
             jwt.TokenValidationParameters.ValidateIssuer = true;
         });
-        builder.Services.AddAuthorization();
+        // RequireAuthorization() on a route uses this default policy: a validated token
+        // AND the identity key. A token without "tid" or "sub" is refused (403) here,
+        // before the rate limiter, so it never spends a permit or reaches a route.
+        builder.Services.AddAuthorizationBuilder().SetDefaultPolicy(new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(ctx => !options.RequireIdentityKey || CallerIdentity.From(ctx.User) is not null)
+            .Build());
 
         int permits = builder.Configuration.GetValue("Quota:PermitLimit", 20);
         int window = builder.Configuration.GetValue("Quota:WindowSeconds", 10);

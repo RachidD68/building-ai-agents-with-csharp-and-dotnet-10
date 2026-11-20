@@ -14,8 +14,9 @@ namespace Ch17.AspNetCoreHost;
 
 /// <summary>
 /// dotnet run -- --self-test. Offline: tokens are minted and validated in
-/// process, and the model is an HTTP handler that answers 503. The end-to-end
-/// two-user proof over HTTP is Ch17.IdentityTests.
+/// process, and the model is an HTTP handler that answers 503. It checks the key
+/// and the partition functions; the routes' status codes (403 without a key, the
+/// two-user proof) are checked over HTTP in Ch17.IdentityTests.
 /// </summary>
 internal static class HostSelfTest
 {
@@ -31,7 +32,7 @@ internal static class HostSelfTest
         ClaimsPrincipal fabrikamAlice = Validate(Mint(("tid", "fabrikam"), ("sub", "alice")), mapInbound: false);
         Check("MapInboundClaims = false keeps \"sub\" and \"tid\": key contoso/alice",
             CallerIdentity.From(alice) is { TenantId: "contoso", SubjectId: "alice" });
-        Check("a token without \"tid\" has no identity key (the route answers 403)",
+        Check("a token without \"tid\" has no identity key: CallerIdentity.From returns null",
             CallerIdentity.From(Validate(Mint(("sub", "alice")), mapInbound: false)) is null);
 
         Console.WriteLine("\n-- Rate-limit partition (two users behind one IP)");
@@ -42,7 +43,7 @@ internal static class HostSelfTest
         object v1A = V1Partition(At(mappedAlice)), v1B = V1Partition(At(mappedBob));
         Check($"DEFECT REPRODUCED: the first edition's key (\"sub\" or the IP) gives both users {v1A}",
             v1A.Equals(v1B) && v1A.Equals("10.0.0.1"));
-        Check("with the default mapping the host finds no identity key: it refuses (403), it never guesses",
+        Check("with the default mapping CallerIdentity.From finds no key (null); it never guesses one",
             CallerIdentity.From(mappedAlice) is null);
         Check("the fix: alice and bob behind 10.0.0.1 get two partitions",
             !CallerIdentity.Partition(At(alice)).Equals(CallerIdentity.Partition(At(bob))));
