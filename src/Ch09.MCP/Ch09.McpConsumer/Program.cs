@@ -1,16 +1,20 @@
 ﻿// ============================================================================
 // The Model Context Protocol (MCP Consumer)
-// Connects to the Ch09.McpServer via stdio, discovers its tools, and feeds
-// them to a ChatClientAgent. The agent code is identical to the tools chapter —
-// the only difference is WHERE the tools come from (MCP server vs. inline).
+// Connects to an MCP server, discovers its tools, and feeds them to a
+// ChatClientAgent. The agent code is identical to the tools chapter; the only
+// difference is WHERE the tools come from (MCP server vs. inline).
 //
-// Key concepts:
-//   - StdioClientTransport to launch an MCP server as a child process
-//   - McpClient.CreateAsync() to connect and negotiate capabilities
-//   - ListToolsAsync() to discover tools from the server
-//   - McpClientTool extends AITool, so it plugs directly into the agent
+//   dotnet run                          stdio: launches Ch09.McpServer as a child process
+//   dotnet run -- --http <url>          streamable HTTP, e.g. http://localhost:5000/mcp
+//                                       (start Ch09.McpHttpServer first)
+//   dotnet run -- --self-test           offline: the real stdio server as a child
+//                                       process, and a scripted model instead of an LLM
+//
+// With --http and MCP_ACCESS_TOKEN set, the token is sent only to an endpoint
+// listed in McpConsumer:AllowedServers (McpDestinationGuard).
 // ============================================================================
 
+using Ch09.McpConsumer;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -19,33 +23,50 @@ using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Client;
 using AgenticAI.Common.Extensions;
 
+if (args.Contains("--self-test")) return await ConsumerSelfTest.RunAsync();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== MCP Consumer — Discovering Tools from an MCP Server ===\n");
+Console.WriteLine("=== MCP Consumer: Discovering Tools from an MCP Server ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 // ---------------------------------------------------------------
-// Step 1: Connect to the MCP server via stdio transport
+// Step 1: Connect to the MCP server (stdio child process, or HTTP)
 // ---------------------------------------------------------------
-// The StdioClientTransport launches the MCP server as a child process.
-// The server's stdin/stdout become the communication channel.
-string serverProjectPath = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Ch09.McpServer"));
-
-Console.WriteLine($"Launching MCP server from: {serverProjectPath}");
-
-StdioClientTransport transport = new(new StdioClientTransportOptions
+int httpIndex = Array.IndexOf(args, "--http");
+IClientTransport transport;
+if (httpIndex >= 0 && httpIndex + 1 < args.Length)
 {
-    Command = "dotnet",
-    Arguments = ["run", "--project", serverProjectPath, "--no-build"],
-    Name = "ContosoProductServer"
-});
+    Uri endpoint = new(args[httpIndex + 1]);
+    string? token = Environment.GetEnvironmentVariable("MCP_ACCESS_TOKEN");
+    HttpClientTransportOptions options = token is null
+        ? new() { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp }
+        : new McpDestinationGuard(
+                builder.Configuration.GetSection("McpConsumer:AllowedServers").Get<Uri[]>() ?? [])
+            .CreateTransportOptions(endpoint, token);
+    Console.WriteLine($"Connecting over streamable HTTP to: {endpoint}");
+    transport = new HttpClientTransport(options);
+}
+else
+{
+    // The StdioClientTransport launches the MCP server as a child process.
+    // The server's stdin/stdout become the communication channel.
+    string serverProjectPath = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Ch09.McpServer"));
+    Console.WriteLine($"Launching MCP server from: {serverProjectPath}");
+    transport = new StdioClientTransport(new StdioClientTransportOptions
+    {
+        Command = "dotnet",
+        Arguments = ["run", "--project", serverProjectPath, "--no-build"],
+        Name = "ContosoProductServer"
+    });
+}
 
 await using McpClient mcpClient = await McpClient.CreateAsync(
     transport,
@@ -70,17 +91,10 @@ Console.WriteLine();
 // ---------------------------------------------------------------
 // Step 3: Feed MCP tools to the ChatClientAgent
 // ---------------------------------------------------------------
-// McpClientTool extends AITool, so it plugs directly into the agent's
-// tools parameter — identical to how we registered inline tools in the tools chapter.
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: "You are a product assistant. Use the available tools to look up products and check inventory. Be helpful and concise.",
-    name: "McpProductAssistant",
-    description: "A product assistant powered by tools from an MCP server",
-    tools: [.. mcpTools]);
+ChatClientAgent agent = CatalogAgent.Create(chatClient, mcpTools);
 
 // ---------------------------------------------------------------
-// Step 4: Use the agent — identical to the tools chapter
+// Step 4: Use the agent, identical to the tools chapter
 // ---------------------------------------------------------------
 string[] queries =
 [
@@ -106,8 +120,9 @@ foreach (string query in queries)
     catch (OperationCanceledException)
     {
         Console.WriteLine("\n[Cancelled by user]");
-        return;
+        return 130;
     }
 }
 
 Console.WriteLine("=== MCP Consumer demo complete! ===");
+return 0;

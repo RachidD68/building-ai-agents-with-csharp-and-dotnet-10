@@ -1,18 +1,22 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace Ex02.DictionaryMcpServer;
 
 /// <summary>
 /// MCP tools for dictionary lookups: DefineWord and GetSynonyms, backed by a
-/// small in-memory dictionary. Two static methods, one dictionary — the same
-/// shape as ProductLookup and InventoryCheck in Ch09.McpServer.
+/// small in-memory dictionary, plus AddWord, the one tool that writes. The
+/// read tools have the same shape as ProductLookup and InventoryCheck in
+/// Ch09.McpServer.
 /// </summary>
 [McpServerToolType]
 public static class DictionaryTools
 {
-    // A small in-memory dictionary — ten to twenty entries is plenty.
-    private static readonly Dictionary<string, DictionaryEntry> Dictionary =
+    // A small in-memory dictionary; ten to twenty entries is plenty. Concurrent,
+    // because over HTTP two callers can run AddWord and DefineWord at once.
+    private static readonly ConcurrentDictionary<string, DictionaryEntry> Dictionary =
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["reticent"] = new("Reluctant to speak or reveal one's thoughts; reserved.",
@@ -84,6 +88,24 @@ public static class DictionaryTools
         string available = string.Join(", ", Dictionary.Keys.Order());
         return $"'{word}' not found in dictionary. Available words: {available}";
     }
+
+    /// <summary>
+    /// Adds a word, or reports that it already exists (no overwrite).
+    /// </summary>
+    [McpServerTool]
+    [Description("Adds a new word with its definition and optional synonyms to the dictionary. Existing words are not overwritten.")]
+    public static string AddWord(
+        [Description("The word to add")] string word,
+        [Description("Its definition")] string definition,
+        [Description("Optional synonyms")] string[]? synonyms = null)
+    {
+        string key = word.Trim();
+        if (key.Length == 0 || string.IsNullOrWhiteSpace(definition))
+            throw new McpException("A word and a definition are both required.");
+        return Dictionary.TryAdd(key, new DictionaryEntry(definition.Trim(), synonyms ?? []))
+            ? $"Added '{key}'."
+            : $"'{key}' is already in the dictionary; nothing changed.";
+    }
 }
 
 /// <summary>
@@ -91,4 +113,4 @@ public static class DictionaryTools
 /// </summary>
 /// <param name="Definition">The definition of the word.</param>
 /// <param name="Synonyms">Synonyms for the word.</param>
-sealed record DictionaryEntry(string Definition, string[] Synonyms);
+public sealed record DictionaryEntry(string Definition, string[] Synonyms);

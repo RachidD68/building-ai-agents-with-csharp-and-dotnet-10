@@ -1,6 +1,15 @@
 # The Model Context Protocol (Knowledge Base MCP Server)
 
-An MCP server that reads Markdown files from a `docs/` folder and exposes a `SearchKnowledgeBase` tool. This bridges to the RAG chapter by showing simple keyword-based retrieval from documents.
+An MCP server over stdio that reads the Markdown files in `docs/` and offers them two ways:
+
+| Primitive | Name | Who uses it |
+|-----------|------|-------------|
+| Tool | `SearchKnowledgeBase(query)` | the model: keyword match, ranked by distinct terms matched, top 3 excerpts |
+| Resource template | `kb://docs/{name}` | an application: reads one document by name (for example to index it) |
+
+`KeywordMatcher.cs` holds the matching rules (terms of 3+ characters, case-insensitive, ranked, ties by name). It matches words, not meaning: "vacation" finds nothing although `leave-and-pto.md` is about it. The RAG chapter keeps the tool and replaces the matcher with embeddings.
+
+Documents are looked up by name among the files that exist; a name is never joined into a path, so `../appsettings` finds nothing.
 
 ## Included Documents
 
@@ -15,5 +24,6 @@ An MCP server that reads Markdown files from a `docs/` folder and exposes a `Sea
 ## Running
 
 ```bash
-dotnet run --project src/Ch09.MCP/Ch09.KnowledgeBaseMcp
+dotnet run --project src/Ch09.MCP/Ch09.KnowledgeBaseMcp                    # serve over stdio
+dotnet run --project src/Ch09.MCP/Ch09.KnowledgeBaseMcp -- --self-test     # offline, RESULT n/n
 ```

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <!-- The tests run the samples' own files, linked (the samples are Exe projects):
+       the tools, the unprotected HTTP setup, the protected setup and the
+       client's destination guard. -->
+  <ItemGroup>
+    <Compile Include="../Ch09.McpServer/ProductCatalogTools.cs" Link="Linked/ProductCatalogTools.cs" />
+    <Compile Include="../Ch09.McpHttpServer/CatalogMcpEndpoint.cs" Link="Linked/CatalogMcpEndpoint.cs" />
+    <Compile Include="../Ch09.ProtectedMcpServer/CatalogScopes.cs" Link="Linked/CatalogScopes.cs" />
+    <Compile Include="../Ch09.ProtectedMcpServer/ProtectedCatalogTools.cs" Link="Linked/ProtectedCatalogTools.cs" />
+    <Compile Include="../Ch09.ProtectedMcpServer/ProtectedMcp.cs" Link="Linked/ProtectedMcp.cs" />
+    <Compile Include="../Ch09.McpConsumer/McpDestinationGuard.cs" Link="Linked/McpDestinationGuard.cs" />
+  </ItemGroup>
+
+</Project>

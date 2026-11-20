@@ -15,6 +15,12 @@ Build a tiny MCP server in C# with **one** tool: `GetCurrentTime(string timezone
 - Use `[McpServerTool]` and `[McpServerToolType]` attributes with `WithToolsFromAssembly()` for automatic discovery.
 - The consumer side is `Ch09.McpConsumer` with the new server project path — it launches the server as a child process via `StdioClientTransport`.
 
+## Accept
+
+- The agent answers "What time is it in Tokyo?" with the tool's value.
+- An id that is not IANA (`Mars/Olympus_Mons`) is a tool error (`McpException`, so `isError: true`), never a guessed time.
+- The tool name on the wire is `get_current_time`: with no `Name`, the SDK derives a snake_case name from the method.
+
 ## Running
 
 ```bash
@@ -23,6 +29,9 @@ dotnet build exercises/Ch09.Exercises/Ex01.TimeMcpServer
 
 # Then run the consumer (it launches the server automatically)
 dotnet run --project exercises/Ch09.Exercises/Ex01.TimeMcpConsumer
+
+# Offline check: the real server, a scripted model (RESULT n/n)
+dotnet run --project exercises/Ch09.Exercises/Ex01.TimeMcpConsumer -- --self-test
 ```
 
 ## Key Concepts

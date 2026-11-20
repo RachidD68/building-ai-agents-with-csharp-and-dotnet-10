@@ -2,35 +2,25 @@
 // HTTP-hosted MCP server (streamable HTTP transport)
 //
 // The stdio server (Ch09.McpServer) and this one expose the SAME tools
-// (ProductCatalogTools, linked in via the .csproj) — only the transport
-// changes. AddMcpServer().WithHttpTransport() + app.MapMcp() serve the tools
-// over a single /mcp endpoint. Point a client at http://localhost:5000/mcp
-// with HttpTransportMode.StreamableHttp (NOT Sse — a client pinned to the
-// legacy SSE mode gets an empty tool list from a streamable-HTTP server).
+// (ProductCatalogTools, linked in via the .csproj); only the transport
+// changes. WithHttpTransport() + MapMcp("/mcp") serve the tools over a single
+// endpoint. Point a client at http://localhost:5000/mcp with
+// HttpTransportMode.StreamableHttp.
 //
-// This is the sample behind the MCP chapter's "swap WithStdioServerTransport for
-// WithHttpTransport" Pro Tip and the streamable-HTTP Challenge exercise.
+// Nothing here checks who the caller is: any process that can reach the port
+// can list and call every tool. Ch09.McpAccessTests reproduces that, and
+// Ch09.ProtectedMcpServer is the same endpoint behind OAuth.
 // ============================================================================
 
-using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol.AspNetCore;
+using Ch09.McpHttpServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Same registration as the stdio host — only the transport line changes.
-builder.Services
-    .AddMcpServer()
-    // Streamable HTTP instead of WithStdioServerTransport(). Since the
-    // 2026-07-28 spec revision there is no Mcp-Session-Id on the wire, and the
-    // SDK defaults to stateless; we set it explicitly so the intent is visible.
-    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
-    .WithToolsFromAssembly();   // discovers [McpServerToolType] classes in this assembly
+builder.Services.AddCatalogMcpOverHttp();   // AddMcpServer().WithHttpTransport(...).WithTools<...>()
 
 var app = builder.Build();
 
-// Routes the endpoint — without this line nothing is listening. Pass the
-// pattern explicitly: the no-argument MapMcp() serves at the site root ("/"),
-// not "/mcp".
-app.MapMcp("/mcp");
+// Routes the endpoint; without this line nothing is listening.
+app.MapCatalogMcp();
 
 app.Run("http://localhost:5000");

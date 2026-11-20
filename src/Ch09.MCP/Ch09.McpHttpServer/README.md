@@ -1,8 +1,8 @@
 # The Model Context Protocol (HTTP-hosted MCP Server)
 
-An ASP.NET Core MCP server that exposes the **same** product catalog tools as `Ch09.McpServer`, but over the **streamable HTTP** transport instead of stdio. This is the sample behind the chapter's "swap `WithStdioServerTransport` for `WithHttpTransport`" Pro Tip and the streamable-HTTP Challenge exercise.
+An ASP.NET Core MCP server that exposes the **same** product catalog tools as `Ch09.McpServer`, over **streamable HTTP** instead of stdio. The `.csproj` links `ProductCatalogTools.cs` from `Ch09.McpServer`; `CatalogMcpEndpoint.cs` registers it with `WithTools(...)` and maps `/mcp`. Only the transport changes.
 
-The tool code is not duplicated -- the `.csproj` links `ProductCatalogTools.cs` from `Ch09.McpServer`, so `WithToolsFromAssembly()` finds the `[McpServerToolType]` classes in this assembly. Only the transport changes.
+**No authentication.** Any caller that can reach the port lists and calls every tool. `Ch09.McpAccessTests` reproduces that (`DEFECT REPRODUCED` lines), and `Ch09.ProtectedMcpServer` is the same endpoint as an OAuth resource server.
 
 ## Exposed Tools
 
@@ -16,21 +16,19 @@ The tool code is not duplicated -- the `.csproj` links `ProductCatalogTools.cs` 
 | Concept | Description |
 |---------|-------------|
 | `Microsoft.NET.Sdk.Web` | Required for `WebApplication.CreateBuilder` |
-| `WithHttpTransport()` | Serves MCP over streamable HTTP instead of stdio |
-| `app.MapMcp()` | Routes the `/mcp` endpoint -- **without this line nothing is listening** |
-| `<Compile Include="../Ch09.McpServer/ProductCatalogTools.cs" />` | Links the tools rather than copying them |
+| `WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.Stateless)` | Streamable HTTP; stateless, no `Mcp-Session-Id` (the SDK default since the 2026-07-28 revision, set explicitly) |
+| `MapMcp("/mcp")` | Routes the endpoint; the no-argument `MapMcp()` serves at `/` |
 
 ## Running
 
 ```bash
 dotnet run --project src/Ch09.MCP/Ch09.McpHttpServer
+dotnet run --project src/Ch09.MCP/Ch09.McpConsumer -- --http http://localhost:5000/mcp
 ```
 
 The server listens on `http://localhost:5000` and serves MCP at `http://localhost:5000/mcp`.
 
 ## Connecting a client
-
-Point a client at the `/mcp` endpoint using `HttpClientTransport`:
 
 ```csharp
 HttpClientTransport transport = new(new HttpClientTransportOptions
@@ -40,12 +38,4 @@ HttpClientTransport transport = new(new HttpClientTransportOptions
 });
 ```
 
-> **Watch the transport mode.** A client pinned to `HttpTransportMode.Sse` talking to a streamable-HTTP server gets an **empty tool list** rather than an error -- the agent then behaves as if the server exposes nothing. `StreamableHttp` (or `AutoDetect`) is what you want. Standalone SSE is the deprecated transport, kept only for connecting to legacy servers.
-
-## Related
-
-| Project | Transport |
-|---------|-----------|
-| `Ch09.McpServer` | stdio (child process, same machine) |
-| `Ch09.McpHttpServer` | streamable HTTP (remote) |
-| `Ch09.McpConsumer` | MAF agent that consumes the stdio server |
+> **Watch the transport mode.** In stateless mode the server has no `/sse` endpoint. A client pinned to `HttpTransportMode.Sse` fails to connect: the `Ex02.DictionaryMcpConsumer` self-test records `HttpRequestException ... 405 (Method Not Allowed)` (MCP C# SDK, version pinned in `Directory.Packages.props`). Use `StreamableHttp`.

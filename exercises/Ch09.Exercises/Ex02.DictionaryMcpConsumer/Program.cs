@@ -1,53 +1,55 @@
 ﻿// ============================================================================
-// Exercise 02 — Dictionary MCP Consumer
-// Connects to the Dictionary MCP server and uses tools via an agent.
-// FULLY STANDALONE.
+// Exercise 02: Dictionary MCP Consumer
+// Connects to the Dictionary MCP server and uses its tools through an agent.
+//
+//   dotnet run                          stdio: launches Ex02.DictionaryMcpServer
+//   dotnet run -- --http [url]          streamable HTTP (default http://localhost:5001/mcp;
+//                                       start the server with --http first)
+//   dotnet run -- --self-test           offline: HTTP transports, SSE-pinned client,
+//                                       and the challenge's scopes (DictionarySelfTest.cs)
 // ============================================================================
 
-using System.ClientModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using Ex02.DictionaryMcpConsumer;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Client;
+using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await DictionarySelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 Console.WriteLine("=== Exercise: Dictionary MCP Consumer ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-string serverProjectPath = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Ex02.DictionaryMcpServer"));
+int http = Array.IndexOf(args, "--http");
+IClientTransport transport = http >= 0
+    ? new HttpClientTransport(new HttpClientTransportOptions
+    {
+        Endpoint = new Uri(http + 1 < args.Length ? args[http + 1] : "http://localhost:5001/mcp"),
+        TransportMode = HttpTransportMode.StreamableHttp,   // not Sse: see the self-test
+    })
+    : new StdioClientTransport(new StdioClientTransportOptions
+    {
+        Command = "dotnet",
+        Arguments = ["run", "--project", Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "Ex02.DictionaryMcpServer")), "--no-build"],
+        Name = "DictionaryServer"
+    });
 
-StdioClientTransport transport = new(new StdioClientTransportOptions
-{
-    Command = "dotnet",
-    Arguments = ["run", "--project", serverProjectPath, "--no-build"],
-    Name = "DictionaryServer"
-});
-
-await using McpClient mcpClient = await McpClient.CreateAsync(
-    transport, cancellationToken: cts.Token);
-
-Console.WriteLine($"Connected to: {mcpClient.ServerInfo?.Name}");
-
+await using McpClient mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
 IList<McpClientTool> tools = await mcpClient.ListToolsAsync(cancellationToken: cts.Token);
-Console.WriteLine($"Discovered {tools.Count} tools\n");
+Console.WriteLine($"Connected to: {mcpClient.ServerInfo?.Name}; discovered {tools.Count} tools: " +
+    string.Join(", ", tools.Select(t => t.Name)) + "\n");
 
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: "You are a helpful dictionary assistant. Use the tools to look up definitions and synonyms. Provide helpful context.",
-    name: "DictionaryAssistant",
-    tools: [.. tools]);
+ChatClientAgent agent = new(chatClient, instructions: DictionarySelfTest.Instructions, name: "DictionaryAssistant", tools: [.. tools]);
 
 string[] queries =
 [
@@ -61,35 +63,15 @@ foreach (string query in queries)
     Console.WriteLine($"You: {query}");
     try
     {
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse response = await agent.RunAsync(
-            query, session, cancellationToken: cts.Token);
+        AgentResponse response = await agent.RunAsync(query, await agent.CreateSessionAsync(cts.Token), cancellationToken: cts.Token);
         Console.WriteLine($"Agent: {response.Text}\n");
     }
     catch (OperationCanceledException)
     {
         Console.WriteLine("\n[Cancelled]");
-        return;
+        return 130;
     }
 }
 
 Console.WriteLine("=== Exercise complete! ===");
-
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
-}
+return 0;

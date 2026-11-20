@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace Ex01.TimeMcpServer.Server;
@@ -18,6 +19,7 @@ public static class TimeTools
     /// Use "UTC" for Coordinated Universal Time.
     /// </param>
     /// <returns>The current time in the specified timezone.</returns>
+    /// <exception cref="McpException">The id is not a known timezone.</exception>
     [McpServerTool]
     [Description("Gets the current date and time in a specified timezone. Use IANA timezone identifiers like 'America/New_York', 'Europe/London', 'Asia/Tokyo', or 'UTC'.")]
     public static string GetCurrentTime(
@@ -31,7 +33,9 @@ public static class TimeTools
         }
         catch (TimeZoneNotFoundException)
         {
-            return $"Unknown timezone: '{timezone}'. Use IANA identifiers like 'America/New_York' or 'UTC'.";
+            // A tool error (isError: true), not a normal result: the model must not
+            // read it as a time, and must not guess one.
+            throw new McpException($"Unknown timezone: '{timezone}'. Use IANA identifiers like 'America/New_York' or 'UTC'.");
         }
     }
 }

@@ -17,6 +17,7 @@ A console app MCP server that exposes product catalog tools over stdio transport
 | `[McpServerToolType]` | Marks a class that contains MCP tools |
 | `WithToolsFromAssembly()` | Automatically discovers all `[McpServerToolType]` classes |
 | `WithStdioServerTransport()` | Runs over standard I/O for child-process hosting |
+| `LogToStandardErrorThreshold = LogLevel.Trace` | stdout carries the JSON-RPC messages, so every log line goes to stderr |
 
 ## Running
 

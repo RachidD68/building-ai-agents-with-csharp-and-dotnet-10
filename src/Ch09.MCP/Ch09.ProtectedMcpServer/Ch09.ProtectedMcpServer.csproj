@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <!-- The tool bodies are the stdio server's; this project only adds the
+       resource-server checks. Linked, not referenced (Ch09.McpServer is an Exe). -->
+  <ItemGroup>
+    <Compile Include="../Ch09.McpServer/ProductCatalogTools.cs" Link="ProductCatalogTools.cs" />
+  </ItemGroup>
+
+</Project>
