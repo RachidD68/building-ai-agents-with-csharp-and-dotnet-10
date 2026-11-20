@@ -38,6 +38,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Agents.AI.Workflows.Checkpointing;
@@ -71,12 +73,9 @@ AIAgent drafter = new ChatClientAgent(
 string topic = "the value of code review in software teams";
 
 // The RequestPort instance is reused across both builds so its identity is
-// stable; the workflow instances themselves are fresh per run.
-RequestPort approvalPort = RequestPort.Create<string, string>("human-approval");
-
-// The approval response is the approved draft text, except for this one word,
-// which routes to the rejection handler instead of the finalizer.
-const string RejectDecision = ApprovalDecisions.RejectReply;
+// stable; the workflow instances themselves are fresh per run. The reply is
+// typed: a decision plus the fingerprint of the draft it decides on.
+RequestPort approvalPort = RequestPort.Create<string, ApprovalReply>("human-approval");
 
 Workflow BuildApprovalWorkflow()
 {
@@ -93,14 +92,17 @@ Workflow BuildApprovalWorkflow()
     ExecutorBinding portNode = approvalPort.BindAsExecutor();
     ExecutorBinding finalNode = new Finalizer().BindExecutor();
     ExecutorBinding rejectNode = new Rejection().BindExecutor();
+    ExecutorBinding notApprovedNode = new NotApproved().BindExecutor();
 
     return new WorkflowBuilder(draftNode)
         .AddEdge(draftNode, trackerNode)
         .AddEdge(trackerNode, portNode)
-        // An empty reply matches neither edge, so it can never reach the finalizer.
-        .AddEdge<string>(portNode, finalNode, reply => !string.IsNullOrWhiteSpace(reply) && reply != RejectDecision)
-        .AddEdge<string>(portNode, rejectNode, reply => reply == RejectDecision)
-        .WithOutputFrom(finalNode, rejectNode)
+        // Route on the typed decision; anything else is not approved.
+        .AddSwitch(portNode, sw => sw
+            .AddCase<ApprovalReply>(r => r is { Decision: ApprovalDecision.Approve }, [finalNode])
+            .AddCase<ApprovalReply>(r => r is { Decision: ApprovalDecision.Reject }, [rejectNode])
+            .WithDefault([notApprovedNode]))
+        .WithOutputFrom(finalNode, rejectNode, notApprovedNode)
         .WithName("CheckpointedApproval")
         .Build();
 }
@@ -194,7 +196,7 @@ await foreach (WorkflowEvent evt in resumedRun.WatchStreamAsync(cts.Token))
                               "(no reviewer in this demo; use prepare/resume to decide yourself).\n");
 
             // Fail closed: an approval needs a non-empty draft to approve.
-            if (!ApprovalDecisions.TryCreateReply(SimulatedDecision, draft, out string? reply))
+            if (!ApprovalDecisions.TryCreateReply(SimulatedDecision, draft, out ApprovalReply? reply))
             {
                 pendingReason = "the draft is empty, so there is nothing to approve.";
                 break;
@@ -320,11 +322,14 @@ async Task<int> ResumeAsync(string session, string decision)
                         answered = true;
                         Console.WriteLine("Approval request re-emitted in a new process.");
                         Console.WriteLine($"Human decision: {choice.ToString().ToLowerInvariant()}\n");
-                        if (!ApprovalDecisions.TryCreateReply(choice, draft, out string? reply))
+                        if (!ApprovalDecisions.TryCreateReply(choice, draft, out ApprovalReply? reply))
                         {
                             emptyDraft = true;   // fail closed: never approve an empty draft
                             break;
                         }
+                        // --other-draft (self-test only): a reply bound to a draft the reviewer never saw.
+                        if (args.Contains("--other-draft"))
+                            reply = reply with { DraftHash = ApprovalDecisions.Fingerprint("another draft") };
                         await run.SendResponseAsync(request.Request.CreateResponse(reply));
                         break;
 
@@ -352,8 +357,10 @@ async Task<int> ResumeAsync(string session, string decision)
             return Fail($"session {session} has an empty draft, so there is nothing to approve.");
         if (error is not null)
             return Fail($"checkpoint {latest.CheckpointId} could not be resumed: {error}");
-        return result is null
-            ? Fail($"session {session} resumed but produced no result.")
+        if (result is null)
+            return Fail($"session {session} resumed but produced no result.");
+        return result.StartsWith(NotApproved.Marker, StringComparison.Ordinal)
+            ? Fail($"session {session}: {result}")
             : 0;
     }
     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -404,14 +411,14 @@ IHost BuildHost()
 // ReviewDecision, minus "revise" (this workflow has no revision loop).
 // ---------------------------------------------------------------
 
-/// <summary>The only two outcomes a reviewer can choose here.</summary>
-internal enum ApprovalDecision { Approve, Reject }
+/// <summary>The only two outcomes a reviewer can choose here. Neither is 0, so default(ApprovalDecision) decides nothing.</summary>
+internal enum ApprovalDecision { Approve = 1, Reject = 2 }
+
+/// <summary>The typed port reply: the decision and the fingerprint of the draft it was made on.</summary>
+internal sealed record ApprovalReply(ApprovalDecision Decision, string DraftHash);
 
 internal static class ApprovalDecisions
 {
-    /// <summary>The reply that routes to the rejection handler.</summary>
-    public const string RejectReply = "reject";
-
     /// <summary>
     /// Accepts exactly "approve" or "reject" (case and surrounding spaces
     /// ignored). Everything else, including empty input, is not a decision.
@@ -427,20 +434,23 @@ internal static class ApprovalDecisions
     }
 
     /// <summary>
-    /// Builds the RequestPort reply for a decision: the draft itself on approve,
-    /// the reject word on reject. Fails closed: approving a null, empty or
-    /// whitespace draft returns false and no reply, so nothing is approved by default.
+    /// Builds the RequestPort reply for a decision, bound to the draft the reviewer
+    /// saw. Fails closed: approving a null, empty or whitespace draft returns false
+    /// and no reply, so nothing is approved by default.
     /// </summary>
-    public static bool TryCreateReply(ApprovalDecision decision, string? draft, [NotNullWhen(true)] out string? reply)
+    public static bool TryCreateReply(ApprovalDecision decision, string? draft, [NotNullWhen(true)] out ApprovalReply? reply)
     {
         reply = decision switch
         {
-            ApprovalDecision.Reject => RejectReply,
-            ApprovalDecision.Approve when !string.IsNullOrWhiteSpace(draft) => draft,
+            ApprovalDecision.Reject => new ApprovalReply(ApprovalDecision.Reject, Fingerprint(draft ?? "")),
+            ApprovalDecision.Approve when !string.IsNullOrWhiteSpace(draft) => new ApprovalReply(ApprovalDecision.Approve, Fingerprint(draft)),
             _ => null,
         };
         return reply is not null;
     }
+
+    /// <summary>SHA-256 of the draft text, hex: what a reply is bound to.</summary>
+    public static string Fingerprint(string draft) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(draft)));
 }
 
 // ---------------------------------------------------------------
@@ -454,15 +464,20 @@ internal static class ApprovalDecisions
 /// </summary>
 internal sealed class RevisionTracker() : Executor<string, string>("revision-tracker")
 {
+    public const string DraftKey = "draft";
+    public const string Scope = "review";   // shared with the finalizer; the default scope is per executor
     private const string StateKey = "revisionCount";
     private int _revisions;
 
-    public override ValueTask<string> HandleAsync(
+    public override async ValueTask<string> HandleAsync(
         string draft, IWorkflowContext context, CancellationToken ct)
     {
         _revisions++;
         Console.WriteLine($"  [RevisionTracker] revision count: {_revisions}");
-        return ValueTask.FromResult(draft);
+        // The draft under review goes into the workflow state, so it is checkpointed
+        // and the finalizer approves this text, not whatever a reply carries.
+        await context.QueueStateUpdateAsync(DraftKey, draft, Scope, ct);
+        return draft;
     }
 
     protected override async ValueTask OnCheckpointingAsync(
@@ -479,22 +494,43 @@ internal sealed class RevisionTracker() : Executor<string, string>("revision-tra
     }
 }
 
-/// <summary>Formats the approved draft as the workflow's output.</summary>
+/// <summary>
+/// Approves the checkpointed draft, and only when the reply is bound to that draft.
+/// </summary>
 [YieldsOutput(typeof(string))]
-internal sealed class Finalizer() : Executor<string>("finalizer")
+internal sealed class Finalizer() : Executor<ApprovalReply>("finalizer")
 {
     public override async ValueTask HandleAsync(
-        string approved, IWorkflowContext context, CancellationToken ct)
-        => await context.YieldOutputAsync($"[APPROVED]\n{approved}", ct);
+        ApprovalReply reply, IWorkflowContext context, CancellationToken ct)
+    {
+        string? draft = await context.ReadStateAsync<string>(RevisionTracker.DraftKey, RevisionTracker.Scope, ct);
+        if (string.IsNullOrWhiteSpace(draft) || ApprovalDecisions.Fingerprint(draft) != reply.DraftHash)
+        {
+            await context.YieldOutputAsync($"{NotApproved.Marker} the reply does not match the checkpointed draft.", ct);
+            return;
+        }
+        await context.YieldOutputAsync($"[APPROVED]\n{draft}", ct);
+    }
 }
 
 /// <summary>Ends a rejected review: nothing is finalized.</summary>
 [YieldsOutput(typeof(string))]
-internal sealed class Rejection() : Executor<string>("rejection")
+internal sealed class Rejection() : Executor<ApprovalReply>("rejection")
 {
     public override async ValueTask HandleAsync(
-        string decision, IWorkflowContext context, CancellationToken ct)
+        ApprovalReply reply, IWorkflowContext context, CancellationToken ct)
         => await context.YieldOutputAsync("[REJECTED] The draft was not finalized.", ct);
+}
+
+/// <summary>The decision switch's default: a reply that is neither approve nor reject.</summary>
+[YieldsOutput(typeof(string))]
+internal sealed class NotApproved() : Executor<ApprovalReply>("not-approved")
+{
+    public const string Marker = "[NOT APPROVED]";
+
+    public override async ValueTask HandleAsync(
+        ApprovalReply reply, IWorkflowContext context, CancellationToken ct)
+        => await context.YieldOutputAsync($"{Marker} decision {(int)reply.Decision} is not approve or reject.", ct);
 }
 
 /// <summary>
@@ -555,10 +591,12 @@ internal static class CrossProcessSelfTest
                 !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "", out _) &&
                 !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "   ", out _) &&
                 !ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, null, out _));
-            Check("approve + draft -> the draft; reject -> the reject word",
-                ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "text", out string? yes) && yes == "text" &&
-                ApprovalDecisions.TryCreateReply(ApprovalDecision.Reject, null, out string? no) &&
-                no == ApprovalDecisions.RejectReply);
+            Check("approve + draft -> Approve bound to that draft; reject -> Reject; default decides nothing",
+                ApprovalDecisions.TryCreateReply(ApprovalDecision.Approve, "text", out ApprovalReply? yes) &&
+                yes == new ApprovalReply(ApprovalDecision.Approve, ApprovalDecisions.Fingerprint("text")) &&
+                ApprovalDecisions.TryCreateReply(ApprovalDecision.Reject, null, out ApprovalReply? no) &&
+                no.Decision == ApprovalDecision.Reject &&
+                !ApprovalDecisions.TryCreateReply(default, "text", out _));
 
             // The no-argument demo says its decision is simulated, and refuses an empty draft.
             Child demo = RunChild();
@@ -608,6 +646,11 @@ internal static class CrossProcessSelfTest
             Child prepare3 = RunChild("prepare", "--store", emptyStore, "--empty-draft");
             Child emptyResume = RunChild("resume", ValueFrom(prepare3, "Session:") ?? "none", "approve", "--store", emptyStore);
             Check("resume + approve of an empty draft fails closed", FailedClosed(emptyResume, "empty draft"));
+
+            string otherStore = Path.Combine(root, "other-draft");
+            Child prepare4 = RunChild("prepare", "--store", otherStore);
+            Child otherDraft = RunChild("resume", ValueFrom(prepare4, "Session:") ?? "none", "approve", "--store", otherStore, "--other-draft");
+            Check("an approval bound to another draft fails closed", FailedClosed(otherDraft, "does not match the checkpointed draft"));
 
             Child unknown = RunChild("resume", Guid.NewGuid().ToString("N"), "approve", "--store", approveStore);
             Check("unknown session fails closed", FailedClosed(unknown, "no checkpoint for session"));

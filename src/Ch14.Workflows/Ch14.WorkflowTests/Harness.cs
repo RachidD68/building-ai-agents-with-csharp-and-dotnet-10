@@ -1,4 +1,5 @@
 using Ch14.ApprovalWorkflow;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 
 namespace Ch14.WorkflowTests;
@@ -30,7 +31,8 @@ internal static class Harness
     }
 }
 
-internal sealed record ReviewRun(ClaimOutcome? Outcome, RunStatus Status, List<ReviewRequest> Requests, List<string> Errors);
+internal sealed record ReviewRun(ClaimOutcome? Outcome, RunStatus Status, List<ReviewRequest> Requests, List<string> Errors,
+    Dictionary<string, int> Steps);
 
 internal static class Review
 {
@@ -47,6 +49,8 @@ internal static class Review
         List<ReviewRequest> requests = [];
         List<string> errors = [];
         ClaimOutcome? outcome = null;
+        Dictionary<string, int> steps = [];                             // executor id -> first superstep
+        int superstep = 0;
         for (int round = 0; round < maxRounds; round++)
         {
             ExternalRequest? asked = null;
@@ -57,6 +61,12 @@ internal static class Review
                     case RequestInfoEvent info when info.Request.TryGetDataAs(out ReviewRequest? request):
                         asked = info.Request;
                         requests.Add(request);
+                        break;
+                    case ExecutorInvokedEvent invoked:
+                        steps.TryAdd(invoked.ExecutorId, superstep);
+                        break;
+                    case SuperStepCompletedEvent:
+                        superstep++;
                         break;
                     case WorkflowOutputEvent { Data: ClaimOutcome done }:
                         outcome = done;
@@ -71,21 +81,33 @@ internal static class Review
             if (reply is null) break;                                   // nobody decided
             await run.SendResponseAsync(asked.CreateResponse(reply));
         }
-        return new ReviewRun(outcome, await run.GetStatusAsync(), requests, errors);
+        return new ReviewRun(outcome, await run.GetStatusAsync(), requests, errors, steps);
     }
 
-    /// <summary>Answers the typed port with a string; returns the refusal message.</summary>
-    public static async Task<string?> SendWrongTypeAsync(ExpenseClaim claim)
+    /// <summary>
+    /// Answers the typed port with a string, then, on the same run, with a typed
+    /// approval. Returns the refusal, the run's status after it, and the outcome
+    /// of the typed reply.
+    /// </summary>
+    public static async Task<(string? Refusal, RunStatus After, ClaimOutcome? Typed)> SendWrongTypeAsync(ExpenseClaim claim)
     {
         await using StreamingRun run = await InProcessExecution.RunStreamingAsync(
             ClaimReviewGraph.Build(new ScriptedChatClient()), claim, sessionId: Guid.NewGuid().ToString());
         ExternalRequest? asked = await FirstRequestAsync(run);
-        try { await run.SendResponseAsync(asked!.CreateResponse("approve")); return null; }
-        catch (InvalidOperationException ex) { return ex.Message; }
+        string? refusal = null;
+        try { await run.SendResponseAsync(asked!.CreateResponse("approve")); }
+        catch (InvalidOperationException ex) { refusal = ex.Message; }
+        RunStatus after = await run.GetStatusAsync();
+
+        await run.SendResponseAsync(asked!.CreateResponse(new ReviewReply(ReviewDecision.Approve)));
+        ClaimOutcome? typed = null;
+        await foreach (WorkflowEvent evt in run.WatchStreamAsync(blockOnPendingRequest: false))
+            if (evt is WorkflowOutputEvent { Data: ClaimOutcome done }) typed = done;
+        return (refusal, after, typed);
     }
 
-    /// <summary>Sends the same approval twice; returns the workflow error it causes.</summary>
-    public static async Task<string?> SendTwiceAsync(ExpenseClaim claim)
+    /// <summary>Sends the same approval twice; returns the workflow error, the final status and any outcome.</summary>
+    public static async Task<(string? Error, RunStatus Status, ClaimOutcome? Outcome)> SendTwiceAsync(ExpenseClaim claim)
     {
         await using StreamingRun run = await InProcessExecution.RunStreamingAsync(
             ClaimReviewGraph.Build(new ScriptedChatClient()), claim, sessionId: Guid.NewGuid().ToString());
@@ -94,9 +116,13 @@ internal static class Review
         await run.SendResponseAsync(reply);
         await run.SendResponseAsync(reply);
         string? error = null;
+        ClaimOutcome? outcome = null;
         await foreach (WorkflowEvent evt in run.WatchStreamAsync(blockOnPendingRequest: false))
+        {
             if (evt is WorkflowErrorEvent failure) error ??= failure.Data?.ToString();
-        return error;
+            if (evt is WorkflowOutputEvent { Data: ClaimOutcome done }) outcome = done;
+        }
+        return (error, await run.GetStatusAsync(), outcome);
     }
 
     public static async Task<ExternalRequest?> FirstRequestAsync(StreamingRun run)
@@ -138,7 +164,7 @@ internal static class Reuse
     /// Run 1 pauses at the review port and keeps the graph; run 2 starts on
     /// another thread while run 1 is still open. Returns run 2's refusal.
     /// </summary>
-    public static async Task<string?> ConcurrentRunAsync(ExpenseClaim claim)
+    public static async Task<string?> SecondRunWhileOwnedAsync(ExpenseClaim claim)
     {
         Workflow shared = ClaimReviewGraph.Build(new ScriptedChatClient());
         await using StreamingRun first = await InProcessExecution.RunStreamingAsync(shared, claim, sessionId: "run-1");
@@ -152,6 +178,102 @@ internal static class Reuse
             }
             catch (InvalidOperationException ex) { return ex.Message; }
         });
+    }
+
+    /// <summary>
+    /// Two runs of one graph started at the same moment: both threads wait at a
+    /// barrier, then call RunStreamingAsync together. Repeated <paramref name="rounds"/>
+    /// times; returns how many rounds ended with exactly one run started and one refused.
+    /// </summary>
+    public static async Task<int> TwoRunsAtOnceAsync(ExpenseClaim claim, int rounds)
+    {
+        int exactlyOne = 0;
+        for (int i = 0; i < rounds; i++)
+        {
+            Workflow shared = ClaimReviewGraph.Build(new ScriptedChatClient());
+            using Barrier gate = new(2);
+            async Task<StreamingRun?> StartAsync(string id)
+            {
+                gate.SignalAndWait();
+                try { return await InProcessExecution.RunStreamingAsync(shared, claim, sessionId: id); }
+                catch (InvalidOperationException) { return null; }
+            }
+            StreamingRun?[] runs = await Task.WhenAll(Task.Run(() => StartAsync("a")), Task.Run(() => StartAsync("b")));
+            if (runs.Count(r => r is not null) == 1) exactlyOne++;
+            foreach (StreamingRun? run in runs)
+                if (run is not null) await run.DisposeAsync();
+        }
+        return exactlyOne;
+    }
+}
+
+/// <summary>
+/// Counts how often switch predicates are called with null: behind a RequestPort,
+/// and behind an ordinary executor. Then runs a port switch whose predicate is not
+/// null-safe.
+/// </summary>
+internal static class NullProbe
+{
+    public static async Task<(int PortNulls, int PlainNulls, ClaimOutcome? UnsafeOutcome, List<string> UnsafeErrors)> RunAsync(ExpenseClaim claim)
+    {
+        int portNulls = 0, plainNulls = 0;
+
+        // 1. The claim graph's shape: a switch after the review port, null-safe but counting.
+        await DriveAsync(PortGraph(r => { if (r is null) portNulls++; return r is { Decision: ReviewDecision.Approve }; }), claim);
+
+        // 2. A switch after an ordinary executor (classify), counting.
+        ExecutorBinding classify = new ClassifyExecutor().BindExecutor();
+        ExecutorBinding returned = new ReturnedExecutor().BindExecutor();
+        Workflow plain = new WorkflowBuilder(classify)
+            .AddSwitch(classify, sw => sw
+                .AddCase<RoutedClaim>(c => { if (c is null) plainNulls++; return c is { Route: ClaimRoute.Unsupported }; }, [returned]))
+            .WithOutputFrom(returned)
+            .Build();
+        await DriveAsync(plain, claim with { Category = "gym" });
+
+        // 3. The same port switch written without a null check.
+        (ClaimOutcome? outcome, List<string> errors) = await DriveAsync(PortGraph(r => r!.Decision == ReviewDecision.Approve), claim);
+        return (portNulls, plainNulls, outcome, errors);
+    }
+
+    private static Workflow PortGraph(Func<ReviewReply?, bool> approve)
+    {
+        ExecutorBinding classify = new ClassifyExecutor().BindExecutor();
+        ExecutorBinding policy = new PolicyCheckExecutor().BindExecutor();
+        ExecutorBinding receipt = new ReceiptCheckExecutor().BindExecutor();
+        ExecutorBinding collect = new CollectChecksExecutor(expected: 2).BindExecutor();
+        ExecutorBinding write = new WriteSummaryExecutor(
+            new ChatClientAgent(new ScriptedChatClient(), instructions: "Summarise the claim.")).BindExecutor();
+        ExecutorBinding port = RequestPort.Create<ReviewRequest, ReviewReply>(ClaimReviewGraph.PortId).BindAsExecutor();
+        ExecutorBinding approved = new ApprovedExecutor().BindExecutor();
+        return new WorkflowBuilder(classify)
+            .AddFanOutEdge(classify, [policy, receipt])
+            .AddFanInBarrierEdge([policy, receipt], collect)
+            .AddEdge(collect, write)
+            .AddEdge(write, port)
+            .AddSwitch(port, sw => sw.AddCase<ReviewReply>(r => approve(r), [approved]))
+            .WithOutputFrom(approved)
+            .Build();
+    }
+
+    private static async Task<(ClaimOutcome?, List<string>)> DriveAsync(Workflow workflow, ExpenseClaim claim)
+    {
+        await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, claim, sessionId: Guid.NewGuid().ToString());
+        ClaimOutcome? outcome = null;
+        List<string> errors = [];
+        for (int round = 0; round < 3; round++)
+        {
+            ExternalRequest? asked = null;
+            await foreach (WorkflowEvent evt in run.WatchStreamAsync(blockOnPendingRequest: false))
+            {
+                if (evt is RequestInfoEvent info) asked ??= info.Request;
+                if (evt is WorkflowOutputEvent { Data: ClaimOutcome done }) outcome = done;
+                if (evt is WorkflowErrorEvent error) errors.Add(error.Data?.ToString() ?? "error");
+            }
+            if (asked is null) break;
+            await run.SendResponseAsync(asked.CreateResponse(new ReviewReply(ReviewDecision.Approve)));
+        }
+        return (outcome, errors);
     }
 }
 

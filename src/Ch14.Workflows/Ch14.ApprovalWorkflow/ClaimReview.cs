@@ -10,6 +10,7 @@
 //                                                      revise (capped)<-- Revise     |
 //                                                                    Approve --> approved
 //                                                                    Reject  --> rejected
+//                                                                    default --> undecided (not-approved)
 //
 // No reply means no outcome: the run stays at PendingRequests, nothing is approved.
 // ============================================================================
@@ -27,8 +28,8 @@ public sealed record CheckResult(ExpenseClaim Claim, string Check, bool Passed, 
 public sealed record DraftRequest(ExpenseClaim Claim, IReadOnlyList<CheckResult> Checks, string Note, int Revision);
 public sealed record ReviewRequest(ExpenseClaim Claim, IReadOnlyList<CheckResult> Checks, string Summary, int Revision);
 
-/// <summary>The only three things a reviewer can decide.</summary>
-public enum ReviewDecision { Approve, Revise, Reject }
+/// <summary>The only three things a reviewer can decide. None of them is 0, so default(ReviewDecision) is no decision.</summary>
+public enum ReviewDecision { Approve = 1, Revise = 2, Reject = 3 }
 public sealed record ReviewReply(ReviewDecision Decision, string Note = "");
 
 /// <summary>What the workflow yields. Only Status "approved" means approved.</summary>
@@ -60,6 +61,7 @@ public static class ClaimReviewGraph
         ExecutorBinding approved = new ApprovedExecutor().BindExecutor();
         ExecutorBinding revise = new ReviseExecutor(maxRevisions).BindExecutor();
         ExecutorBinding rejected = new RejectedExecutor().BindExecutor();
+        ExecutorBinding undecided = new UndecidedExecutor().BindExecutor();
 
         return new WorkflowBuilder(classify)
             .AddSwitch(classify, sw => sw
@@ -71,9 +73,10 @@ public static class ClaimReviewGraph
             .AddSwitch(port, sw => sw
                 .AddCase<ReviewReply>(r => r is { Decision: ReviewDecision.Approve }, [approved])
                 .AddCase<ReviewReply>(r => r is { Decision: ReviewDecision.Revise }, [revise])
-                .AddCase<ReviewReply>(r => r is { Decision: ReviewDecision.Reject }, [rejected]))
+                .AddCase<ReviewReply>(r => r is { Decision: ReviewDecision.Reject }, [rejected])
+                .WithDefault([undecided]))
             .AddEdge(revise, write)
-            .WithOutputFrom(returned, approved, revise, rejected)
+            .WithOutputFrom(returned, approved, revise, rejected, undecided)
             .WithName("ContosoClaimReview")
             .Build();
     }
@@ -183,8 +186,25 @@ internal sealed class ApprovedExecutor() : Executor<ReviewReply>("approved")
 {
     public override async ValueTask HandleAsync(ReviewReply reply, IWorkflowContext context, CancellationToken ct)
     {
+        ReviewRequest last = await context.ReadStateAsync<ReviewRequest>("last", WriteSummaryExecutor.Scope, ct)
+            ?? throw new InvalidOperationException("approve without a review request: nothing to approve");
+        await context.YieldOutputAsync(new ClaimOutcome(last.Claim.Id, "approved", last.Summary), ct);
+    }
+}
+
+/// <summary>
+/// The decision switch's default: a reply whose Decision is none of the three
+/// (default(ReviewDecision), a JSON body with no Decision, an out-of-range value).
+/// It ends the review visibly as not approved instead of leaving the run idle.
+/// </summary>
+[YieldsOutput(typeof(ClaimOutcome))]
+internal sealed class UndecidedExecutor() : Executor<ReviewReply>("undecided")
+{
+    public override async ValueTask HandleAsync(ReviewReply reply, IWorkflowContext context, CancellationToken ct)
+    {
         ReviewRequest? last = await context.ReadStateAsync<ReviewRequest>("last", WriteSummaryExecutor.Scope, ct);
-        await context.YieldOutputAsync(new ClaimOutcome(last?.Claim.Id ?? "?", "approved", last?.Summary ?? ""), ct);
+        await context.YieldOutputAsync(new ClaimOutcome(last?.Claim.Id ?? "?", "not-approved",
+            $"decision {(int)reply.Decision} is not approve, revise or reject"), ct);
     }
 }
 

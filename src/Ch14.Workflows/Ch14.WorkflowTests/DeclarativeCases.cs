@@ -68,9 +68,14 @@ internal static class DeclarativeCases
             await RestoreAsync() is { } restored && restored.Text.Contains("route: review, runs: 1") &&
             !restored.Invoked.Contains("set_route") && restored.Invoked.Contains("send_route"));
 
-        DeclaredRun tooLong = await BuildAndRunAsync(TriageYaml, new DeclarativeWorkflowOptions(new InMemoryAgentProvider()) { MaximumExpressionLength = 10 }, LongClaim);
-        Harness.Check("MaximumExpressionLength 10: the declared expression is refused, nothing is sent",
-            tooLong.Text.Length == 0 && tooLong.Errors.Count > 0, string.Join(" | ", tooLong.Errors));
+        // Build and run apart: the limit is enforced when the run evaluates the expression, not by Build.
+        Workflow? tight = null;
+        string? buildError = null;
+        try { tight = Build(TriageYaml, new DeclarativeWorkflowOptions(new InMemoryAgentProvider()) { MaximumExpressionLength = 10 }); }
+        catch (Exception ex) { buildError = Flatten(ex); }
+        DeclaredRun tooLong = tight is null ? new DeclaredRun([], [], "", [buildError ?? "build failed"]) : await RunAsync(tight, LongClaim);
+        Harness.Check("MaximumExpressionLength 10: Build accepts the file; the run refuses the expression, nothing is sent",
+            tight is not null && tooLong.Text.Length == 0 && tooLong.Errors.Count > 0, string.Join(" | ", tooLong.Errors));
         Console.WriteLine($"        refused with: {tooLong.Errors.FirstOrDefault()?.Split(" -> ").Last()}");
 
         await HttpContractAsync();
@@ -111,6 +116,7 @@ internal static class DeclarativeCases
     // ---------------------------------------------------------------
     private static async Task HttpContractAsync()
     {
+        // Two loopback listeners on different ports stand in for two hosts: the allow-list compares authorities.
         await using LoopbackServer elsewhere = LoopbackServer.Start(_ => "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
         await using LoopbackServer policy = LoopbackServer.Start(_ =>
             $"HTTP/1.1 302 Found\r\nLocation: {elsewhere.BaseUrl}/collect\r\nContent-Length: 0\r\n\r\n");
@@ -118,7 +124,7 @@ internal static class DeclarativeCases
 
         await using (DefaultHttpRequestHandler plain = new())
             await RunAsync(Build(yaml, Options(plain)), "go");
-        Harness.Defect("DefaultHttpRequestHandler on a default HttpClient follows a 302 to another host",
+        Harness.Defect("DefaultHttpRequestHandler on a default HttpClient follows a 302 to another authority (host:port)",
             policy.Hits == 1 && elsewhere.Hits == 1);
 
         await using AllowListHttpRequestHandler guarded = new([new Uri(policy.BaseUrl).Authority]);
@@ -148,13 +154,6 @@ internal static class DeclarativeCases
         """;
 
     internal sealed record DeclaredRun(List<string> Invoked, List<string> Completed, string Text, List<string> Errors);
-
-    /// <summary>Build errors count as run errors, so a refused file is visible either way.</summary>
-    private static async Task<DeclaredRun> BuildAndRunAsync(string yaml, DeclarativeWorkflowOptions options, string input)
-    {
-        try { return await RunAsync(Build(yaml, options), input); }
-        catch (Exception ex) { return new DeclaredRun([], [], "", [Flatten(ex)!]); }
-    }
 
     private static async Task<DeclaredRun> RunAsync(Workflow workflow, string input)
     {

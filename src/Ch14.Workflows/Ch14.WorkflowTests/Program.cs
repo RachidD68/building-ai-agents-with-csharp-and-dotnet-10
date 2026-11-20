@@ -15,6 +15,7 @@
 // Accepts --self-test (same run) so the repository's self-test sweep finds it.
 // ============================================================================
 
+using System.Text.Json;
 using Ch14.ApprovalWorkflow;
 using Ch14.WorkflowTests;
 using Microsoft.Agents.AI.Workflows;
@@ -33,8 +34,11 @@ Console.WriteLine("\n-- Claim review: every branch");
 ReviewRun approve = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Approve));
 Harness.Check("approve -> approved, one review request",
     approve.Outcome?.Status == "approved" && approve.Requests.Count == 1);
-Harness.Check("both checks ran in parallel and met at the barrier",
-    approve.Requests[0].Checks.Select(c => c.Check).SequenceEqual(["policy", "receipt"]));
+Harness.Check("both checks ran in one superstep and met at the barrier",
+    approve.Steps.TryGetValue("policy-check", out int policyStep) && approve.Steps.TryGetValue("receipt-check", out int receiptStep) &&
+    policyStep == receiptStep && approve.Steps["collect"] > policyStep &&
+    approve.Requests[0].Checks.Select(c => c.Check).SequenceEqual(["policy", "receipt"]),
+    string.Join(",", approve.Steps.Select(s => $"{s.Key}@{s.Value}")));
 
 ReviewRun revise = await Review.RunAsync(meals, r => r.Revision == 0
     ? new ReviewReply(ReviewDecision.Revise, "Say who attended.") : new ReviewReply(ReviewDecision.Approve));
@@ -60,10 +64,25 @@ ReviewRun capped = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecis
 Harness.Check("always revise, cap 2 -> not-approved after 3 requests (cap is not success)",
     capped.Outcome?.Status == "not-approved" && capped.Requests.Count == 3);
 
-ReviewRun typed = await Review.RunAsync(meals, _ => null);
-string? refused = await Review.SendWrongTypeAsync(meals);
-Harness.Check("typed port refuses a string reply; the run stays pending",
-    refused?.Contains("does not match expected response type") == true && typed.Status == RunStatus.PendingRequests);
+(string? refused, RunStatus afterRefusal, ClaimOutcome? typedAfter) = await Review.SendWrongTypeAsync(meals);
+Harness.Check("typed port refuses a string reply; that run stays pending and still takes a typed approve",
+    refused?.Contains("does not match expected response type") == true && afterRefusal == RunStatus.PendingRequests &&
+    typedAfter?.Status == "approved", $"status={afterRefusal} typed={typedAfter?.Status}");
+
+ReviewDecision fromJson = JsonSerializer.Deserialize<ReviewReply>("{}")!.Decision;
+ReviewRun noDecision = await Review.RunAsync(meals, _ => new ReviewReply(default));
+ReviewRun emptyJson = await Review.RunAsync(meals, _ => JsonSerializer.Deserialize<ReviewReply>("{\"Note\":\"pls check\"}"));
+ReviewRun outOfRange = await Review.RunAsync(meals, _ => new ReviewReply((ReviewDecision)7));
+Harness.Check("default(ReviewDecision), JSON {} and decision 7 are not Approve -> switch default -> not-approved",
+    fromJson != ReviewDecision.Approve && !ReviewDecisions.TryParse("garbage", out ReviewDecision junk) && junk != ReviewDecision.Approve &&
+    new[] { noDecision, emptyJson, outOfRange }.All(r => r.Outcome?.Status == "not-approved" && r.Errors.Count == 0),
+    $"{noDecision.Outcome?.Status},{emptyJson.Outcome?.Status},{outOfRange.Outcome?.Status}");
+
+var probe = await NullProbe.RunAsync(meals);
+Harness.Check("switch after the RequestPort is called with null; switch after classify is not",
+    probe.PortNulls > 0 && probe.PlainNulls == 0, $"port={probe.PortNulls} plain={probe.PlainNulls}");
+Harness.Defect("port switch written r => r.Decision == ...: NullReferenceException, no outcome",
+    probe.UnsafeOutcome is null && probe.UnsafeErrors.Any(e => e.Contains("NullReferenceException")));
 
 Console.WriteLine("\n-- Where it fails, reproduced");
 string[] v1Inputs = ["", "aprove", "reject"];
@@ -73,9 +92,10 @@ Harness.Check("(a) fixed: empty, typo and end of input are no decision; \"reject
     !ReviewDecisions.TryParse("", out _) && !ReviewDecisions.TryParse("aprove", out _) && !ReviewDecisions.TryParse(null, out _) &&
     ReviewDecisions.TryParse("reject", out ReviewDecision rejected) && rejected == ReviewDecision.Reject);
 
-string? duplicate = await Review.SendTwiceAsync(meals);
-Harness.Check("(b) the same reply sent twice: MAF reports no pending request for that id",
-    duplicate?.Contains("No pending request with ID") == true);
+(string? duplicate, RunStatus afterDuplicate, ClaimOutcome? duplicateOutcome) = await Review.SendTwiceAsync(meals);
+Harness.Check("(b) the same reply sent twice: no pending request for that id; the run ends with no outcome",
+    duplicate?.Contains("No pending request with ID") == true && afterDuplicate == RunStatus.Ended && duplicateOutcome is null,
+    $"status={afterDuplicate} outcome={duplicateOutcome?.Status}");
 
 Harness.Defect("(c) one graph with a stateful executor, run twice: run 2 sees run 1's state",
     await Reuse.SharedCounterAsync() is ("seen 1", "seen 2"));
@@ -83,9 +103,12 @@ Harness.Check("(c) fixed: a fresh graph per run gives the same output twice",
     await Reuse.FreshCounterAsync() is ("seen 1", "seen 1"));
 Harness.Check("(c) fixed: IResettableExecutor resets between runs of one graph",
     await Reuse.ResettableCounterAsync() is ("seen 1", "seen 1"));
-string? concurrent = await Reuse.ConcurrentRunAsync(meals);
-Harness.Check("(c) a second, concurrent run of one graph is refused (Task.Run while run 1 is paused)",
-    concurrent?.Contains("already owned by another runner") == true);
+string? owned = await Reuse.SecondRunWhileOwnedAsync(meals);
+Harness.Check("(c) a second run is refused while run 1 owns the graph (paused at the port)",
+    owned?.Contains("already owned by another runner") == true);
+int exactlyOne = await Reuse.TwoRunsAtOnceAsync(meals, rounds: 20);
+Harness.Check("(c) two runs started at once behind a barrier: exactly one refused, 20 of 20 rounds",
+    exactlyOne == 20, $"{exactlyOne}/20");
 
 ReviewRun unbounded = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Revise), maxRevisions: int.MaxValue, maxRounds: 10);
 Harness.Defect("(d) no cap, a reviewer who always says revise: 10 rounds, still no outcome",

@@ -10,7 +10,7 @@ classify --switch--> policy-check + receipt-check --barrier--> collect --> write
                                                               Reject  --> rejected  <-'
 ```
 
-The `RequestPort` takes a `ReviewReply` (`Approve`, `Revise` or `Reject`), not a string. Only an explicit `approve` produces the `approved` outcome. An empty line, a typo, three wrong entries or the end of input send no reply at all: the run stays at `PendingRequests` and nothing is approved. A claim that is sent back more than twice ends as `not-approved`, because a loop that stops on its cap has not succeeded.
+The `RequestPort` takes a `ReviewReply` (`Approve`, `Revise` or `Reject`), not a string. None of the three is 0, so `default(ReviewDecision)`, a JSON body with no `Decision` or an out-of-range value matches no case and takes the decision switch's default: `not-approved`, with the reason. Only an explicit `approve` produces the `approved` outcome. An empty line, a typo, three wrong entries or the end of input send no reply at all: the run stays at `PendingRequests` and nothing is approved. A claim that is sent back more than twice ends as `not-approved`, because a loop that stops on its cap has not succeeded.
 
 This chapter covers only the pause and the typed, fail-closed decision. What an approval is allowed to authorize (exact arguments, reviewer identity, expiry) belongs to the authorized-actions chapter.
 
@@ -25,7 +25,7 @@ This chapter covers only the pause and the typed, fail-closed decision. What an 
 | `IResettableExecutor` | The barrier collector clears its per-run list if the graph is reused |
 | `RunStatus.PendingRequests` | What "no decision" looks like from the host |
 
-Switch predicates are written `r => r is { Decision: ReviewDecision.Approve }`: the switch can call a predicate with `null`, so a predicate that dereferences its argument throws inside the run.
+Switch predicates are written `r => r is { Decision: ReviewDecision.Approve }`: in Workflows 1.28 the switch after the `RequestPort` is evaluated with `null` when the port forwards its request, so a predicate that dereferences its argument throws inside the run (`Ch14.WorkflowTests` counts the null calls and reproduces the exception).
 
 ## Running
 
