@@ -44,6 +44,10 @@ internal static class SelfTest
         var negated = Run(pto, "Not 15 days; employees get 20 days [pto-policy@v1#2].");
         Check(!negated[Layer.Fact].Passed && negated[Layer.Fact].Reason.StartsWith("negates", StringComparison.Ordinal),
             "a contradiction that contains \"15\" fails Fact: " + negated[Layer.Fact].Reason);
+        var dont = Run(pto, "New employees don't get 15 days of PTO [pto-policy@v1#2].");
+        bool curlyFails = !EvidenceScorer.Score(pto, "The allowance isn’t 15 days for new employees [pto-policy@v1#2].", [])[(int)Layer.Fact].Passed;
+        Check(!dont[Layer.Fact].Passed && curlyFails,
+            "contracted negations (\"don't\", and \"isn't\" with a curly apostrophe) fail Fact: " + dont[Layer.Fact].Reason);
         var big = Run(pto, "Employees get 115 days of PTO [pto-policy@v1#2].");
         Check(!big[Layer.Fact].Passed && !big[Layer.Support].Passed, "\"115 days\" fails Fact and Support");
         var foreign = Run(pto, "New employees get 15 PTO days [fabrikam-pto@v1#2].");
@@ -59,6 +63,8 @@ internal static class SelfTest
             "no authorized evidence, the answer abstains: pass, and Fact does not apply");
         var leaks = Run(fab, "Fabrikam employees get 20 PTO days.");
         Check(!leaks[Layer.Abstention].Passed, "no authorized evidence, the answer states a number: Abstention fails");
+        var hedged = Run(fab, "I can't find a policy you have access to that answers this. Fabrikam employees get 20 PTO days.");
+        Check(!hedged[Layer.Abstention].Passed, "the refusal sentence followed by a number still fails Abstention: " + hedged[Layer.Abstention].Reason);
         var shy = Run(pto, "I can't find a policy you have access to that answers this.");
         Check(!shy[Layer.Abstention].Passed && !shy[Layer.Fact].Passed, "evidence issued, the answer abstains: Abstention and Fact fail");
 
@@ -109,6 +115,11 @@ internal static class SelfTest
             "C ships: 18/20, 95 % Wilson interval 0.70-0.97, no guarded loss");
         Decision moved = ReleaseGate.Decide(plan with { MinItemPassRate = 0.50 }, declared, a, c);
         Check(moved.Verdict == "REFUSED", "a threshold changed after the run is refused: " + moved.Reasons[0]);
+        ItemOutcome[] swapped = [.. b.Where(o => o.CaseId != "perm-3"), b.Single(o => o.CaseId == "perm-0")];
+        ItemOutcome[] relabelled = [.. b.Select(o => o.CaseId == "perm-3" ? o with { Slice = "faq" } : o)];
+        Decision dup = ReleaseGate.Decide(plan, declared, a, swapped), slice = ReleaseGate.Decide(plan, declared, a, relabelled);
+        Check(dup.Verdict == "REFUSED" && slice.Verdict == "BLOCK" && slice.GuardedLosses.SequenceEqual(["perm-3 (permission)"]),
+            "B with its regressed item dropped and another listed twice is refused; relabelling its slice still blocks");
 
         Console.WriteLine("\n-- 6. Rule of three, under its assumption --");
         double perRun = ReleaseGate.RuleOfThree(40), perItem = ReleaseGate.RuleOfThree(10);

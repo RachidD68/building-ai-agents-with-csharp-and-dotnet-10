@@ -50,21 +50,30 @@ public static partial class Calibration
         ANSWER>>>
         """.ReplaceLineEndings("\n");
 
-    /// <summary>The judge's model may not be the model that produced any answer it grades.</summary>
+    /// <summary>
+    /// The judge's model may not be the model that produced any answer it grades. Models are
+    /// compared by name before the tag (llama3.2, llama3.2:latest and llama3.2:3b are one model);
+    /// an alias made with `ollama cp` has another name and is not caught.
+    /// </summary>
     public static string? SelfJudging(string judgeModel, IEnumerable<CalItem> items)
     {
-        static string Norm(string m) => m.EndsWith(":latest", StringComparison.OrdinalIgnoreCase) ? m[..^7] : m;
+        static string Norm(string m) => m.Split(':')[0].Trim();
         string[] own = [.. items.Where(i => string.Equals(Norm(i.ProducedBy), Norm(judgeModel), StringComparison.OrdinalIgnoreCase))
             .Select(i => i.Id)];
         return own.Length == 0 ? null
             : $"judge model {judgeModel} produced {own.Length} of the answers it would grade ({string.Join(", ", own.Take(3))}...): pick another judge";
     }
 
+    /// <summary>
+    /// The verdict is a line that holds only "VERDICT: SUPPORTED" or "VERDICT: UNSUPPORTED"
+    /// (markdown around it is tolerated). No such line, or lines that disagree, is no verdict:
+    /// an echoed template or a quoted verdict inside a sentence never counts.
+    /// </summary>
     public static Verdict Parse(string itemId, string reply)
     {
-        Match v = VerdictLine().Match(reply);
+        string[] said = [.. VerdictLine().Matches(reply).Select(m => m.Groups[1].Value.ToLowerInvariant()).Distinct()];
         Match r = RubricLineRef().Match(reply);
-        return new(itemId, v.Success ? v.Groups[1].Value.ToLowerInvariant() : null, r.Success ? r.Groups[1].Value.ToUpperInvariant() : null, reply.Trim());
+        return new(itemId, said.Length == 1 ? said[0] : null, r.Success ? r.Groups[1].Value.ToUpperInvariant() : null, reply.Trim());
     }
 
     public static async Task<Verdict> JudgeAsync(IChatClient judge, string rubric, CalItem item, CancellationToken ct = default)
@@ -115,7 +124,7 @@ public static partial class Calibration
             Console.WriteLine($"    {d.ItemId}  human {d.Human} ({d.HumanLine}), judge {d.Judge} ({d.JudgeLine ?? "-"})");
     }
 
-    [GeneratedRegex(@"VERDICT:\W*(UNSUPPORTED|SUPPORTED)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^[\W_]*VERDICT:[\W_]*(UNSUPPORTED|SUPPORTED)[\W_]*$", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex VerdictLine();
 
     // "RUBRIC: R2", or a bare "R2" on its own line (the form llama3.2 replied with).

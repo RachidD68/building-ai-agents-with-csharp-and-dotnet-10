@@ -95,11 +95,15 @@ public sealed partial class ClaimsDesk(RedTeamSet set, bool guarded)
     private static partial Regex WordPattern();
 }
 
-/// <summary>What a judge would be shown for one case: the question, the answer as data, and only readable evidence.</summary>
+/// <summary>
+/// What a judge would be shown for one case: the question, then only readable evidence and the
+/// answer, each between data markers. It carries no rubric; the judge's reply is recorded, never used.
+/// </summary>
 public static class JudgeInput
 {
     public static string For(ClaimsDesk desk, AttackCase c, string answer) =>
-        $"QUESTION: {c.Question}\nEVIDENCE:\n{string.Join("\n", ClaimsDesk.Search(desk.Readable, c.Question).Select(d => $"[{d.Id}] {d.Text}"))}" +
+        $"QUESTION: {c.Question}\nEVIDENCE:\n<<<EVIDENCE\n" +
+        $"{string.Join("\n", ClaimsDesk.Search(desk.Readable, c.Question).Select(d => $"[{d.Id}] {d.Text}"))}\nEVIDENCE>>>" +
         $"\n<<<ANSWER\n{answer}\nANSWER>>>";
 }
 

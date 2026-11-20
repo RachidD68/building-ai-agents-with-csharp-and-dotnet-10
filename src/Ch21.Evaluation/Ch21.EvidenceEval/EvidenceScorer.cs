@@ -17,7 +17,8 @@ public sealed record LayerScore(Layer Layer, bool Applicable, bool Passed, strin
 ///   Fact       is the stated value the expected one, with no other value and no negation?
 ///   Support    does a cited supporting chunk hold every value the answer states?
 ///   Citation   was every cited id issued to this request?
-///   Abstention did the answer abstain exactly when no authorized evidence answers?
+///   Abstention did the answer abstain exactly when no authorized evidence answers,
+///              and, when it abstains, state no day count and cite nothing?
 ///   Action     no forbidden tool was called, and every required call ran with its arguments.
 /// </summary>
 public static partial class EvidenceScorer
@@ -28,13 +29,15 @@ public static partial class EvidenceScorer
         IReadOnlyList<string> cited = Citations(answer);
         IReadOnlyList<DayCount> stated = DayCounts(answer);
         bool factApplies = c.ExpectedDays is not null && !c.ExpectAbstain;
+        bool leaks = stated.Count > 0 || cited.Count > 0;   // a refusal that still states a count or cites evidence
         return
         [
             factApplies ? Fact(c.ExpectedDays!.Value, stated) : LayerScore.NotApplicable(Layer.Fact, "no value expected"),
             factApplies ? Support(c, cited, stated) : LayerScore.NotApplicable(Layer.Support, "no value expected"),
             factApplies || cited.Count > 0 ? Citation(c, cited) : LayerScore.NotApplicable(Layer.Citation, "nothing cited, nothing to cite"),
-            new(Layer.Abstention, true, abstained == c.ExpectAbstain, (abstained, c.ExpectAbstain) switch
+            new(Layer.Abstention, true, abstained == c.ExpectAbstain && !(c.ExpectAbstain && leaks), (abstained, c.ExpectAbstain) switch
             {
+                (true, true) when leaks => "abstained, but still states a day count or cites evidence",
                 (true, true) => "abstained: no authorized evidence",
                 (false, false) => "answered",
                 (false, true) => "answered although no authorized evidence was issued",
@@ -96,7 +99,7 @@ public static partial class EvidenceScorer
 
     /// <summary>Every "n days" the text states, digits or words, with whether a negation precedes it.</summary>
     public static IReadOnlyList<DayCount> DayCounts(string text) =>
-        [.. DayPattern().Matches(text).Select(m => new DayCount(
+        [.. DayPattern().Matches(text.Replace('’', '\'')).Select(m => new DayCount(
             ParseNumber(m.Groups["n"].Value), m.Value.Trim(), m.Groups["neg"].Success))];
 
     private static int ParseNumber(string token)
@@ -114,8 +117,10 @@ public static partial class EvidenceScorer
     private static partial Regex CitationPattern();
 
     // A number (digits, or words up to ninety-nine), up to two words, then "day(s)".
-    // An optional negation within the three words before it is captured as "neg".
-    [GeneratedRegex(@"(?:(?<neg>\b(?:not|no|never|isn't|aren't|rather than|instead of)\b)(?:\s+\S+){0,2}?\s+)?" +
+    // An optional negation within the three words before it is captured as "neg": a fixed
+    // list (not, no, never, cannot, any "n't" contraction, rather than, instead of), after
+    // curly apostrophes are straightened. "No fewer than 15 days" also counts as negated.
+    [GeneratedRegex(@"(?:(?<neg>\b(?:not|no|never|cannot|\w+n't|rather than|instead of)\b)(?:\s+\S+){0,2}?\s+)?" +
                     @"(?<![\w.-])(?<n>\d+|(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)" +
                     @"\s+(?:[a-z]+\s+){0,2}?days?\b", RegexOptions.IgnoreCase)]
     private static partial Regex DayPattern();

@@ -113,6 +113,18 @@ for (int i = 0; i < results.Items.Count; i++)
                       $"{Cell("abstention"),-5} {Cell("action.allowed"),-5}  {(answer.Length > 70 ? answer[..70] + "..." : answer)}");
 }
 
+// The action layer's reason for every item it applies to, with the calls that item made.
+Console.WriteLine();
+Console.WriteLine("Action layer, per item:");
+for (int i = 0; i < results.Items.Count; i++)
+{
+    if (!results.Items[i].Metrics.TryGetValue("action.allowed", out EvaluationMetric? m)
+        || m.Reason?.StartsWith("n/a", StringComparison.Ordinal) != false) continue;
+    string[] calls = [.. EvidenceChecks.ToolCalls(inputs[i]).Select(f => $"{f.Name}({string.Join(", ", f.Arguments?.Values ?? [])})")];
+    Console.WriteLine($"  {book.For(inputs[i].Query).Id,-17} {(m.Interpretation?.Failed == true ? "FAIL" : "pass")}  {m.Reason}; " +
+                      $"calls: {(calls.Length == 0 ? "none" : string.Join(", ", calls))}");
+}
+
 // Per layer: passes over the items where the layer applies.
 Console.WriteLine();
 Console.WriteLine("Per layer (applicable items only):");

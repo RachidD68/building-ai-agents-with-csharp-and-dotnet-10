@@ -274,27 +274,33 @@ return localResults.Passed == localResults.Total ? 0 : 1;
 internal readonly record struct GoldenItem(string Question, string GroundTruth);
 
 // The expected value must appear as a whole token and not right after a
-// negation: "15" matches "15 PTO days" but not "115 days" or "Not 15 days".
+// negation: "15" matches "15 PTO days" but not "115 days", "15.5 days" or "Not 15 days".
+// The negations are a fixed list (not, no, never, cannot, any "n't" contraction,
+// rather than, instead of), read after curly apostrophes are straightened.
 // This is still a lexical signal (a value check), not a faithfulness score.
 internal static class TextMatch
 {
     public static bool StatesValue(string response, string expected)
     {
+        string text = response.Replace('’', '\'');
         string value = System.Text.RegularExpressions.Regex.Escape(expected);
-        bool present = System.Text.RegularExpressions.Regex.IsMatch(response, @"(?<![\w])" + value + @"(?![\w])");
-        bool negated = System.Text.RegularExpressions.Regex.IsMatch(response,
-            @"\b(?:not|no|never|isn't|aren't|rather than|instead of)\b(?:\s+\S+){0,2}?\s+" + value + @"(?![\w])",
+        const string Token = @"(?![\w]|[.,]\d)";
+        bool present = System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\w]|\d[.,])" + value + Token);
+        bool negated = System.Text.RegularExpressions.Regex.IsMatch(text,
+            @"\b(?:not|no|never|cannot|\w+n't|rather than|instead of)\b(?:\s+\S+){0,2}?\s+" + value + Token,
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         return present && !negated;
     }
 }
 
 // The judge runs only when it was asked for, on Ollama, with a model that is not the agent's.
+// Models are compared by name before the tag, so llama3.2, llama3.2:latest and llama3.2:3b
+// are one model. An alias made with `ollama cp` has another name and is not caught.
 internal static class JudgePairing
 {
     public static string? SkipReason(bool enabled, string provider, string agentModel, string? judgeModel)
     {
-        static string Norm(string m) => m.EndsWith(":latest", StringComparison.OrdinalIgnoreCase) ? m[..^7] : m;
+        static string Norm(string m) => m.Split(':')[0].Trim();
         if (!enabled) return "set LlmProvider:Judge:Enabled to true and LlmProvider:Judge:Model to another Ollama model.";
         if (!string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
             return $"this sample wires the judge for the ollama provider only (provider is {provider}).";
@@ -322,9 +328,15 @@ internal static class FaqEvalSelfTest
         Check(TextMatch.StatesValue("New employees (0-2 years) receive 15 PTO days per year.", "15"), "expected_value: \"15 PTO days\" passes");
         Check(!TextMatch.StatesValue("Employees get 115 days of PTO.", "15"), "expected_value: \"115 days\" fails");
         Check(!TextMatch.StatesValue("Not 15 days; employees get 20 days.", "15"), "expected_value: \"Not 15 days; ... 20\" fails");
+        Check(!TextMatch.StatesValue("New employees don't get 15 PTO days per year.", "15")
+              && !TextMatch.StatesValue("New employees don’t get 15 PTO days per year.", "15"),
+            "expected_value: \"don't get 15 PTO days\" fails, with a straight or a curly apostrophe");
+        Check(!TextMatch.StatesValue("Employees get 15.5 days of PTO.", "15"), "expected_value: \"15.5 days\" fails");
         Check(TextMatch.StatesValue("Contoso observes 11 company holidays per year.", "11"), "expected_value: \"11 company holidays\" passes");
         Check(JudgePairing.SkipReason(true, "ollama", "llama3.2", "llama3.2:latest")?.Contains("agent's model", StringComparison.Ordinal) == true,
             "judge = agent model (llama3.2 / llama3.2:latest): skipped, with the reason");
+        Check(JudgePairing.SkipReason(true, "ollama", "llama3.2", "llama3.2:3b") is not null,
+            "judge = another tag of the agent model (llama3.2:3b): skipped");
         Check(JudgePairing.SkipReason(true, "ollama", "llama3.2", "phi4") is null, "judge phi4 for agent llama3.2: allowed");
         Check(JudgePairing.SkipReason(false, "ollama", "llama3.2", "phi4") is not null, "judge not enabled: skipped");
         Console.WriteLine($"\nRESULT {passed}/{total}");

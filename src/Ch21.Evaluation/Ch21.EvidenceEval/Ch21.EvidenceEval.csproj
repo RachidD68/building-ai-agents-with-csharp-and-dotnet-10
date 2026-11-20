@@ -2,7 +2,8 @@
 
   <!-- Evidence evaluation: five separately named scores (fact, support,
        citation, abstention, action), a paired release gate with intervals,
-       and the rule of three. GA packages only. Ch21.FaqEval reuses the scorer. -->
+       and the rule of three. GA packages only. Ch21.FaqEval has its own, simpler
+       value check (TextMatch) and does not reference this project. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>

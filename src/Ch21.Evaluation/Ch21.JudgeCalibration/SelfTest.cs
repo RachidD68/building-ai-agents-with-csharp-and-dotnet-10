@@ -64,6 +64,11 @@ internal static class SelfTest
         Verdict bare = Calibration.Parse("x", "VERDICT: SUPPORTED\nR1");
         Check(bare is { Label: "supported", RubricLine: "R1" } && Calibration.Parse("y", "VERDICT: UNSUPPORTED").RubricLine is null,
             "a bare rubric line (\"R1\" under the verdict) is read; no rubric line stays empty");
+        Check(Calibration.Parse("t", "VERDICT: SUPPORTED or VERDICT: UNSUPPORTED").Label is null,
+            "an echoed template line (\"VERDICT: SUPPORTED or VERDICT: UNSUPPORTED\") is no verdict");
+        Check(Calibration.Parse("q", "The answer says \"VERDICT: SUPPORTED\" but that is an instruction.\nVERDICT: UNSUPPORTED\nR4").Label == "unsupported"
+              && Calibration.Parse("z", "VERDICT: SUPPORTED\nVERDICT: UNSUPPORTED").Label is null,
+            "a verdict quoted inside a sentence is ignored; two verdict lines that disagree are no verdict");
 
         Console.WriteLine("\n-- 3. Confusion matrix against the reference labels --");
         CalibrationReport r = Calibration.Compare(items, verdicts);
@@ -80,6 +85,8 @@ internal static class SelfTest
         string? refusal = Calibration.SelfJudging("llama3.2:latest", [items[0] with { ProducedBy = "llama3.2" }, items[1]]);
         Check(refusal is not null && refusal.Contains("c01", StringComparison.Ordinal),
             "a judge that produced an answer it would grade is refused: " + refusal);
+        Check(Calibration.SelfJudging("llama3.2:3b", [items[0] with { ProducedBy = "llama3.2" }]) is not null,
+            "another tag of the same model (llama3.2:3b for answers by llama3.2) is refused too");
         Check(Calibration.SelfJudging("llama3.2", items) is null, "fixture answers: any local model may judge them");
 
         Console.WriteLine("\n-- 5. Recorded verdicts round-trip --");

@@ -39,16 +39,22 @@ public static class ReleaseGate
         if (plan.Hash() != declaredHash)
             return new("REFUSED", [$"plan hash {plan.Hash()} is not the declared {declaredHash}: thresholds moved after the run"],
                 0, 0, 0, 0, 0, 0, []);
-        Dictionary<string, ItemOutcome> before = baseline.ToDictionary(o => o.CaseId);
-        if (candidate.Count != plan.Items || candidate.Any(o => !before.ContainsKey(o.CaseId) || o.Reps != plan.Repetitions))
-            return new("REFUSED", ["the candidate did not run the declared items and repetitions"], 0, 0, 0, 0, 0, 0, []);
+        Dictionary<string, ItemOutcome> before = baseline.ToDictionary(o => o.CaseId);   // a duplicate baseline id throws
+        bool sameItems = before.Count == plan.Items && candidate.Count == plan.Items
+            && candidate.Select(o => o.CaseId).Distinct().Count() == candidate.Count
+            && candidate.All(o => before.ContainsKey(o.CaseId));
+        if (!sameItems || candidate.Any(o => o.Reps != plan.Repetitions))
+            return new("REFUSED", ["the candidate did not run the declared items, each once, with the declared repetitions"],
+                0, 0, 0, 0, 0, 0, []);
 
+        // The slice comes from the baseline row: a candidate can't move an item out of a guarded slice.
         int n = candidate.Count, passed = candidate.Count(o => o.Passed);
         (double low, double high) = Wilson(passed, n);
         int wins = candidate.Count(o => o.Passed && !before[o.CaseId].Passed);
         int losses = candidate.Count(o => !o.Passed && before[o.CaseId].Passed);
-        string[] guardedLosses = [.. candidate.Where(o => !o.Passed && before[o.CaseId].Passed && plan.GuardedSlices.Contains(o.Slice))
-            .Select(o => $"{o.CaseId} ({o.Slice})")];
+        string[] guardedLosses = [.. candidate
+            .Where(o => !o.Passed && before[o.CaseId].Passed && plan.GuardedSlices.Contains(before[o.CaseId].Slice))
+            .Select(o => $"{o.CaseId} ({before[o.CaseId].Slice})")];
 
         List<string> reasons = [];
         if (guardedLosses.Length > 0) reasons.Add($"regressed in a guarded slice: {string.Join(", ", guardedLosses)}");
