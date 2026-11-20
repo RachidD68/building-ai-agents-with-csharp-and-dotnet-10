@@ -2,15 +2,19 @@ using Microsoft.Data.Sqlite;
 
 namespace Ch08.UncertainOutcome;
 
-public enum DeliveryStatus { Pending, Sending, Delivered, OutcomeUnknown, Reconciled }
+public enum DeliveryStatus { Pending, Sending, Delivered, OutcomeUnknown, Reconciled, Conflict }
 
 /// <summary>One external effect to deliver, keyed by the business operation.</summary>
 public sealed record Delivery(
     string Tenant, Guid OperationId, string EmployeeId, string Amount, string Currency,
     DeliveryStatus Status = DeliveryStatus.Pending, string? PaymentId = null, int Attempts = 0)
 {
-    /// <summary>The provider reference: the operation id, never a fresh value.</summary>
-    public string Reference => OperationId.ToString("D");
+    /// <summary>
+    /// The provider reference: stable across retries, and unique across
+    /// everything the provider sees. Operation ids are unique only inside a
+    /// tenant here, so the tenant is part of the key.
+    /// </summary>
+    public string Reference => $"{Tenant}:{OperationId:D}";
 }
 
 public sealed record ReconcileResult(Guid OperationId, DeliveryStatus Status, string How);
@@ -48,8 +52,7 @@ public sealed class DeliveryWorker(string databasePath, IPaymentProvider provide
         try
         {
             PaymentReceipt receipt = await provider.PayAsync(Request(current), ct);
-            Save(current with { Status = DeliveryStatus.Delivered, PaymentId = receipt.PaymentId });
-            return DeliveryStatus.Delivered;
+            return Settle(current, receipt, DeliveryStatus.Delivered);
         }
         catch (TimeoutException)
         {
@@ -57,6 +60,28 @@ public sealed class DeliveryWorker(string databasePath, IPaymentProvider provide
             Save(current with { Status = DeliveryStatus.OutcomeUnknown });
             return DeliveryStatus.OutcomeUnknown;
         }
+        catch (ReferenceConflictException)
+        {
+            Save(current with { Status = DeliveryStatus.Conflict });
+            return DeliveryStatus.Conflict;
+        }
+    }
+
+    /// <summary>
+    /// Records a receipt only if it is this delivery's payment: same reference,
+    /// payee, amount and currency. Anything else is a Conflict for a person to
+    /// look at, never "paid".
+    /// </summary>
+    private DeliveryStatus Settle(Delivery d, PaymentReceipt receipt, DeliveryStatus status, int attempts = 0)
+    {
+        if (!receipt.Matches(Request(d))) status = DeliveryStatus.Conflict;
+        Save(d with
+        {
+            Status = status,
+            PaymentId = status == DeliveryStatus.Conflict ? null : receipt.PaymentId,
+            Attempts = d.Attempts + attempts,
+        });
+        return status;
     }
 
     private bool TryClaimForSending(Delivery d)
@@ -77,7 +102,7 @@ public sealed class DeliveryWorker(string databasePath, IPaymentProvider provide
     /// Resolves every delivery whose outcome is not known: ask the provider by
     /// the stable reference first; send again only when it has no record, with
     /// the SAME reference, so the provider's idempotency key absorbs a request
-    /// that was still in flight.
+    /// that was still in flight. A receipt for another payment is a Conflict.
     /// </summary>
     public async Task<IReadOnlyList<ReconcileResult>> ResumeAsync(CancellationToken ct)
     {
@@ -87,20 +112,27 @@ public sealed class DeliveryWorker(string databasePath, IPaymentProvider provide
             PaymentReceipt? found = await provider.FindByReferenceAsync(d.Reference, ct);
             if (found is not null)
             {
-                Save(d with { Status = DeliveryStatus.Reconciled, PaymentId = found.PaymentId });
-                results.Add(new(d.OperationId, DeliveryStatus.Reconciled, $"found {found.PaymentId} by reference"));
+                DeliveryStatus status = Settle(d, found, DeliveryStatus.Reconciled);
+                results.Add(new(d.OperationId, status, status == DeliveryStatus.Reconciled
+                    ? $"found {found.PaymentId} by reference" : "the reference holds a different payment"));
                 continue;
             }
             try
             {
                 PaymentReceipt receipt = await provider.PayAsync(Request(d), ct);
-                Save(d with { Status = DeliveryStatus.Delivered, PaymentId = receipt.PaymentId, Attempts = d.Attempts + 1 });
-                results.Add(new(d.OperationId, DeliveryStatus.Delivered, $"not found; sent again as {receipt.PaymentId}"));
+                DeliveryStatus status = Settle(d, receipt, DeliveryStatus.Delivered, attempts: 1);
+                results.Add(new(d.OperationId, status, status == DeliveryStatus.Delivered
+                    ? $"not found; sent again as {receipt.PaymentId}" : "the reference holds a different payment"));
             }
             catch (TimeoutException)
             {
                 Save(d with { Status = DeliveryStatus.OutcomeUnknown, Attempts = d.Attempts + 1 });
                 results.Add(new(d.OperationId, DeliveryStatus.OutcomeUnknown, "still unknown; try the next resume"));
+            }
+            catch (ReferenceConflictException)
+            {
+                Save(d with { Status = DeliveryStatus.Conflict, Attempts = d.Attempts + 1 });
+                results.Add(new(d.OperationId, DeliveryStatus.Conflict, "the reference holds a different payment"));
             }
         }
         return results;

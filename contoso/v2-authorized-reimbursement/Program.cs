@@ -14,7 +14,9 @@
 // arrives twice at once, the payment provider's response is lost, and a right
 // is revoked while a claim waits. One reimbursement, one simulated payment,
 // one operation id. The self-test adds reviews that must be refused at any
-// amount (no role, own claim, another tenant) and a crash between the steps.
+// amount (no role, own claim, another tenant), a crash between each pair of
+// steps, a model outage, a reviewer role revoked before the commit, and a
+// second tenant that reuses an operation id.
 //
 //   dotnet run                    against the configured model (Ollama llama3.2)
 //   dotnet run -- --self-test     a scripted model, no network; RESULT n/n
@@ -203,29 +205,117 @@ internal static class Scenario
         Console.WriteLine($"\nSimulated payments in the provider journal: {Effects(journal)}");
         if (!assert) return 0;
 
-        // The review, the commit and the claim's state are separate transactions.
-        // Crash after each of the first two, on a fresh database, and restart.
-        Console.WriteLine("\n-- 9. The process crashes after Rita's review, then after the commit, and restarts --");
+        // Intake, the proposal, the review, the commit and the claim's state are
+        // separate transactions. Crash after each, on a fresh database, and restart.
+        Console.WriteLine("\n-- 9. The process crashes between the steps, and restarts --");
+        (ReimbursementDesk Desk, string Journal) Fresh(string name, string? crashAt)
+        {
+            string db = Path.Combine(root, $"{name}.db"), log = Path.Combine(root, $"{name}-provider.db");
+            var fresh = new ReimbursementDesk(model, db, new FakePaymentProvider(log), directory)
+            {
+                CrashPoint = step => { if (step == crashAt) throw new SimulatedCrash(step); },
+            };
+            fresh.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
+            return (fresh, log);
+        }
+        ReimbursementDesk Restart(string name) => new(model, Path.Combine(root, $"{name}.db"),
+            new FakePaymentProvider(Path.Combine(root, $"{name}-provider.db")), directory);
+        static async Task<ClaimStatus> Survive(Func<Task<ClaimStatus>> step)
+        {
+            try { return await step(); } catch (SimulatedCrash) { return new(Guid.Empty, ClaimState.Submitted, "crashed"); }
+        }
+        void Line(string label, ClaimStatus before, ClaimStatus after) =>
+            Console.WriteLine($"   {label}: {before.State} ({before.Reason}) -> after restart {after.State} ({after.Reason})");
+
         foreach (string point in new[] { "after_review", "after_commit" })
         {
-            string crashDb = Path.Combine(root, $"{point}.db"), crashJournal = Path.Combine(root, $"{point}-provider.db");
-            var crashing = new ReimbursementDesk(model, crashDb, new FakePaymentProvider(crashJournal), directory)
-            {
-                CrashPoint = step => { if (step == point) throw new SimulatedCrash(step); },
-            };
-            crashing.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
+            (ReimbursementDesk crashing, string crashJournal) = Fresh(point, point);
             await crashing.SubmitAsync(alice, taxi, ct);
-            try { await crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct); }
-            catch (SimulatedCrash) { }
+            await Survive(() => crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
             ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
-            var repaired = new ReimbursementDesk(model, crashDb, new FakePaymentProvider(crashJournal), directory);
+            ReimbursementDesk repaired = Restart(point);
             await repaired.ResumeAsync(ct);
             ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
-            Console.WriteLine($"   {point}: {stranded.State} ({stranded.Reason}) -> after restart {after.State} ({after.Reason})");
+            Line(point, stranded, after);
             Expect($"crash {point}: the restart finishes the claim, one operation, one payment",
                 stranded.State == ClaimState.AwaitingReview && after.State == ClaimState.Delivered &&
                 repaired.Store.Count("operations") == 1 && Effects(crashJournal) == 1);
         }
+
+        // Before any proposal is stored: after intake the claim is Submitted with nothing to decide.
+        {
+            (ReimbursementDesk crashing, string crashJournal) = Fresh("after_intake", "after_intake");
+            await Survive(() => crashing.SubmitAsync(alice, taxi, ct));
+            ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
+            ReimbursementDesk repaired = Restart("after_intake");
+            await repaired.ResumeAsync(ct);
+            ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
+            ClaimStatus retried = await repaired.SubmitAsync(alice, taxi, ct);
+            Line("after_intake", stranded, after);
+            Expect("crash after_intake: the restart marks it proposal_failed; the resubmit proposes again",
+                stranded is { State: ClaimState.Submitted, Reason: "received" } &&
+                after is { State: ClaimState.Rejected, Reason: "proposal_failed" } &&
+                retried is { State: ClaimState.AwaitingReview, Reason: "approval_missing" } && Effects(crashJournal) == 0);
+        }
+
+        // With the proposal stored but no decision: the restart decides it.
+        {
+            (ReimbursementDesk crashing, string crashJournal) = Fresh("after_proposal", "after_proposal");
+            await Survive(() => crashing.SubmitAsync(alice, taxi, ct));
+            ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
+            ReimbursementDesk repaired = Restart("after_proposal");
+            await repaired.ResumeAsync(ct);
+            ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
+            ClaimStatus reviewed = await repaired.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
+            Line("after_proposal", stranded, after);
+            Expect("crash after_proposal: the restart decides the stored proposal; Rita's review then pays once",
+                stranded is { State: ClaimState.Submitted, Reason: "received" } &&
+                after is { State: ClaimState.AwaitingReview, Reason: "approval_missing" } &&
+                reviewed.State == ClaimState.Delivered && Effects(crashJournal) == 1);
+        }
+
+        // The model is unreachable: no crash, but no proposal either.
+        {
+            (ReimbursementDesk outageDesk, string outageJournal) = Fresh("model_outage", null);
+            var scripted = (ScriptedProposalClient)model;
+            scripted.Outages = 1;
+            int callsBefore = scripted.Calls("Taxi");
+            ClaimStatus failed = await outageDesk.SubmitAsync(alice, taxi, ct);
+            ClaimStatus retried = await outageDesk.SubmitAsync(alice, taxi, ct);
+            Console.WriteLine($"   model outage: {failed.State} ({failed.Reason}) -> resubmit {retried.State} ({retried.Reason})");
+            Expect("model outage: recorded as proposal_failed, no effect; the resubmit proposes again",
+                failed is { State: ClaimState.Rejected, Reason: "proposal_failed" } &&
+                retried is { State: ClaimState.AwaitingReview, Reason: "approval_missing" } &&
+                scripted.Calls("Taxi") == callsBefore + 2 && Effects(outageJournal) == 0);
+        }
+
+        // Rita's role is revoked between her review and the restart's commit.
+        {
+            (ReimbursementDesk crashing, string crashJournal) = Fresh("revoked_reviewer", "after_review");
+            await crashing.SubmitAsync(alice, taxi, ct);
+            await Survive(() => crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
+            directory.Revoke(Tenant, "rita", Roles.FinanceReviewer);
+            ReimbursementDesk repaired = Restart("revoked_reviewer");
+            await repaired.ResumeAsync(ct);
+            ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
+            directory.Grant(Tenant, "rita", Roles.FinanceReviewer);
+            Line("role revoked after review", stranded, after);
+            Expect("the restart reloads Rita's role: denied (reviewer_not_authorized), nothing committed or paid",
+                after is { State: ClaimState.Rejected, Reason: "reviewer_not_authorized" } &&
+                repaired.Store.Count("operations") == 0 && Effects(crashJournal) == 0);
+        }
+
+        // Operation ids are unique per tenant; the provider sees every tenant.
+        Console.WriteLine("\n-- 10. A fabrikam claim reuses the id of Bob's lunch claim --");
+        directory.Grant("fabrikam", "F-1", Permissions.SubmitReimbursement);
+        restarted.Store.SeedAccount(new EmployeeAccount("fabrikam", "F-1", "EUR", 300m, 1));
+        var fabrikamClaim = new ExpenseClaim(lunch.SubmissionId, "F-1", "Fabrikam parking at the station: 45.00 EUR.");
+        ClaimStatus fabrikam = await restarted.SubmitAsync(directory.Authenticate("fabrikam", "F-1"), fabrikamClaim, ct);
+        Show(fabrikam);
+        Expect("paid by its own payment: a third effect, a payment id unlike Bob's",
+            fabrikam.State == ClaimState.Delivered && fabrikam.Detail is not null &&
+            fabrikam.Detail != restarted.Status(Tenant, lunch.SubmissionId).Detail && Effects(journal) == 3);
 
         Console.WriteLine($"RESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
@@ -255,12 +345,33 @@ internal sealed class SimulatedCrash(string step) : Exception($"simulated crash 
 /// </summary>
 internal sealed class ScriptedProposalClient : IChatClient
 {
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _calls = new();
+    private readonly Lock _gate = new();
+    private int _outages;
+
+    /// <summary>The next n calls fail as an unreachable model would.</summary>
+    public int Outages { set { lock (_gate) _outages = value; } }
+
+    /// <summary>How many calls asked about a claim containing this text.</summary>
+    public int Calls(string text) => _calls.Where(c => c.Key.Contains(text)).Sum(c => c.Value);
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         string claim = messages.Last(m => m.Role == ChatRole.User).Text;
+        _calls.AddOrUpdate(claim, 1, (_, n) => n + 1);
+        lock (_gate)
+        {
+            if (_outages > 0)
+            {
+                _outages--;
+                throw new HttpRequestException("simulated outage: the model endpoint did not answer");
+            }
+        }
         string json = claim switch
         {
+            _ when claim.Contains("Fabrikam parking") =>
+                """{"employeeId":"F-1","amount":45.00,"currency":"EUR","explanation":"Station parking."}""",
             _ when claim.Contains("Taxi") =>
                 """{"employeeId":"E-1001","amount":64.80,"currency":"EUR","explanation":"Airport taxi with a receipt."}""",
             _ when claim.Contains("lunch") =>

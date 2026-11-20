@@ -17,6 +17,8 @@
 //      short plain letters (`-l`, `-la`), so a path cannot hide inside a flag.
 //      Paths through a symbolic link or junction are refused, component by
 //      component, and `ls`/`dir` may not recurse (-R) or follow links (-L).
+//      On Windows cmd reads '/' anywhere as a switch (`dir ./s` recurses), so
+//      dir and type there take no '/' at all; folders are separated with '\'.
 //      The folder test ignores case only on Windows. Hard links are NOT detected.
 //      Shell metacharacters (& | < > ^ % ; , = ! ( ) quotes, backtick,
 //      control characters) are refused in every argument.
@@ -350,6 +352,10 @@ internal static class ShellPolicy
                     return $"flag '{arg}' is not allowed: it can recurse or follow links.";
                 continue;
             }
+            // On Windows, dir and type run inside cmd, which reads '/' anywhere in an argument
+            // as a switch: `dir ./s` is `dir . /s`, a recursive listing. Folders take '\' there.
+            if (OperatingSystem.IsWindows() && executable.ToLowerInvariant() is "dir" or "type" && arg.Contains('/'))
+                return $"'{arg}' contains '/', which cmd reads as a switch.";
             // Rooted (C:\x, \x, /x), UNC (\\server\share) and drive-relative (D:x) paths are refused.
             if (Path.IsPathRooted(arg) || arg.Contains(':'))
                 return $"'{arg}' is outside the scratch folder.";
@@ -430,6 +436,10 @@ internal static class ShellPolicy
             ("ls", ["-RL"], false),
             ("dir", ["-L"], false),
             ("ls", ["--deref"], false),
+            // On Windows cmd reads '/' as a switch: ./s is '. /s' (recurse), ./b is '/b' (bare paths).
+            ("dir", ["./s"], !windows),
+            ("dir", ["notes/s"], !windows),
+            ("dir", ["./s", "./b"], !windows),
             ("dotnet", ["run"], false),
             ("dotnet", ["exec", "a.dll"], false),
             ("dotnet", ["--version", "extra"], false),

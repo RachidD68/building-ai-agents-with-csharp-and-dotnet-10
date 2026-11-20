@@ -6,7 +6,16 @@ namespace Ch08.UncertainOutcome;
 
 public sealed record PaymentRequest(string Reference, string EmployeeId, string Amount, string Currency);
 
-public sealed record PaymentReceipt(string PaymentId, string Reference);
+/// <summary>What the provider holds under a reference, so the caller can check it is its own payment.</summary>
+public sealed record PaymentReceipt(string PaymentId, string Reference, string EmployeeId, string Amount, string Currency)
+{
+    public bool Matches(PaymentRequest r) =>
+        Reference == r.Reference && EmployeeId == r.EmployeeId && Amount == r.Amount && Currency == r.Currency;
+}
+
+/// <summary>The reference is already held by a payment with another payee, amount or currency.</summary>
+public sealed class ReferenceConflictException(string reference)
+    : InvalidOperationException($"reference '{reference}' already belongs to a different payment");
 
 /// <summary>The provider's side of the boundary, as the worker sees it.</summary>
 public interface IPaymentProvider
@@ -14,8 +23,10 @@ public interface IPaymentProvider
     /// <summary>
     /// Pays once per reference: a second request with the same reference
     /// returns the first receipt and moves no money (the provider's
-    /// idempotency key). May throw <see cref="TimeoutException"/>, in which
-    /// case the caller cannot tell whether the payment happened.
+    /// idempotency key). A repeated reference whose payee, amount or currency
+    /// differ is refused with <see cref="ReferenceConflictException"/>. May
+    /// throw <see cref="TimeoutException"/>, in which case the caller cannot
+    /// tell whether the payment happened.
     /// </summary>
     Task<PaymentReceipt> PayAsync(PaymentRequest request, CancellationToken ct);
 
@@ -69,7 +80,10 @@ public sealed class FakePaymentProvider(string journalPath, ProviderFault fault 
             insert.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O"));
             insert.ExecuteNonQuery();
         }
+        // The key is only safe if the provider compares the arguments: the same
+        // reference with another payee or amount is a different payment, not a retry.
         PaymentReceipt receipt = Find(db, request.Reference)!;
+        if (!receipt.Matches(request)) throw new ReferenceConflictException(request.Reference);
 
         switch (fault)
         {
@@ -102,9 +116,10 @@ public sealed class FakePaymentProvider(string journalPath, ProviderFault fault 
     private static PaymentReceipt? Find(SqliteConnection db, string reference)
     {
         using SqliteCommand cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT payment_id FROM payments WHERE reference = $reference";
+        cmd.CommandText = "SELECT payment_id, employee_id, amount, currency FROM payments WHERE reference = $reference";
         cmd.Parameters.AddWithValue("$reference", reference);
-        return cmd.ExecuteScalar() is string id ? new PaymentReceipt(id, reference) : null;
+        using SqliteDataReader r = cmd.ExecuteReader();
+        return r.Read() ? new PaymentReceipt(r.GetString(0), reference, r.GetString(1), r.GetString(2), r.GetString(3)) : null;
     }
 
     private SqliteConnection Open()

@@ -121,10 +121,22 @@ public sealed class ReimbursementDesk
     public async Task<ClaimStatus> SubmitAsync(Caller employee, ExpenseClaim claim, CancellationToken ct)
     {
         // Intake claims the submission id first: a double click is answered
-        // from the stored state, without a second model call.
+        // from the stored state, without a second model call. Only a claim whose
+        // proposal failed (proposal_failed) is taken again, by one caller.
         if (!ClaimIntake(employee, claim.SubmissionId)) return Status(employee.TenantId, claim.SubmissionId);
+        CrashPoint?.Invoke("after_intake");
 
-        ProposalDraft? draft = await ProposeAsync(claim, ct);
+        ProposalDraft? draft;
+        try
+        {
+            draft = await ProposeAsync(claim, ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TimeoutException ||
+                                   (ex is OperationCanceledException && !ct.IsCancellationRequested))
+        {
+            // The model was unreachable: nothing was proposed. Say so, and let a resubmit try again.
+            return Finish(employee, claim.SubmissionId, ClaimState.Rejected, "proposal_failed");
+        }
         if (draft is null) return Finish(employee, claim.SubmissionId, ClaimState.Rejected, "unreadable_proposal");
 
         // Scoped load: the account of the AUTHENTICATED employee, at its current version.
@@ -133,12 +145,19 @@ public sealed class ReimbursementDesk
         var proposal = new ReimbursementProposal(claim.SubmissionId, draft.EmployeeId, draft.Amount,
             draft.Currency, account.Version);
         SaveProposal(employee, proposal, draft.Explanation);
+        CrashPoint?.Invoke("after_proposal");
+        return await DecideAsync(employee, account, proposal, ct);
+    }
 
+    /// <summary>The first decision on a stored proposal: rejected, waiting for a reviewer, or committed.</summary>
+    private async Task<ClaimStatus> DecideAsync(Caller employee, EmployeeAccount account,
+        ReimbursementProposal proposal, CancellationToken ct)
+    {
         PolicyResult policy = ReimbursementPolicy.Evaluate(employee, account, proposal, approval: null, _clock());
         return policy.Decision switch
         {
-            Decision.Deny => Finish(employee, claim.SubmissionId, ClaimState.Rejected, policy.Reason),
-            Decision.RequireApproval => Finish(employee, claim.SubmissionId, ClaimState.AwaitingReview, policy.Reason),
+            Decision.Deny => Finish(employee, proposal.OperationId, ClaimState.Rejected, policy.Reason),
+            Decision.RequireApproval => Finish(employee, proposal.OperationId, ClaimState.AwaitingReview, policy.Reason),
             _ => await CommitAsync(employee, proposal, approval: null, ct),
         };
     }
@@ -197,17 +216,25 @@ public sealed class ReimbursementDesk
     internal Action<string>? CrashPoint { get; set; }
 
     /// <summary>
-    /// The review, the commit and the claim's state are written in separate
-    /// transactions, so a crash can leave a claim behind its own records. A
-    /// claim whose operation committed is marked Committed; a claim with a
-    /// stored decision but no operation is finished now, and an approval goes
-    /// through CommitAsync, which runs the policy again like any commit.
+    /// Intake, the proposal, the review, the commit and the claim's state are
+    /// written in separate transactions, so a crash can leave a claim behind
+    /// its own records. Run at startup, before new requests. A claim whose
+    /// operation committed is marked Committed; a stored decision with no
+    /// operation is finished now (an approval goes through CommitAsync, which
+    /// runs the policy again); a Submitted claim with a proposal is decided
+    /// now, and one without becomes proposal_failed, which a resubmit retries.
     /// </summary>
     private async Task RepairClaimsAsync(CancellationToken ct)
     {
-        foreach ((string tenant, Guid op, bool committed, bool? approved) in StrandedClaims())
+        foreach ((string tenant, Guid op, string requesterId, bool submitted, bool committed, bool? approved)
+                 in StrandedClaims())
         {
-            if (LoadProposal(tenant, op) is not { } pending) continue;
+            if (LoadProposal(tenant, op) is not { } pending)
+            {
+                if (submitted)
+                    Finish(_directory.Authenticate(tenant, requesterId), op, ClaimState.Rejected, "proposal_failed");
+                continue;
+            }
             (Caller requester, ReimbursementProposal proposal) = pending;
             if (committed)
                 Finish(requester, op, ClaimState.Committed, "committed_before_restart");
@@ -215,26 +242,32 @@ public sealed class ReimbursementDesk
                 Finish(requester, op, ClaimState.Rejected, "approval_rejected");
             else if (LoadApproval(tenant, op) is { } approval)
                 await CommitAsync(requester, proposal, approval, ct);
+            else if (submitted && Store.LoadAccount(tenant, requester.SubjectId) is { } account)
+                await DecideAsync(requester, account, proposal, ct);
+            else if (submitted)
+                Finish(requester, op, ClaimState.Rejected, "resource_scope");
         }
     }
 
-    private List<(string Tenant, Guid OperationId, bool Committed, bool? Approved)> StrandedClaims()
+    private List<(string Tenant, Guid OperationId, string Requester, bool Submitted, bool Committed, bool? Approved)>
+        StrandedClaims()
     {
         using SqliteConnection db = Open();
         using SqliteCommand cmd = db.CreateCommand();
         cmd.CommandText = """
-            SELECT c.tenant, c.operation_id, o.operation_id IS NOT NULL, a.approved
+            SELECT c.tenant, c.operation_id, c.requester, c.state = 'Submitted',
+                   o.operation_id IS NOT NULL, a.approved
             FROM claims c
             LEFT JOIN operations o ON o.tenant = c.tenant AND o.operation_id = c.operation_id
             LEFT JOIN approvals a ON a.tenant = c.tenant AND a.operation_id = c.operation_id
-            WHERE c.state IN ('Submitted', 'AwaitingReview')
-              AND (o.operation_id IS NOT NULL OR a.approved IS NOT NULL)
+            WHERE c.state = 'Submitted'
+               OR (c.state = 'AwaitingReview' AND (o.operation_id IS NOT NULL OR a.approved IS NOT NULL))
             """;
         using SqliteDataReader r = cmd.ExecuteReader();
-        List<(string, Guid, bool, bool?)> rows = [];
+        List<(string, Guid, string, bool, bool, bool?)> rows = [];
         while (r.Read())
-            rows.Add((r.GetString(0), Guid.Parse(r.GetString(1)), r.GetInt64(2) == 1,
-                r.IsDBNull(3) ? null : r.GetInt64(3) == 1));
+            rows.Add((r.GetString(0), Guid.Parse(r.GetString(1)), r.GetString(2), r.GetInt64(3) == 1,
+                r.GetInt64(4) == 1, r.IsDBNull(5) ? null : r.GetInt64(5) == 1));
         return rows;
     }
 
@@ -274,6 +307,9 @@ public sealed class ReimbursementDesk
         }
         if (state == ClaimState.Committed && Worker.Load(tenant, operationId) is { } delivery)
         {
+            // The provider holds this reference for another payment: committed here, not paid.
+            if (delivery.Status == DeliveryStatus.Conflict)
+                return new(operationId, ClaimState.Committed, "provider_reference_conflict");
             state = delivery.Status switch
             {
                 DeliveryStatus.Delivered => ClaimState.Delivered,
@@ -310,6 +346,12 @@ public sealed class ReimbursementDesk
     private async Task<ClaimStatus> CommitAsync(Caller requester, ReimbursementProposal proposal,
         ApprovalRecord? approval, CancellationToken ct)
     {
+        // The reviewer's role is read again from the directory: a role revoked
+        // since the review approves nothing. The stored approval only records it.
+        if (approval is not null &&
+            !_directory.Authenticate(approval.TenantId, approval.ReviewerId).Permissions.Contains(approval.ReviewerRole))
+            return Finish(requester, proposal.OperationId, ClaimState.Rejected, "reviewer_not_authorized");
+
         // The policy again, against the account as it is now, then one transaction.
         EmployeeAccount account = Store.LoadAccount(requester.TenantId, requester.SubjectId)!;
         PolicyResult policy = ReimbursementPolicy.Evaluate(requester, account, proposal, approval, _clock());
@@ -340,7 +382,8 @@ public sealed class ReimbursementDesk
     private bool ClaimIntake(Caller employee, Guid operationId) => Execute("""
         INSERT INTO claims (tenant, operation_id, requester, state, reason)
         VALUES ($tenant, $op, $requester, 'Submitted', 'received')
-        ON CONFLICT (tenant, operation_id) DO NOTHING
+        ON CONFLICT (tenant, operation_id) DO UPDATE SET state = 'Submitted', reason = 'received'
+        WHERE claims.state = 'Rejected' AND claims.reason = 'proposal_failed' AND claims.requester = excluded.requester
         """, ("$tenant", employee.TenantId), ("$op", operationId.ToString("D")), ("$requester", employee.SubjectId)) == 1;
 
     private void SaveProposal(Caller requester, ReimbursementProposal p, string explanation) => Execute("""

@@ -7,9 +7,11 @@
 // the money move? The worker cannot know, so it records OutcomeUnknown.
 //
 // A later run, in another process, resumes: it asks the provider for the
-// payment by the stable reference (the operation id). Found -> Reconciled.
-// Not found -> sent again with the SAME reference, which the provider
-// deduplicates. One simulated effect, one operation id, from start to end.
+// payment by the stable reference (tenant plus operation id, unique across
+// everything the provider sees). Found -> Reconciled. Not found -> sent again
+// with the SAME reference, which the provider deduplicates; a reference it
+// holds for another payee or amount is a Conflict, never "paid". One simulated
+// effect, one operation id, from start to end.
 //
 //   dotnet run                                  both steps in this process
 //   dotnet run -- submit --store <dir> [--fault accept-then-timeout|lost-request|crash-after-accept]
@@ -149,7 +151,45 @@ internal static class TwoProcessSelfTest
             Expect("resume reconciles the Sending row: one effect, same operation id",
                 resumeC.Output.Contains($"Operation: {opC} -> Reconciled") && Effects(c) == 1);
 
-            // 4. Defect reproduction: the blind retry this design replaces.
+            // 4. Two tenants, one operation id. Operation ids are unique per tenant,
+            // and the provider sees every tenant, so the tenant is part of the reference.
+            Console.WriteLine("\n-- same operation id in two tenants --");
+            string t = Store(root, "tenants");
+            Guid shared = Guid.Parse("11111111-2222-4333-8444-555555555555");
+            DeliveryStatus contoso = Worker(t).DeliverAsync(
+                new Delivery("contoso", shared, "E-1001", "20.00", "EUR"), CancellationToken.None).GetAwaiter().GetResult();
+            DeliveryStatus fabrikam = Worker(t).DeliverAsync(
+                new Delivery("fabrikam", shared, "F-1", "45.00", "EUR"), CancellationToken.None).GetAwaiter().GetResult();
+            string? payC = Worker(t).Load("contoso", shared)?.PaymentId, payF = Worker(t).Load("fabrikam", shared)?.PaymentId;
+            Console.WriteLine($"    | contoso {contoso} {payC}; fabrikam {fabrikam} {payF}");
+            Expect("each tenant's claim is paid by its own payment: two effects, two payment ids",
+                contoso == DeliveryStatus.Delivered && fabrikam == DeliveryStatus.Delivered &&
+                payC is not null && payF is not null && payC != payF && Effects(t) == 2);
+            var direct = new FakePaymentProvider(Path.Combine(t, "provider.db"));
+            bool refused = false;
+            try
+            {
+                direct.PayAsync(new PaymentRequest($"contoso:{shared:D}", "F-1", "45.00", "EUR"), CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            catch (ReferenceConflictException) { refused = true; }
+            Expect("a known reference with another payee and amount is refused, not answered as paid",
+                refused && Effects(t) == 2);
+            // The worker checks the receipt too: a reference found with other values is a Conflict.
+            Guid lost = Guid.Parse("22222222-3333-4444-8555-666666666666");
+            var losing = new DeliveryWorker(Path.Combine(t, "app.db"),
+                new FakePaymentProvider(Path.Combine(t, "provider.db"), ProviderFault.LostRequest));
+            losing.DeliverAsync(new Delivery("contoso", lost, "E-1001", "20.00", "EUR"), CancellationToken.None)
+                .GetAwaiter().GetResult();
+            direct.PayAsync(new PaymentRequest($"contoso:{lost:D}", "F-1", "45.00", "EUR"), CancellationToken.None)
+                .GetAwaiter().GetResult();
+            ReconcileResult checkedReceipt = Worker(t).ResumeAsync(CancellationToken.None).GetAwaiter().GetResult().Single();
+            Console.WriteLine($"    | resume {checkedReceipt.OperationId}: {checkedReceipt.Status} ({checkedReceipt.How})");
+            Expect("resume finds the reference holding another payment: Conflict, no payment id",
+                checkedReceipt.Status == DeliveryStatus.Conflict &&
+                Worker(t).Load("contoso", lost) is { Status: DeliveryStatus.Conflict, PaymentId: null });
+
+            // 5. Defect reproduction: the blind retry this design replaces.
             Console.WriteLine("\n-- Defect reproduction --");
             string d = Store(root, "blind");
             var provider = new FakePaymentProvider(Path.Combine(d, "provider.db"), ProviderFault.AcceptThenTimeout);

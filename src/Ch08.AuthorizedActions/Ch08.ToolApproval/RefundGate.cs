@@ -59,8 +59,11 @@ internal sealed class RefundGate(string tenant, Caller admin, RefundLedger ledge
 
     /// <summary>
     /// The tool body. It runs only after the framework approved the call, and
-    /// it checks the policy again (the state may have changed since the
-    /// review) before the per-order ledger issues at most one credit.
+    /// it checks the policy again before the per-order ledger issues at most
+    /// one credit. Here that re-reads the stored approval: its expiry, and its
+    /// digest against the arguments the body actually received. The orders and
+    /// the admin caller are fixed in this sample; a real gate would reload the
+    /// order, the caller's rights and the reviewer's role at this point too.
     /// </summary>
     public string Refund(string orderId, decimal amount, string currency)
     {
