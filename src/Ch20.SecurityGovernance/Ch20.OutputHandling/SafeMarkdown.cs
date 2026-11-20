@@ -12,7 +12,8 @@ namespace Ch20.OutputHandling;
 /// with or without a title, reference-style links and their definitions, and
 /// autolinks. Raw HTML is removed whole, since it can carry its own src.
 /// Images to other hosts are dropped: a browser fetches them on render, so the
-/// URL itself is the leak.
+/// URL itself is the leak. What replaces a cut is escaped, so it renders as text
+/// and cannot pair with the source around it into a new link or image.
 /// </summary>
 public sealed class SafeMarkdown(IEnumerable<string> allowedHosts)
 {
@@ -31,18 +32,18 @@ public sealed class SafeMarkdown(IEnumerable<string> allowedHosts)
             {
                 case LinkInline link when Refusal(link.Url) is { } refusal:
                     string label = string.Concat(link.Descendants<LiteralInline>().Select(l => l.Content.ToString()));
-                    cuts.Add((link.Span, link.IsImage ? $"[image removed: {refusal}]"
-                        : link.IsAutoLink ? $"[link removed: {refusal}]"
-                        : $"{label} [link removed: {refusal}]"));
+                    cuts.Add((link.Span, link.IsImage ? Marker("image removed", refusal)
+                        : link.IsAutoLink ? Marker("link removed", refusal)
+                        : $"{Escape(label)} {Marker("link removed", refusal)}"));
                     break;
                 case AutolinkInline auto when Refusal(auto.Url) is { } refusal:
-                    cuts.Add((auto.Span, $"[link removed: {refusal}]"));
+                    cuts.Add((auto.Span, Marker("link removed", refusal)));
                     break;
                 case LinkReferenceDefinition definition when Refusal(definition.Url) is { } refusal:
-                    cuts.Add((definition.Span, $"[link definition removed: {refusal}]"));
+                    cuts.Add((definition.Span, Marker("link definition removed", refusal)));
                     break;
                 case HtmlInline or HtmlBlock:
-                    cuts.Add((node.Span, "[html removed]"));
+                    cuts.Add((node.Span, Marker("html removed", null)));
                     break;
             }
         }
@@ -58,6 +59,19 @@ public sealed class SafeMarkdown(IEnumerable<string> allowedHosts)
         }
         return result;
     }
+
+    // "\[image removed: host\]" renders as [image removed: host]. The escaped
+    // brackets cannot open a link, so a '!' before the cut or a "(url)" after it
+    // stays text, and a second Render finds nothing left to cut.
+    private static string Marker(string what, string? why) =>
+        why is null ? $@"\[{what}\]" : $@"\[{what}: {Escape(why)}\]";
+
+    // Backslash-escape what CommonMark would read as markup in a label or a host.
+    private static string Escape(string text) =>
+        string.Concat(text.Select(c => @"\`*_[]()<>!&~#|".Contains(c) ? $@"\{c}" : c.ToString()));
+
+    /// <summary>The HTML a CommonMark renderer makes of <paramref name="markdown"/>, for tests.</summary>
+    public static string ToHtml(string markdown) => Markdown.ToHtml(markdown, Pipeline);
 
     private string? Refusal(string? url)
     {

