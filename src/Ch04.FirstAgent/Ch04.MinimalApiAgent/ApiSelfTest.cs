@@ -68,6 +68,19 @@ internal static class ApiSelfTest
         Expect("a model that outlives the time budget is 504 time_budget",
             r.StatusCode == HttpStatusCode.GatewayTimeout && await Title(r) == "time_budget" && slow.Status == RunStatus.Failed);
 
+        // A provider's own timeout is also an OperationCanceledException; only our budget is a 504.
+        model.Then(FakeReply.Throw(new TaskCanceledException("HttpClient.Timeout elapsed")));
+        r = await Post(http, "Is parking reimbursed?");
+        await log.NextAsync(default);
+        Expect("a provider timeout inside the budget is 502 provider_error, not 504",
+            r.StatusCode == HttpStatusCode.BadGateway && await Title(r) == "provider_error");
+
+        model.Then(FakeReply.Text("", ChatFinishReason.ContentFilter));
+        r = await Post(http, "Is parking reimbursed?");
+        await log.NextAsync(default);
+        Expect("a content-filter block is 502 content_filter",
+            r.StatusCode == HttpStatusCode.BadGateway && await Title(r) == "content_filter");
+
         Console.WriteLine("\n-- GET /chat/stream --");
         int before = model.Calls.Count;
         r = await http.GetAsync("/chat/stream");
@@ -89,6 +102,13 @@ internal static class ApiSelfTest
         Print(events);
         Expect("an error mid-stream still ends with done/failed",
             events[^1] is ("done", var f) && Status(f) == "failed" && f.Contains("provider_error"));
+
+        model.Then(FakeReply.Throw(new TaskCanceledException("HttpClient.Timeout elapsed"), "Claims up to "));
+        events = await Events(http, "Which claims are automatic?");
+        await log.NextAsync(default);
+        Print(events);
+        Expect("a provider timeout mid-stream ends with done/failed provider_error, not time_budget",
+            events[^1] is ("done", var g) && Status(g) == "failed" && g.Contains("\"provider_error\""));
 
         model.Then(FakeReply.Hang("Claims up to "));
         // No drain on dispose: closing the response closes the connection at once.

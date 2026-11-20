@@ -4,8 +4,8 @@
 // The same policy agent, streamed. Text is printed as it arrives, and every
 // run ends in exactly one state: Completed, Cancelled, Truncated or Failed.
 // Text that arrived before a cancellation or a cut-off is kept, but it is
-// never reported as a finished answer. Press Ctrl+C during the first answer
-// to see a cancelled run.
+// never reported as a finished answer. Press Ctrl+C during an answer to see
+// a cancelled run (exit code 130).
 //
 //   dotnet run    against the configured model (Ollama llama3.2 by default)
 //
@@ -29,20 +29,30 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 Console.WriteLine("=== Contoso expense help: streaming ===\n");
 
-RunOutcome first = await Stream("Who reviews a 180 EUR hotel claim, and why?");
-if (first.Status == RunStatus.Cancelled) return 130;
+try
+{
+    RunOutcome first = await Stream("Who reviews a 180 EUR hotel claim, and why?");
+    if (first.Status == RunStatus.Cancelled) return 130;
 
-// The same agent with a 12-token ceiling for this call: the answer is cut off.
-await Stream("Explain the whole expense policy.",
-    new ChatClientAgentRunOptions(new ChatOptions { MaxOutputTokens = 12 }));
+    // The same agent with a 12-token ceiling for this call: the answer is cut off.
+    RunOutcome second = await Stream("Explain the whole expense policy.",
+        new ChatClientAgentRunOptions(new ChatOptions { MaxOutputTokens = 12 }));
+    if (second.Status == RunStatus.Cancelled) return 130;
 
-// Streaming transport, one object at the end: ToAgentResponseAsync merges the updates.
-AgentResponse merged = await agent
-    .RunStreamingAsync("Is a 42 EUR taxi receipt approved automatically?", cancellationToken: cts.Token)
-    .ToAgentResponseAsync(cts.Token);
-Console.WriteLine($"Merged: {merged.Text.Trim()}");
-Console.WriteLine($"  [finish: {merged.FinishReason?.Value ?? "none"}]");
-return 0;
+    // Streaming transport, one object at the end: ToAgentResponseAsync merges the updates.
+    AgentResponse merged = await agent
+        .RunStreamingAsync("Is a 42 EUR taxi receipt approved automatically?", cancellationToken: cts.Token)
+        .ToAgentResponseAsync(cts.Token);
+    Console.WriteLine($"Merged: {merged.Text.Trim()}");
+    Console.WriteLine($"  [finish: {merged.FinishReason?.Value ?? "none"}]");
+    return 0;
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+    // Ctrl+C before the first answer started, or during the merged call.
+    Console.WriteLine("\n[cancelled]");
+    return 130;
+}
 
 async Task<RunOutcome> Stream(string question, AgentRunOptions? options = null)
 {

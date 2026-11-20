@@ -21,11 +21,14 @@ public sealed record ChatReply(string Agent, string Message, string Status, bool
 /// <summary>Every finished run, for the server log and for the self-test.</summary>
 public sealed class RunLog(ILogger<RunLog> logger)
 {
-    private readonly Channel<RunOutcome> _ended = Channel.CreateUnbounded<RunOutcome>();
+    // Only the self-test reads this, so it is bounded: a server nobody reads keeps the last 100.
+    private readonly Channel<RunOutcome> _ended = Channel.CreateBounded<RunOutcome>(
+        new BoundedChannelOptions(100) { FullMode = BoundedChannelFullMode.DropOldest });
 
     public void Add(string route, RunOutcome outcome)
     {
-        logger.LogInformation("{Route} ended {Status} after {Length} characters", route, outcome.Status, outcome.Text.Length);
+        logger.LogInformation("{Route} ended {Status} after {Length} characters {Error}",
+            route, outcome.Status, outcome.Text.Length, outcome.Error?.GetType().Name);
         _ended.Writer.TryWrite(outcome);
     }
 
@@ -84,10 +87,13 @@ public static class AgentApi
             RunStatus.Completed or RunStatus.Truncated =>
                 TypedResults.Ok(new ChatReply(agent.Name!, outcome.Text, Wire(outcome.Status), SingleTurn: true)),
             RunStatus.Cancelled => TypedResults.StatusCode(499),          // the client went away
-            _ when outcome.Error is OperationCanceledException =>
+            _ when budget.IsCancellationRequested =>                      // our token, not the provider's
                 TypedResults.Problem("The model did not answer within the time budget.",
                     statusCode: StatusCodes.Status504GatewayTimeout, title: "time_budget"),
-            _ => TypedResults.Problem($"The model call failed ({outcome.Error?.GetType().Name}).",
+            _ when outcome.FinishReason == ChatFinishReason.ContentFilter =>
+                TypedResults.Problem("The provider withheld the answer (content filter).",
+                    statusCode: StatusCodes.Status502BadGateway, title: "content_filter"),
+            _ => TypedResults.Problem("The model call failed.",          // the type name stays in the log
                     statusCode: StatusCodes.Status502BadGateway, title: "provider_error"),
         };
     }
@@ -124,8 +130,10 @@ public static class AgentApi
                 : new RunOutcome(RunStatus.Cancelled, "", null, null));
         }
         RunOutcome outcome = tracker.Outcome;
-        string reason = outcome.Error is OperationCanceledException ? "time_budget"
-                      : outcome.Error is not null ? "provider_error" : "";
+        string reason = outcome.Status != RunStatus.Failed ? ""
+                      : budget.IsCancellationRequested ? "time_budget"
+                      : outcome.FinishReason == ChatFinishReason.ContentFilter ? "content_filter"
+                      : "provider_error";
         yield return new SseItem<string>(
             JsonSerializer.Serialize(new { status = Wire(outcome.Status), reason }), "done");
     }
