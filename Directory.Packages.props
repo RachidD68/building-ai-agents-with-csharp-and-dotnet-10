@@ -15,6 +15,12 @@
     <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.28.0-preview.261106.1" />
+    <!-- AG-UI (Ch18.AguiServer, Ch18.AguiClient): 1.5.0-preview is the only AG-UI build in the offline cache.
+         Its hosting package is compiled against Microsoft.Agents.AI.Hosting 1.5 (AgentSessionStore moved in 1.28:
+         TypeLoadException on MapAGUI), so Ch18.AguiServer overrides Hosting to 1.5.0-preview locally.
+         Re-pin both to the 1.28 line when it is restored. -->
+    <PackageVersion Include="Microsoft.Agents.AI.AGUI" Version="1.5.0-preview.260507.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.5.0-preview.260507.1" />
     <!-- New provider packages (1.10) -->
     <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.28.0" />
     <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...).
