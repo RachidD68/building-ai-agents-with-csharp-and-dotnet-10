@@ -1,0 +1,44 @@
+# code 0c1aa78 | SDK 11.0.100 | Windows 11 | none (scripted models)
+$ dotnet run
+
+=== Testing multi-agent compositions ===
+
+-- 1. Deterministic agent output --
+  PASS  classifier returns the scripted label
+
+-- 2. Routing decisions --
+  PASS  billing message routes to BILLING
+  PASS  technical message routes to TECHNICAL
+  PASS  other message routes to GENERAL
+
+-- 3. Manual chain vs AgentWorkflowBuilder.BuildSequential --
+  PASS  manual chain produces the golden transcript
+  PASS  BuildSequential produces the same final text
+  PASS  the second agent is shown 1 message by hand, 2 (the whole conversation) by BuildSequential
+  PASS  a string input reaches BuildSequential's first agent as a user message
+
+-- 4. Agents as tools (AsAIFunction) --
+  (tool name: CodeExpert; parameters: {"query":{"description":"Input query to invoke the agent.","type":"string"}})
+  PASS  the answer carries the specialist's text
+  PASS  model calls: orchestrator 2, specialist 1
+  PASS  the specialist is shown only the question the orchestrator chose to send
+
+-- 5. Concurrent orchestration --
+  PASS  the aggregator receives one list per agent (3)
+  PASS  each section is attributed to its agent
+  PASS  the three reviewers were in flight together (max 3)
+  PASS  DEFECT REPRODUCED: a string input reaches BuildConcurrent's agents as an empty conversation (pass a ChatMessage)
+
+-- 6. Handoff orchestration --
+  (triage was offered: handoff_to_1, handoff_to_2; billing was offered: [])
+  PASS  triage is offered one handoff tool per declared edge
+  PASS  billing, with no outgoing edge, is offered no handoff tool
+  PASS  the last reply comes from Billing
+  PASS  an instruction in Billing's reply does not reach the Supervisor
+  PASS  a string input reaches the Handoff entry agent as a user message (unlike BuildConcurrent)
+
+-- 7. Group Chat orchestration --
+  PASS  the turn cap stops the chat after 6 turns (Writer Reviewer Writer Reviewer Writer Reviewer)
+  PASS  a stop condition ends it at the first APPROVED (Writer Reviewer Writer Reviewer)
+
+RESULT 22/22
