@@ -267,4 +267,7 @@
   <Folder Name="/contoso/v5-durable-resume/">
     <Project Path="contoso/v5-durable-resume/Contoso.DurableResume.csproj" />
   </Folder>
+  <Folder Name="/contoso/v6-api-ui/">
+    <Project Path="contoso/v6-api-ui/Contoso.ApiUi.csproj" />
+  </Folder>
 </Solution>
