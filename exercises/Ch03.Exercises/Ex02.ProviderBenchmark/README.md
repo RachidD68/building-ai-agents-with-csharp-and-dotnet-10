@@ -2,50 +2,25 @@
 
 ## Prompt
 
-Write a program that takes the **same 10 questions**, asks **each of your configured providers**, and prints a table of provider → **average latency** → **average output tokens** → **estimated cost**. Use the companion `LlmSettings` record and instantiate **one `IChatClient` per provider**.
+Send the **same prompt 5 times** to each configured provider and report, per provider, the time to
+the **first streamed token** and the **total** time. Run it on two configurations (for example
+Ollama and one hosted provider).
 
-## Hints
+## Acceptance
 
-- Swap `AddLlmChatClient` for a **loop that registers each provider under a different keyed service name** (`AddKeyedSingleton<IChatClient>(providerName, ...)`), then resolve with `GetRequiredKeyedService<IChatClient>(providerName)`.
-- `Stopwatch` gives you latency.
-- The per-token cost formula gives you the dollar figure: `tokens × rate / 1M`, input and output priced separately, summed over the run.
-- A provider counts as *configured* when its section carries the field it cannot work without: `Ollama:Endpoint`, `GitHub:Token`, `OpenAI:ApiKey`, or `AzureOpenAI:Endpoint`.
+- Reports first-token and total time for each configuration.
+- Keeps failures separate: a failed call is counted, never averaged in.
+- Dates the result and names the package versions it ran on.
 
-## Setup
+A provider counts as configured when its required field is set: `LlmProvider:Ollama:Endpoint`,
+`LlmProvider:OpenAI:ApiKey` or `LlmProvider:AzureOpenAI:Endpoint`.
 
-Configure one or more providers in `appsettings.json`, environment variables (`LlmProvider__GitHub__Token`), or User Secrets:
+## Run
 
 ```bash
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
+dotnet run -- --self-test      # offline: the timing harness on a manual clock, RESULT n/n
+dotnet run                     # 5 calls per configured provider
 ```
 
-Ollama is configured out of the box (`http://localhost:11434`, `llama3.2`). The program discovers configured providers itself — there is no hardcoded provider list to edit. Ctrl+C stops the benchmark cleanly; partial results still print.
-
-## Expected Outcome
-
-```
-=== Exercise: Provider Benchmark ===
-
-Configured providers: openai, ollama
-
---- github (openai/gpt-5.6-luna) ---
-  Q 1:    412 ms,   18 out tokens
-  ...
-
---- Benchmark Results (10 questions per provider) ---
-
-  Provider   Answered     Avg ms  Avg out tok  Est. cost ($)
-  ---------- -------- ---------- ------------ --------------
-  openai           10        450         19.4       0.000031
-  ollama           10       1830         24.1       0.000000
-
-Fastest provider: openai (450 ms average)
-```
-
-## Key Concepts
-
-- Keyed DI services: one named `IChatClient` registration per provider
-- Discovering configured providers from configuration instead of hardcoding
-- Benchmarking with `Stopwatch`; averaging latency and token counts
-- The per-token cost formula applied to real usage data
-- Distinguishing user cancellation (Ctrl+C) from provider failure
+Five calls on one machine are an anecdote, not a measurement; the performance chapter measures
+latency properly.

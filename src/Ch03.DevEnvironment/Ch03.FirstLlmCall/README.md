@@ -40,7 +40,7 @@ Your first real conversation with an AI model. This project connects to an LLM p
 **Azure OpenAI:**
 1. Create an Azure OpenAI resource in the Azure portal
 2. Deploy a model (e.g., gpt-5.6-luna)
-3. Note your endpoint URL -- authentication uses DefaultAzureCredential
+3. Note your endpoint URL -- authentication uses DefaultAzureCredential, and the identity still needs a role assignment on the resource (signing in is not enough)
 
 ### 3. Configure User Secrets
 
@@ -88,18 +88,22 @@ dotnet user-secrets set "LlmProvider:AzureOpenAI:Endpoint" "https://your-resourc
 dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "gpt-5.6-luna"
 ```
 
-### 4. Run
+### 4. Check, then run
 
 ```bash
-dotnet run --project src/Ch03.DevEnvironment/Ch03.FirstLlmCall
+dotnet run -- --self-test      # offline: the configuration rules (RESULT n/n)
+dotnet run -- --config-check   # which settings were found, and where; never their values
+dotnet run                     # one call to the configured provider
 ```
 
 ## What Happens
 
-1. The app loads configuration from User Secrets
-2. It creates an `IChatClient` for your chosen provider (via `AgenticAI.Common`)
-3. Sends a prompt and displays the complete response
-4. Sends a second prompt and streams tokens in real-time as they arrive
+1. `--self-test` checks the configuration rules over in-memory configurations: a key outside the
+   `LlmProvider` root is ignored, a missing key fails at registration, a later source (an
+   environment variable) beats an earlier one, and user secrets load only in `Development`.
+2. `--config-check` prints the provider and each setting's name and source, then exits.
+3. A plain run creates the `IChatClient` through `AddLlmChatClient` and sends one prompt.
+   Streaming is the next chapter's subject.
 
 ## Troubleshooting
 

@@ -1,109 +1,45 @@
 ﻿// ============================================================================
-// Exercise 01 — Multi-Provider Chat (Beginner)
-// Interactive console chat that lets the user pick a provider
-// (azure/openai/ollama) and have a single-turn conversation.
-// FULLY STANDALONE — no project references to Common.
+// Exercise 01 — Multi-provider chat (Basic)
+// ----------------------------------------------------------------------------
+// The provider comes from configuration only (LlmProvider:Provider): switch
+// from ollama to openai or azure with a user secret or an environment variable,
+// never with a code change. FULLY STANDALONE: no reference to AgenticAI.Common.
+//
+//   dotnet run -- --self-test      offline: the switch, with a fake client, RESULT n/n
+//   dotnet run -- --config-check   the active provider and where it came from
+//   dotnet run                     chat; an empty line or "quit" ends it
 // ============================================================================
 
-using System.ClientModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Ex01.MultiProviderChat;
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-
-Console.WriteLine("=== Exercise: Multi-Provider Chat ===\n");
-Console.WriteLine("Available providers: azure, openai, ollama");
-Console.Write("Select provider: ");
-
-// Empty input (or EOF) falls back to the repo's offline default, ollama —
-// never to a hosted provider that would then fail on a missing credential.
-string? providerInput = Console.ReadLine()?.Trim().ToLowerInvariant();
-string provider = string.IsNullOrEmpty(providerInput) ? "ollama" : providerInput;
-
-using CancellationTokenSource cts = new();
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-IChatClient chatClient = CreateChatClient(provider, config);
-
-Console.WriteLine($"\nConnected to: {provider}");
-Console.WriteLine("Type your message (or 'quit' to exit):\n");
-
-while (true)
+if (args.Contains("--self-test"))
 {
-    Console.Write("You: ");
-    string? input = Console.ReadLine();
-
-    if (string.IsNullOrWhiteSpace(input) ||
-        input.Equals("quit", StringComparison.OrdinalIgnoreCase))
-    {
-        break;
-    }
-
-    try
-    {
-        ChatResponse response = await chatClient.GetResponseAsync(
-            input,
-            cancellationToken: cts.Token);
-
-        Console.WriteLine($"Assistant: {response.Text}\n");
-
-        if (response.Usage is { } usage)
-        {
-            Console.WriteLine($"  [Tokens: {usage.InputTokenCount ?? 0} in, " +
-                              $"{usage.OutputTokenCount ?? 0} out, " +
-                              $"{usage.TotalTokenCount ?? 0} total]\n");
-        }
-    }
-    catch (OperationCanceledException)
-    {
-        Console.WriteLine("\n[Cancelled]");
-        break;
-    }
+    return SelfTest.Run();
 }
 
-Console.WriteLine("=== Exercise complete! ===");
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+Console.WriteLine(ProviderSwitch.Describe(builder.Configuration));
+if (args.Contains("--config-check"))
+{
+    return 0;
+}
 
-// ---------------------------------------------------------------
-// Provider factory — fully standalone
-// ---------------------------------------------------------------
+IChatClient chat;
+try
+{
+    chat = ProviderSwitch.Create(builder.Configuration);
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine(ex.Message);
+    return 1;
+}
 
-/// <summary>
-/// Creates an <see cref="IChatClient"/> for the specified provider.
-/// </summary>
-/// <param name="providerName">The provider name: azure, openai, or ollama.</param>
-/// <param name="configuration">The configuration containing User Secrets.</param>
-/// <returns>A configured <see cref="IChatClient"/>.</returns>
-static IChatClient CreateChatClient(string providerName, IConfiguration configuration) =>
-    providerName switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"]
-                    ?? throw new InvalidOperationException("Missing LlmProvider:AzureOpenAI:Endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] is { Length: > 0 } oaKey
-                    ? oaKey
-                    : throw new InvalidOperationException("Missing LlmProvider:OpenAI:ApiKey"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        // is { Length: > 0 } rejects the empty-string placeholder that ships in
-        // appsettings.json — a bare null-check lets "" through to
-        // ApiKeyCredential, which throws a far less helpful ArgumentException.
-        "ollama" => new OllamaSharp.OllamaApiClient(
-                new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-                configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-
-        _ => throw new InvalidOperationException(
-            $"Unknown provider: '{providerName}'. Valid: azure, openai, ollama.")
-    };
+Console.WriteLine("Type a message (an empty line or quit to exit).\n");
+while (Console.ReadLine() is { Length: > 0 } input && !input.Equals("quit", StringComparison.OrdinalIgnoreCase))
+{
+    Console.WriteLine(await ChatTurn.AskAsync(chat, input) + "\n");
+}
+return 0;

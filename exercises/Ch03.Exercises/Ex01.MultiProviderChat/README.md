@@ -1,45 +1,36 @@
-# Exercise 01 — Multi-Provider Chat (Beginner)
+# Exercise 01 — Multi-Provider Chat (Basic)
 
 ## Prompt
 
-Build an interactive console chat that:
+Build a console chat whose provider is chosen by **configuration only**:
 
-1. Prompts the user to pick a provider: **azure**, **openai**, or **ollama**.
-2. Creates the appropriate `IChatClient` using User Secrets for configuration.
-3. Allows single-turn conversations with token usage display.
+1. Read `LlmProvider:Provider` (`ollama`, `openai` or `azure`; `ollama` when nothing sets it).
+2. Build the matching `IChatClient`; a missing setting fails with its **name**, never its value.
+3. `--config-check` prints the active provider and the source it came from, then exits.
+
+## Acceptance
+
+- No code change between two runs on different providers: switch with a user secret or an
+  environment variable (`LlmProvider__Provider=openai`).
+- `--config-check` names the active provider.
+- No secret appears in the output or in any file of the project.
 
 ## Setup
 
-Configure User Secrets:
+```bash
+dotnet user-secrets set "LlmProvider:Provider" "openai"
+dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your key>"
+```
+
+User secrets load only when `DOTNET_ENVIRONMENT` is `Development` (the launch profile sets it).
+
+## Run
 
 ```bash
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token-here"
-dotnet user-secrets set "LlmProvider:OpenAI:Model" "gpt-5.6-luna"
+dotnet run -- --self-test      # offline, with the fake client in SelfTest.cs: RESULT n/n
+dotnet run -- --config-check
+dotnet run
 ```
 
-## Hints
-
-- Use `Microsoft.Extensions.AI.OpenAI` for the `AsIChatClient()` extension method.
-- Azure uses `DefaultAzureCredential`; OpenAI uses an API key.
-- Ollama uses `OllamaApiClient` with a local endpoint.
-- `ChatResponse.Usage` contains token counts (may be null for some providers).
-
-## Expected Outcome
-
-```
-Select provider: openai
-Connected to: openai
-Type your message (or 'quit' to exit):
-
-You: What is LINQ?
-Assistant: LINQ (Language Integrated Query) is...
-
-  [Tokens: 12 in, 85 out, 97 total]
-```
-
-## Key Concepts
-
-- Multi-provider `IChatClient` abstraction
-- User Secrets for secure API key storage
-- `ChatResponse` usage metadata
-- Provider-agnostic chat interface
+The fake client (`FakeChatClient`) only proves the chat turn here; the next chapter explains
+scripted clients and the tests built on them.

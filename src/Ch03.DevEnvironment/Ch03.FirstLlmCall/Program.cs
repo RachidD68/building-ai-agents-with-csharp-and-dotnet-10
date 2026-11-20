@@ -1,111 +1,57 @@
 ﻿// ============================================================================
-// Your First LLM Call
-// The reader's first real conversation with an AI model using
-// Microsoft.Extensions.AI and the multi-provider pattern from AgenticAI.Common.
+// Your first LLM call
+// ----------------------------------------------------------------------------
+// One IChatClient from the LlmProvider configuration section, one prompt, one
+// answer. Three ways to run it, from cheapest to the one that calls a model:
+//
+//   dotnet run -- --self-test      offline: the configuration rules, RESULT n/n
+//   dotnet run -- --config-check   names and sources of the settings, no call
+//   dotnet run                     one GetResponseAsync on the configured provider
+//
+// The default provider is a local Ollama (llama3.2). Secrets go in user secrets
+// or environment variables, never in appsettings.json.
 // ============================================================================
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using AgenticAI.Common.Configuration;
 using AgenticAI.Common.Extensions;
+using Ch03.FirstLlmCall;
 
-// ---------------------------------------------------------------
-// Step 1: Build the host with configuration and DI
-// ---------------------------------------------------------------
+if (args.Contains("--self-test"))
+{
+    return ConfigSelfTest.Run();
+}
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-
-// Register the IChatClient using the multi-provider factory from Common.
-// This reads the "LlmProvider" section from appsettings.json to decide which
-// provider to use (azure, openai, or ollama).
-builder.Services.AddAzureOpenAIProvider();   // the azure arm, from AgenticAI.Common.Azure
-builder.Services.AddLlmChatClient(builder.Configuration);
+builder.Services.AddAzureOpenAIProvider();                // the azure arm (prerelease package)
+builder.Services.AddLlmChatClient(builder.Configuration); // --config-check stops here
 
 using IHost host = builder.Build();
+IChatClient chat = host.Services.GetRequiredService<IChatClient>();
 
-// Resolve the configured chat client
-IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
-
-Console.WriteLine("=== Your First LLM Call ===");
-Console.WriteLine($"Provider configured. Chat client type: {chatClient.GetType().Name}\n");
-
-using CancellationTokenSource cts = new();
-
-// Allow Ctrl+C to cancel gracefully
-Console.CancelKeyPress += (_, e) =>
-{
-    e.Cancel = true;
-    cts.Cancel();
-};
-
-// ---------------------------------------------------------------
-// Step 2: Send a simple prompt and get a complete response
-// ---------------------------------------------------------------
-Console.WriteLine("--- Complete Response ---\n");
-
-string prompt = "What are three interesting facts about the .NET programming language?";
-Console.WriteLine($"Prompt: {prompt}\n");
+LlmSettings settings = new();
+builder.Configuration.GetSection("LlmProvider").Bind(settings);
+string prompt = "In one sentence, what does a global.json file do in a .NET repository?";
+Console.WriteLine($"Provider: {settings.Provider}");
+Console.WriteLine($"Prompt:   {prompt}\n");
 
 try
 {
-    ChatResponse response = await chatClient.GetResponseAsync(prompt, cancellationToken: cts.Token);
-
-    Console.WriteLine("Response:");
-    Console.WriteLine(new string('-', 60));
+    ChatResponse response = await chat.GetResponseAsync(prompt);
     Console.WriteLine(response.Text);
-    Console.WriteLine(new string('-', 60));
-
-    // Display usage information if available
     if (response.Usage is { } usage)
     {
-        Console.WriteLine($"\nUsage: {usage.InputTokenCount ?? 0} input tokens, " +
-                          $"{usage.OutputTokenCount ?? 0} output tokens, " +
-                          $"{usage.TotalTokenCount ?? 0} total");
+        Console.WriteLine($"\nTokens: {usage.InputTokenCount ?? 0} in, {usage.OutputTokenCount ?? 0} out");
     }
+    return 0;
 }
-catch (OperationCanceledException)
+catch (Exception ex) when (ex is not OperationCanceledException)
 {
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
+    // The usual causes: Ollama not running, the model not pulled, a wrong key.
+    Console.WriteLine($"The provider did not answer ({ex.GetType().Name}): {ex.Message}");
+    Console.WriteLine("Run again with --config-check to see which settings were found.");
+    return 1;
 }
-catch (Exception ex)
-{
-    Console.WriteLine($"\nError: {ex.Message}");
-    Console.WriteLine("Make sure you have configured your API keys. See README.md for setup instructions.");
-    return;
-}
-
-// ---------------------------------------------------------------
-// Step 3: Streaming — watch tokens arrive in real-time
-// ---------------------------------------------------------------
-Console.WriteLine("\n--- Streaming Response ---\n");
-
-string streamingPrompt = "Write a haiku about coding in C#.";
-Console.WriteLine($"Prompt: {streamingPrompt}\n");
-Console.Write("Response: ");
-
-try
-{
-    await foreach (ChatResponseUpdate update in chatClient.GetStreamingResponseAsync(
-        streamingPrompt,cancellationToken: cts.Token))
-    {
-        if (update.Text is { } text)
-        {
-            Console.Write(text);
-        }
-    }
-
-    Console.WriteLine("\n");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"\nStreaming error: {ex.Message}");
-}
-
-Console.WriteLine("=== First LLM call complete! ===");
