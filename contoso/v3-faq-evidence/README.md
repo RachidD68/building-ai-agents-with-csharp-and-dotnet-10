@@ -16,10 +16,25 @@ The scenario: Alice (`contoso/E-1001`) asks whether ride-sharing is reimbursable
 
 ## What this snapshot does not do
 
-- Every Contoso employee can read every handbook passage. Which employee may see which document, freshness of the index and a durable evidence store are the next chapter's work, which completes this milestone.
+- The handbook desk (`FaqDesk`) still lets every Contoso employee read every handbook passage; the permission-aware path is `PolicyFaq`, below, over its own two-organization policy corpus. The evidence log of either desk lives in memory.
 - A citation check proves the answer names a retrieved source, not that the sentence is supported by it.
-- The evidence log lives in memory and ends with the process.
 - The 0.55 threshold is the FAQ agent's starting point for this corpus with `nomic-embed-text`; `Ch10.RetrievalEval` is where it is measured.
+
+## Permissions, freshness and evidence (`PolicyFaq`)
+
+The RAG-with-permissions chapter completes this milestone with `PolicyFaq`, compiled from that chapter's projects as linked files (`Ch11.AuthorizedSearch`, `Ch11.VersionedIngestion`, `Ch11.ScopedCache`) over its synthetic corpus (`src/Ch11.RAGPermissions/corpus`: `contoso` and `fabrikam`, three access levels, superseded and withdrawn versions, a management draft, a hostile annex).
+
+```
+question -> scoped cache (HMAC key over tenant + level and versions; delivery-time check)
+         -> authorized search (tenant, level, active state in the store query; per-request agent)
+         -> model -> evidence check (every cited id was supplied to this request)
+         -> answer (+ a warning when a dated question falls under an older version) | named abstention
+publish / withdraw -> versioned ingestion (SQLite, atomic activation, tombstones) -> revoke cache entries
+```
+
+The scenario: on Friday Alice's late-taxi answer cites taxi v1 and Bob gets it from the cache; on Monday taxi v2 is published, which revokes Friday's entry; Frank (Fabrikam) and Maria (a Contoso manager) ask the same question, and the management draft is indexed but never supplied; a question about a ride on 10 November gets a warning that version 1 applied then; the supplier annex's text makes the scripted model cite an id it was never given, so the answer is withheld and not cached, and the same note pasted into a claim is denied by v2's desk (`resource_scope`); the hotel policy is withdrawn while answers about it are cached; thirty concurrent questions from both organizations stay apart. `--self-test` runs the handbook desk's checks and then these.
+
+What `PolicyFaq` does not do: the vector index is in memory and is rebuilt from the publish calls at start; one process owns the cache; the evidence check proves where a cited passage came from, not that it supports the sentence.
 
 ## Running
 

@@ -3,8 +3,8 @@
   <!-- Contoso snapshot v3, "FAQ with evidence": the v2 expense assistant gains a
        handbook desk. A policy question is answered from retrieved handbook
        evidence, with citations checked against what was retrieved, or the desk
-       abstains. Every reply keeps its evidence record. A console app; the next
-       chapter adds who may see which document, freshness and the evidence store. -->
+       abstains. Every reply keeps its evidence record. The RAG-with-permissions
+       chapter adds PolicyFaq: who may see which document, freshness and a scoped cache. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -25,6 +25,19 @@
     <!-- The RAG baseline chapter's retrieval, used as it is: chunker, dimension check,
          FaqSearchService, evidence format, and the handbook in docs/. -->
     <ProjectReference Include="../../src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The RAG-with-permissions chapter's building blocks, compiled in as linked files:
+         authorized search and evidence check, versioned ingestion (SQLite), scoped cache,
+         and its two-organization policy corpus. Used by PolicyFaq. -->
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/Corpus.cs" Link="Ch11/Corpus.cs" />
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/HashingEmbedder.cs" Link="Ch11/HashingEmbedder.cs" />
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/AuthorizedSearch.cs" Link="Ch11/AuthorizedSearch.cs" />
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/EvidenceCheck.cs" Link="Ch11/EvidenceCheck.cs" />
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.ScopedCache/ScopedCache.cs" Link="Ch11/ScopedCache.cs" />
+    <Compile Include="../../src/Ch11.RAGPermissions/Ch11.VersionedIngestion/IngestionStore.cs" Link="Ch11/IngestionStore.cs" />
+    <Content Include="../../src/Ch11.RAGPermissions/corpus/**" LinkBase="corpus" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

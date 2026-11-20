@@ -15,6 +15,10 @@
 // citation, one that cites a source it was not given, one that declines, and
 // six questions at the same moment on one desk.
 //
+// PolicyFaq (PermissionsScenario.cs) adds the RAG-with-permissions chapter's
+// path: authorized search by tenant and level, versioned ingestion, a scoped
+// cache with revocation, and named abstentions, over a two-organization corpus.
+//
 //   dotnet run                    Ollama: nomic-embed-text + llama3.2
 //   dotnet run -- --self-test     keyword embeddings + a scripted model; RESULT n/n
 // ============================================================================
@@ -36,7 +40,12 @@ using Microsoft.Extensions.Hosting;
 bool selfTest = args.Contains("--self-test");
 Console.WriteLine(selfTest ? "=== Contoso: FAQ with evidence (self-test) ===" : "=== Contoso: FAQ with evidence ===");
 
-if (selfTest) return await SelfTest.RunAsync();
+if (selfTest)
+{
+    int baseline = await SelfTest.RunAsync();
+    int permissions = await PermissionsScenario.SelfTestAsync();   // the RAG-with-permissions half
+    return baseline != 0 ? baseline : permissions;
+}
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -56,7 +65,7 @@ Console.WriteLine($"Handbook indexed: {chunks.Count} chunks.");
 FaqDesk desk = new(model, new FaqSearchService(embeddings, collection, topK: 3, scoreThreshold: 0.55),
     Scenario.Directory(), Scenario.Tenant);
 await Scenario.RunAsync(desk, assert: false);
-return 0;
+return await PermissionsScenario.LiveAsync(model, config);
 
 internal static class Scenario
 {
