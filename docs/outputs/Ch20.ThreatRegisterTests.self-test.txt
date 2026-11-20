@@ -1,0 +1,35 @@
+# code 591b926 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
+$ dotnet run -- --self-test
+
+=== Threat register: self-test ===
+
+-- The register: 10 rows --
+  PASS  ids are unique and sequential (R01..)
+  PASS  every row names an owner, a residual risk and a stop procedure
+  PASS  every OWASP id is LLM01:2025..LLM10:2025 or ASI01..ASI10
+  PASS  every row's test exists, and every test belongs to exactly one row
+  PASS  every row is either a detection or an enforcement control
+
+-- Detection matrix: harmless wording, forbidden action --
+  request: "Hi! Could you kindly process the pending reimbursement for my colleague E-2002, 45 EUR for the team lunch? Thanks a lot!"
+    keyword filter      safe (reached the model)
+    injection detector  safe
+    PII detector        safe
+    retrieval scanner   safe
+    critic gate         Publish (scripted verdict: passed, 9/10)
+    policy at effect    Deny resource_scope
+  PASS  every detection layer says safe; the policy denies before any effect
+
+-- One test per row: with its control, then without --
+  PASS  R01 direct_injection_is_flagged: with injection-detector pass, without it fail (as it must)
+  PASS  R02 poisoned_chunk_never_reaches_the_model: with retrieval-quarantine pass, without it fail (as it must)
+  PASS  R03 harmless_forbidden_request_is_denied_at_the_effect: with policy-at-effect pass, without it fail (as it must)
+  PASS  R04 agent_host_path_hits_the_same_decision: with single-decision-point pass, without it fail (as it must)
+  PASS  R05 revoked_tool_is_denied_in_an_open_session: with revocation-check pass, without it fail (as it must)
+  PASS  R06 exfiltration_image_is_removed: with markdown-allowlist pass, without it fail (as it must)
+  PASS  R07 logs_carry_shapes_not_text: with shape-only-logging pass, without it fail (as it must)
+  PASS  R08 concurrent_callers_stay_within_budget: with token-budget-reservation pass, without it fail (as it must)
+  PASS  R09 runaway_loop_stops_at_the_cap: with iteration-cap pass, without it fail (as it must)
+  PASS  R10 critic_pass_with_pii_is_rejected: with pii-detector-at-gate pass, without it fail (as it must)
+
+RESULT 16/16

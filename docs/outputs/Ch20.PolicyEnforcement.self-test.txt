@@ -1,0 +1,39 @@
+# code 591b926 | SDK 11.0.100 | Windows 11 (Linux aspnet:10.0-noble: identical)
+$ dotnet run -- --self-test
+
+=== Policy enforcement: self-test ===
+
+-- One decision, four transports --
+  PASS  alice, own tenant, 30 EUR: Allow low_value_policy on http, mcp, a2a, agui
+  PASS  HARMLESS WORDING, FORBIDDEN ACTION: alice, E-2002 (fabrikam), 45 EUR: Deny resource_scope on http, mcp, a2a, agui
+  PASS  E-2002's balance is untouched: 500
+  PASS  negative amount: Deny invalid_amount on http, mcp, a2a, agui
+  PASS  unknown employee answers like a foreign one: Deny resource_scope on http, mcp, a2a, agui
+  PASS  80 EUR needs an approval: RequireApproval approval_missing on http, mcp, a2a, agui
+  PASS  bob has no submit permission: Deny missing_permission on http, mcp, a2a, agui
+  PASS  the tenantId sent in every request body and tool call was never read (E-2002 stayed denied)
+
+-- Observe, then enforce --
+  PASS  observe: 4 paid, the 3rd and 4th recorded as would-deny daily_limit; balance 380
+  PASS  enforce: the same rule now denies: Deny daily_limit on http, mcp, a2a, agui
+  PASS  a baseline rule cannot be put in observe mode
+
+-- Revocation reaches open sessions --
+  PASS  tool revoked after the MCP sessions opened: Deny tool_revoked on http, mcp, a2a, agui
+  PASS  subject revoked, token still valid: HTTP 403 Deny subject_revoked (authenticated, then denied)
+  PASS  subject revoked: Deny subject_revoked on http, mcp, a2a, agui
+
+-- Idempotency across transports --
+  PASS  same operation id over HTTP then MCP: Allow low_value_policy; Deny duplicate_operation
+
+-- Concurrent claims on one balance --
+  PASS  10 concurrent 30 EUR claims (Task.Run): 3 allowed, balance 10
+  PASS  DEFECT REPRODUCED: check, await, then debit: 10 of 10 pass, balance -200
+
+-- A second transport that skips the check --
+  PASS  DEFECT REPRODUCED: an MCP tool that calls the ledger directly pays fabrikam's E-2002: Allow posted, balance 455
+
+-- Audit --
+  PASS  39 decisions audited, each with its transport (a2a 9, agui 9, http 11, mcp 10)
+
+RESULT 19/19
