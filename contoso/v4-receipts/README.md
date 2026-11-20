@@ -19,7 +19,7 @@ Intake states: `AwaitingVerification`, `Rejected` (`duplicate_receipt`, `reading
 
 - Receipts waiting for a person live in memory. A restart loses them (the v2 claims after the hand-off are in SQLite). A real intake stores the pending receipt and its reading the way v2 stores claims.
 - Duplicate detection compares the exact image bytes. A second photo of the same paper receipt is a different image; catching it needs the receipt number and vendor, which the reading would have to report reliably first.
-- The FAQ-with-evidence snapshot (v3) is not in the repository yet. v4 builds on v2; when v3 lands, its answer path sits beside this intake and does not change it.
+- No FAQ here. The FAQ-with-evidence snapshot (v3) is a desk beside the reimbursement path; receipts extend the reimbursement path, so v4 references v2's desk directly and leaves v3 as it is. Both use v2's `PermissionDirectory` as the identity source.
 
 ## Running
 
