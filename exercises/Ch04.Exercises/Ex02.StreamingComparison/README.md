@@ -1,38 +1,24 @@
-# Exercise 02 — Streaming Comparison (Intermediate)
+# Exercise 02: Streaming Comparison (Intermediate)
 
 ## Prompt
 
-Run the same prompt through `RunAsync` and `RunStreamingAsync` and plot the token-arrival timings. For streaming, record the timestamp of each update. Print a simple console bar chart showing when each token arrived. You should be able to eyeball the provider's output rate.
+Run the same prompt through `RunAsync` and `RunStreamingAsync`. Report the time to the first output and the total time for each, and print each update's arrival time as it comes in.
+
+## Acceptance
+
+- The report gives time to first update and total time.
+- A cancelled run is reported as cancelled, with the number of characters that arrived, never as a short success with a total time.
 
 ## Hints
 
-- `Stopwatch.Elapsed` gives you millisecond precision.
-- A bar chart is just `new string('#', elapsedMs / 50)` per token. Don't over-engineer the visualization.
-- `RunStreamingAsync` yields `AgentResponseUpdate` items — record one `(elapsedMs, text)` entry per update as it arrives.
+- `Stopwatch` for the timings; `AgentRuns.CollectAsync` (from `Ch04.StreamingAgent`) gives the terminal state and calls you back for each piece of text.
+- For a non-streamed run, the first output is the whole answer.
 
-## Expected Outcome
+## Running
 
-```
---- Token-Arrival Timings ---
-
-     412 ms | ######## "The"
-     455 ms | ######### " SOLID"
-     502 ms | ########## " principles"
-    ...
-
---- Comparison Summary ---
-
-  Metric                    Non-Streaming       Streaming
-  ------------------------- --------------- ---------------
-  Time to first token              2150ms            412ms
-  Total time                       2150ms           2340ms
-
-  Streaming first-token speedup: 5.2x faster
+```bash
+dotnet run --project exercises/Ch04.Exercises/Ex02.StreamingComparison
+dotnet run --project exercises/Ch04.Exercises/Ex02.StreamingComparison -- --self-test
 ```
 
-## Key Concepts
-
-- `RunAsync` vs `RunStreamingAsync`
-- Per-update arrival timing with `Stopwatch`
-- Time-to-first-token (TTFT) as a UX metric
-- Eyeballing a provider's output rate from a console bar chart
+The self-test's timings come from a fake model and change from run to run; the checks compare them, they do not print fixed numbers.

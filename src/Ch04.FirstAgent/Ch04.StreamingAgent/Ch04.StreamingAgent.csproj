@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,6 +14,11 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+  <!-- The policy agent is defined once, in Ch04.BasicAgent, and compiled in here as it is. -->
+  <ItemGroup>
+    <Compile Include="../Ch04.BasicAgent/ContosoPolicy.cs" Link="ContosoPolicy.cs" />
   </ItemGroup>
 
 

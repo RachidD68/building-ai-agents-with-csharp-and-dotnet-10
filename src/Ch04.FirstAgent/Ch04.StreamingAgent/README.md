@@ -1,23 +1,12 @@
-# Ch04.StreamingAgent — Streaming Responses
+# Ch04.StreamingAgent
 
-The same pirate agent, but using `RunStreamingAsync()` to display tokens as they arrive in real-time.
+The policy agent, streamed, with an explicit terminal status.
 
-## What You'll Learn
-
-- Streaming responses with `RunStreamingAsync()` and `IAsyncEnumerable<AgentResponseUpdate>`
-- Time-to-first-token vs. total completion time
-- When to choose streaming over non-streaming
-
-## Setup
+- `AgentRuns.cs`: `RunStatus` (`Completed`, `Cancelled`, `Truncated`, `Failed`), `RunOutcome` and `RunTracker`. A run ends in exactly one state. Text that arrived before a cancellation or a cut-off is kept in `RunOutcome.Text`, but only `Completed` is a success. An `OperationCanceledException` the caller did not ask for (a time budget, an HTTP timeout) is `Failed`, not `Cancelled`; any other exception is `Failed` and kept as thrown in `RunOutcome.Error`.
+- `Program.cs`: one streamed answer (press Ctrl+C during it to see `cancelled`), one with a 12-token ceiling (`truncated`), and one stream merged into a single `AgentResponse` with `ToAgentResponseAsync`.
 
 ```bash
-cd src/Ch04.FirstAgent/Ch04.StreamingAgent
-dotnet user-secrets set "LlmProvider:Provider" "openai"
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
+dotnet run --project src/Ch04.FirstAgent/Ch04.StreamingAgent
 ```
 
-## Run
-
-```bash
-dotnet run
-```
+`AgentRuns.cs` is tested offline in `Ch04.AgentTests`.

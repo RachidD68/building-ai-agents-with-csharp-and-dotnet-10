@@ -1,196 +1,93 @@
 // ============================================================================
-// Hello, Agent! (Basic Agent)
-// Your first agent using the Microsoft Agent Framework (MAF).
-// We create a ChatClientAgent with a fun pirate persona, send it a message,
-// and get a complete (non-streaming) response.
+// Contoso expense help: a first agent
+// ----------------------------------------------------------------------------
+// A ChatClientAgent that answers Contoso employees' expense-policy questions.
+// No tools, no effects. The program shows the three ways to build the agent,
+// a run with no session, a run with one, and options overridden for one call.
 //
-// FORWARD REFERENCE: In the security chapter, we'll see how to add middleware to this
-// agent pipeline for logging, timing, and content filtering.
+//   dotnet run    against the configured model (Ollama llama3.2 by default)
+//
+// The offline proof of this agent is Ch04.AgentTests: a fake IChatClient
+// checks what reaches the model without calling one.
 // ============================================================================
 
 using System.ClientModel;
+using Ch04.FirstAgent;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
-// ---------------------------------------------------------------
-// Step 1: Build the host with configuration and DI
-// ---------------------------------------------------------------
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
-
 using IHost host = builder.Build();
 IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
-Console.WriteLine("=== Hello, Agent! (Basic Agent) ===\n");
-
-// Wire Ctrl-C to a CancellationTokenSource. Two reasons:
-//   1. The app shuts down gracefully instead of being hard-killed.
-//   2. The token flows through to the provider, so an abandoned call actually
-//      stops generating — which stops the token meter (and the bill) running.
+// Ctrl+C cancels the token, and the token reaches the provider call, so an
+// abandoned answer stops generating instead of running on in the background.
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Step 2: Create a ChatClientAgent with a pirate persona
-// ---------------------------------------------------------------
-// The simplest way — pass instructions directly to the constructor.
-// Instructions define the agent's persona and behaviour rules.
-string pirateInstructions = """
-    You are Captain CodeBeard, a legendary pirate who sailed the Seven Seas of Software.
-    You speak in pirate dialect, love puns about programming, and always end your
-    responses with a pirate-themed programming tip.
-    Keep your answers concise — three to five sentences at most.
-    """;
+Console.WriteLine("=== Contoso expense help: a first agent ===\n");
 
-ChatClientAgent pirateAgent = new(
-    chatClient,
-    instructions: pirateInstructions,
-    name: "CaptainCodeBeard",
-    description: "A pirate-themed AI assistant for programming questions");
+// 1. Constructor with instructions: the pattern every Contoso host uses.
+ChatClientAgent agent = ContosoPolicy.Create(chatClient);
 
-Console.WriteLine($"Agent created: {pirateAgent.Name}");
-Console.WriteLine($"Description  : {pirateAgent.Description}\n");
-
-// ---------------------------------------------------------------
-// Step 3: The one-shot call — no session needed
-// ---------------------------------------------------------------
-// By default the agent is stateless: each run starts with no history. For a
-// single, self-contained question you don't need a session at all. Omit it
-// and MAF creates a throwaway session internally just for this call.
-string userMessage = "What is dependency injection and why should I use it?";
-Console.WriteLine($"You: {userMessage}\n");
-
-try
+// 2. An options object: chat defaults pinned when the agent is built.
+ChatClientAgent pinned = new(chatClient, new ChatClientAgentOptions
 {
-    AgentResponse response = await pirateAgent.RunAsync(
-        userMessage,
-        cancellationToken: cts.Token);
-
-    Console.WriteLine($"{pirateAgent.Name}: {response.Text}\n");
-
-    // Display usage if available
-    if (response.Usage is { } usage)
-    {
-        Console.WriteLine($"[Usage: {usage.InputTokenCount ?? 0} input, " +
-                          $"{usage.OutputTokenCount ?? 0} output, " +
-                          $"{usage.TotalTokenCount ?? 0} total tokens]");
-    }
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
-}
-// A failed first call is the single most common thing a new reader hits. These
-// are the real errors the provider surfaces through IChatClient — not just
-// cancellation. We log something useful and stop; the hosting chapter adds real
-// resilience (retries, backoff, circuit breakers) around this exact call.
-catch (ClientResultException ex)
-{
-    // OpenAI-compatible providers (OpenAI, Azure OpenAI) throw
-    // ClientResultException; ex.Status carries the HTTP status code.
-    string reason = ex.Status switch
-    {
-        429 => "Rate limited (HTTP 429) — you're sending requests too fast, or you've hit a quota. Back off and retry.",
-        400 => "Bad request (HTTP 400) — often a content-filter rejection: the provider refused to answer.",
-        >= 500 => $"Transient server error (HTTP {ex.Status}) — a provider-side blip. Safe to retry.",
-        _ => $"Provider returned HTTP {ex.Status}."
-    };
-    Console.WriteLine($"[Agent call failed] {reason}");
-    Console.WriteLine($"  Detail: {ex.Message}");
-    return;
-}
-
-// ---------------------------------------------------------------
-// Step 4: Per-call option overrides with ChatClientAgentRunOptions
-// ---------------------------------------------------------------
-// Set defaults at construction; override per request when you need to. Here the
-// SAME agent answers the same question twice at two different temperatures —
-// once near-deterministic, once loose and creative — without rebuilding it.
-Console.WriteLine("\n--- Per-call options: same agent, two temperatures ---\n");
-
-string creativePrompt = "Give me a name for a code review bot.";
-
-try
-{
-    ChatClientAgentRunOptions cool = new(new ChatOptions { Temperature = 0.0f });
-    AgentResponse coolReply = await pirateAgent.RunAsync(
-        creativePrompt, options: cool, cancellationToken: cts.Token);
-    Console.WriteLine($"Temp 0.0 → {coolReply.Text}\n");
-
-    ChatClientAgentRunOptions warm = new(new ChatOptions { Temperature = 1.0f });
-    AgentResponse warmReply = await pirateAgent.RunAsync(
-        creativePrompt, options: warm, cancellationToken: cts.Token);
-    Console.WriteLine($"Temp 1.0 → {warmReply.Text}");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
-}
-
-// ---------------------------------------------------------------
-// Step 5: Alternative creation pattern — ChatClientAgentOptions
-// ---------------------------------------------------------------
-// For more control, use the options object. This is the pattern to reach for
-// when you need to pin chat options, or add history/context providers (the conversations and memory chapter).
-Console.WriteLine("\n--- Alternative: Using ChatClientAgentOptions ---\n");
-
-ChatClientAgentOptions options = new()
-{
-    Name = "NavigatorNova",
-    Description = "A space-explorer AI that explains concepts using space metaphors",
+    Name = "ContosoExpenseHelpPinned",
     ChatOptions = new ChatOptions
     {
-        Temperature = 0.7f,
-        MaxOutputTokens = 300
-    }
-};
+        Instructions = ContosoPolicy.Instructions,
+        Temperature = 0.2f,
+        MaxOutputTokens = 200,
+    },
+});
 
-ChatClientAgent spaceAgent = new(
-    chatClient,
-    options: options);
-
-try
-{
-    AgentResponse spaceResponse = await spaceAgent.RunAsync(
-        "Explain async/await in C# like you're a space explorer.",
-        cancellationToken: cts.Token);
-
-    Console.WriteLine($"{spaceAgent.Name}: {spaceResponse.Text}\n");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
-}
-
-// ---------------------------------------------------------------
-// Step 6: The AsAIAgent() extension method
-// ---------------------------------------------------------------
-// If you already have an IChatClient, you can convert it to an agent inline.
-// This is handy for quick prototyping.
-Console.WriteLine("--- Alternative: IChatClient.AsAIAgent() ---\n");
-
-AIAgent quickAgent = chatClient.AsAIAgent(
-    instructions: "You are a helpful assistant. Be concise.",
-    name: "QuickHelper");
+// 3. The AsAIAgent extension on any IChatClient.
+AIAgent quick = chatClient.AsAIAgent(instructions: ContosoPolicy.Instructions, name: "ContosoQuick");
 
 try
 {
-    AgentResponse quickResponse = await quickAgent.RunAsync(
-        "What is LINQ in one sentence?",
-        cancellationToken: cts.Token);
+    // No session: the run starts with no history and keeps none.
+    await Ask(agent, "Is a 42 EUR taxi receipt approved automatically?");
 
-    Console.WriteLine($"{quickAgent.Name}: {quickResponse.Text}");
+    // A session carries the conversation, so the second question can say "it".
+    AgentSession session = await agent.CreateSessionAsync(cts.Token);
+    await Ask(agent, "My hotel claim is 180 EUR.", session);
+    await Ask(agent, "Who has to approve it?", session);
+
+    // Options for one call only: the agent's own defaults stay as they were.
+    ChatClientAgentRunOptions shortAnswer = new(new ChatOptions { MaxOutputTokens = 12 });
+    await Ask(agent, "Explain the whole expense policy.", options: shortAnswer);
+
+    await Ask(pinned, "Can I approve my own claim?");
+    await Ask(quick, "Can you pay my claim now?");
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
-    Console.WriteLine("\n[Cancelled by user]");
+    Console.WriteLine("\n[cancelled]");
+    return 130;
 }
+catch (HttpRequestException ex)                  // Ollama and other HTTP providers
+{
+    Console.WriteLine($"[model call failed] {ex.StatusCode?.ToString() ?? "no response"}: {ex.Message}");
+    return 1;
+}
+catch (ClientResultException ex)                 // OpenAI-compatible SDKs: ex.Status is the HTTP status
+{
+    Console.WriteLine($"[model call failed] HTTP {ex.Status}: {ex.Message}");
+    return 1;
+}
+return 0;
 
-Console.WriteLine("\n=== Basic Agent demo complete! ===");
+async Task Ask(AIAgent who, string question, AgentSession? session = null, AgentRunOptions? options = null)
+{
+    AgentResponse response = await who.RunAsync(question, session, options, cts.Token);
+    Console.WriteLine($"You: {question}");
+    Console.WriteLine($"{who.Name}: {response.Text.Trim()}");
+    Console.WriteLine($"  [finish: {response.FinishReason?.Value ?? "none"}, " +
+                      $"tokens in/out: {response.Usage?.InputTokenCount}/{response.Usage?.OutputTokenCount}]\n");
+}

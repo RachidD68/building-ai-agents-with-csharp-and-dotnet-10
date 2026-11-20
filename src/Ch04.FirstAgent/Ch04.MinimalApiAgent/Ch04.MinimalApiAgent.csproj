@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
@@ -13,6 +10,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- The fake model, for the self-test only. -->
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+  <!-- The policy agent and the run classifier, compiled in as they are. -->
+  <ItemGroup>
+    <Compile Include="../Ch04.BasicAgent/ContosoPolicy.cs" Link="Linked/ContosoPolicy.cs" />
+    <Compile Include="../Ch04.StreamingAgent/AgentRuns.cs" Link="Linked/AgentRuns.cs" />
   </ItemGroup>
 
 </Project>

@@ -1,138 +1,65 @@
 ﻿// ============================================================================
-// Hello, Agent! (Streaming Agent)
-// The same pirate agent, but now using streaming to see tokens arrive in
-// real-time. Streaming is essential for chat UIs where users expect to see
-// the response being "typed out" rather than waiting for the full response.
+// Contoso expense help: streaming with an explicit terminal status
+// ----------------------------------------------------------------------------
+// The same policy agent, streamed. Text is printed as it arrives, and every
+// run ends in exactly one state: Completed, Cancelled, Truncated or Failed.
+// Text that arrived before a cancellation or a cut-off is kept, but it is
+// never reported as a finished answer. Press Ctrl+C during the first answer
+// to see a cancelled run.
 //
-// Key difference:
-//   RunAsync()          → waits for complete response, returns AgentResponse
-//   RunStreamingAsync() → yields AgentResponseUpdate items as they arrive
+//   dotnet run    against the configured model (Ollama llama3.2 by default)
+//
+// RunTracker and AgentRuns (AgentRuns.cs) are tested offline in Ch04.AgentTests.
 // ============================================================================
 
+using Ch04.FirstAgent;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
-// ---------------------------------------------------------------
-// Step 1: Build the host (same pattern as BasicAgent)
-// ---------------------------------------------------------------
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
-
 using IHost host = builder.Build();
-IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
-
-Console.WriteLine("=== Hello, Agent! (Streaming) ===\n");
+ChatClientAgent agent = ContosoPolicy.Create(host.Services.GetRequiredService<IChatClient>());
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Step 2: Create the agent with a pirate persona
-// ---------------------------------------------------------------
-ChatClientAgent pirateAgent = new(
-    chatClient,
-    instructions: """
-        You are Captain CodeBeard, a legendary pirate who sailed the Seven Seas of Software.
-        You speak in pirate dialect, love puns about programming, and always end your
-        responses with a pirate-themed programming tip.
-        """,
-    name: "CaptainCodeBeard",
-    description: "A pirate-themed AI assistant for programming questions");
+Console.WriteLine("=== Contoso expense help: streaming ===\n");
 
-AgentSession session = await pirateAgent.CreateSessionAsync(cts.Token);
+RunOutcome first = await Stream("Who reviews a 180 EUR hotel claim, and why?");
+if (first.Status == RunStatus.Cancelled) return 130;
 
-// ---------------------------------------------------------------
-// Step 3: Streaming response — tokens arrive one at a time
-// ---------------------------------------------------------------
-string userMessage = "Explain the SOLID principles in software engineering.";
-Console.WriteLine($"You: {userMessage}\n");
-Console.Write($"{pirateAgent.Name}: ");
+// The same agent with a 12-token ceiling for this call: the answer is cut off.
+await Stream("Explain the whole expense policy.",
+    new ChatClientAgentRunOptions(new ChatOptions { MaxOutputTokens = 12 }));
 
-try
+// Streaming transport, one object at the end: ToAgentResponseAsync merges the updates.
+AgentResponse merged = await agent
+    .RunStreamingAsync("Is a 42 EUR taxi receipt approved automatically?", cancellationToken: cts.Token)
+    .ToAgentResponseAsync(cts.Token);
+Console.WriteLine($"Merged: {merged.Text.Trim()}");
+Console.WriteLine($"  [finish: {merged.FinishReason?.Value ?? "none"}]");
+return 0;
+
+async Task<RunOutcome> Stream(string question, AgentRunOptions? options = null)
 {
-    // RunStreamingAsync returns an IAsyncEnumerable<AgentResponseUpdate>.
-    // Each update contains a small chunk of the response (often a single token).
-    await foreach (AgentResponseUpdate update in pirateAgent.RunStreamingAsync(
-        userMessage,
-        session,
-        cancellationToken: cts.Token))
+    Console.WriteLine($"You: {question}");
+    Console.Write($"{agent.Name}: ");
+    RunOutcome outcome = await AgentRuns.CollectAsync(
+        agent.RunStreamingAsync(question, options: options, cancellationToken: cts.Token),
+        cts.Token,
+        Console.Write);
+    Console.WriteLine();
+    Console.WriteLine(outcome.Status switch
     {
-        // Write each token immediately — the user sees the response "typing out"
-        if (update.Text is { Length: > 0 } text)
-        {
-            Console.Write(text);
-        }
-    }
-
-    Console.WriteLine("\n");
+        RunStatus.Completed => "  [completed]",
+        RunStatus.Truncated => $"  [truncated: the answer hit its token limit after {outcome.Text.Length} characters]",
+        RunStatus.Cancelled => $"  [cancelled: {outcome.Text.Length} characters arrived, not an answer]",
+        _ => $"  [failed: {outcome.Error?.GetType().Name}: {outcome.Error?.Message}]",
+    });
+    Console.WriteLine();
+    return outcome;
 }
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n\n[Cancelled by user]");
-    return;
-}
-
-// ---------------------------------------------------------------
-// Step 4: Side-by-side comparison — non-streaming vs. streaming
-// ---------------------------------------------------------------
-Console.WriteLine("--- Timing Comparison: Non-Streaming vs. Streaming ---\n");
-
-string comparisonPrompt = "Write a short poem about C# in four lines.";
-
-// Non-streaming: measure time to first output
-var nonStreamStart = DateTime.UtcNow;
-AgentSession nonStreamSession = await pirateAgent.CreateSessionAsync(cts.Token);
-
-try
-{
-    AgentResponse fullResponse = await pirateAgent.RunAsync(
-        comparisonPrompt,
-        nonStreamSession,
-        cancellationToken: cts.Token);
-
-    var nonStreamElapsed = DateTime.UtcNow - nonStreamStart;
-    Console.WriteLine($"Non-streaming (time to complete response): {nonStreamElapsed.TotalMilliseconds:F0}ms");
-    Console.WriteLine($"Response: {fullResponse.Text}\n");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled by user]");
-    return;
-}
-
-// Streaming: measure time to first token
-var streamStart = DateTime.UtcNow;
-TimeSpan? timeToFirstToken = null;
-AgentSession streamSession = await pirateAgent.CreateSessionAsync(cts.Token);
-
-try
-{
-    Console.Write("Streaming: ");
-    await foreach (AgentResponseUpdate update in pirateAgent.RunStreamingAsync(
-        comparisonPrompt,
-        streamSession,
-        cancellationToken: cts.Token))
-    {
-        if (update.Text is { Length: > 0 } text)
-        {
-            timeToFirstToken ??= DateTime.UtcNow - streamStart;
-            Console.Write(text);
-        }
-    }
-
-    var streamElapsed = DateTime.UtcNow - streamStart;
-    Console.WriteLine($"\n\nStreaming time to first token: {timeToFirstToken?.TotalMilliseconds:F0}ms");
-    Console.WriteLine($"Streaming total time: {streamElapsed.TotalMilliseconds:F0}ms");
-    Console.WriteLine("\nNotice: streaming gives the user something to read almost immediately,");
-    Console.WriteLine("even though the total time may be similar.");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n\n[Cancelled by user]");
-}
-
-Console.WriteLine("\n=== Streaming Agent demo complete! ===");

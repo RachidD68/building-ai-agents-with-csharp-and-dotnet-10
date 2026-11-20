@@ -1,205 +1,164 @@
 // ============================================================================
-// Exercise 03 — Multi-Persona API (Challenge)
-// Extends Ch04.MinimalApiAgent: the ONE /chat endpoint now accepts a persona
-// field in the request body ("pirate", "navigator", "helper") and resolves a
-// different ChatClientAgent per persona via keyed DI. GET /personas returns
-// the available personas WITH their descriptions. FULLY STANDALONE.
+// Exercise 03: Multi-Persona API (Challenge)
+// ----------------------------------------------------------------------------
+// One API, several agents registered as keyed services; the request names the
+// persona. An unknown persona is a 404 and an empty message a 400, both before
+// any model call; a provider error is a 502. The stream ends with an explicit
+// 'done' event that carries the run's terminal status.
 //
-// Keyed DI: AddKeyedSingleton<ChatClientAgent>("pirate", (sp, _) => ...)
-// registers each agent. [FromKeyedServices("pirate")] binds ONE fixed key at
-// compile time — the persona here comes from the request body, so the endpoint
-// resolves dynamically with sp.GetRequiredKeyedService<ChatClientAgent>(key).
+//   POST /chat          { "persona": "pirate", "message": "..." }
+//   GET  /chat/stream   ?persona=pirate&message=...
+//   GET  /personas
+//
+//   dotnet run                    against the configured model (Ollama llama3.2)
+//   dotnet run -- --self-test     the real app on a loopback port with a fake
+//                                 model, no outside network; RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using System.Net;
+using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using AgenticAI.Common.Extensions;
+using AgenticAI.Testing;
+using Ch04.FirstAgent;
 using Microsoft.Agents.AI;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.AI;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
+Api.Build(args).Run();
+return 0;
 
-// The persona catalog: DI key, agent name, description (surfaced by
-// GET /personas), and the instructions behind each agent. The three personas
-// are the chapter's three example agents.
-(string Key, string Name, string Description, string Instructions)[] personaCatalog =
-[
-    ("pirate",
-     "CaptainCodeBeard",
-     "A pirate-themed AI assistant for programming questions",
-     """
-     You are Captain CodeBeard, a legendary pirate who sailed the Seven Seas of Software.
-     You speak in pirate dialect, love puns about programming, and always end your
-     responses with a pirate-themed programming tip.
-     Keep your answers concise — three to five sentences at most.
-     """),
+internal sealed record Persona(string Key, string Name, string Instructions);
+internal sealed record PersonaRequest(string? Persona, string? Message);
+internal sealed record PersonaReply(string Persona, string Agent, string Message, string Status);
 
-    ("navigator",
-     "NavigatorNova",
-     "A space-explorer AI that explains concepts using space metaphors",
-     """
-     You are NavigatorNova, a space-explorer AI charting the galaxy of software.
-     Explain every concept using space and navigation metaphors.
-     Keep your answers concise — three to five sentences at most.
-     """),
-
-    ("helper",
-     "QuickHelper",
-     "A no-frills assistant that answers plainly and concisely",
-     "You are a helpful assistant. Be concise.")
-];
-
-// Register IChatClient as singleton — shared by all three agents.
-builder.Services.AddSingleton<IChatClient>(sp =>
+internal static class Api
 {
-    IConfiguration config = sp.GetRequiredService<IConfiguration>();
-    return CreateChatClient(config);
-});
+    public static readonly Persona[] Personas =
+    [
+        new("pirate", "CaptainCodeBeard", "You are a pirate who explains programming. Three sentences at most."),
+        new("auditor", "StrictAuditor", "You are a strict code auditor. Name risks first. Three sentences at most."),
+    ];
 
-// Register one keyed ChatClientAgent per persona.
-foreach ((string key, string name, string description, string instructions) in personaCatalog)
-{
-    builder.Services.AddKeyedSingleton(key, (sp, _) =>
-        new ChatClientAgent(
-            sp.GetRequiredService<IChatClient>(),
-            instructions: instructions,
-            name: name,
-            description: description));
-}
-
-WebApplication app = builder.Build();
-
-// ---------------------------------------------------------------
-// POST /chat — one endpoint, persona selected by the request body
-// ---------------------------------------------------------------
-app.MapPost("/chat", async (
-    ChatRequest request,
-    IServiceProvider services,
-    CancellationToken cancellationToken) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Message))
+    public static WebApplication Build(string[] args, IChatClient? model = null, Action<WebApplicationBuilder>? configure = null)
     {
-        return Results.BadRequest(new { error = "Message is required." });
-    }
-
-    string personaKey = request.Persona?.Trim().ToLowerInvariant() ?? string.Empty;
-    if (!personaCatalog.Any(p => p.Key == personaKey))
-    {
-        return Results.BadRequest(new
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        if (model is null) builder.Services.AddLlmChatClient(builder.Configuration);
+        else builder.Services.AddSingleton(model);
+        foreach (Persona p in Personas)
         {
-            error = $"Unknown persona '{request.Persona}'. See GET /personas for the available personas."
+            builder.Services.AddKeyedSingleton(p.Key, (sp, _) =>
+                new ChatClientAgent(sp.GetRequiredService<IChatClient>(), instructions: p.Instructions, name: p.Name));
+        }
+        configure?.Invoke(builder);
+
+        WebApplication app = builder.Build();
+        app.MapGet("/personas", () => Personas.Select(p => new { persona = p.Key, name = p.Name }));
+        app.MapPost("/chat", async (PersonaRequest request, IServiceProvider sp, CancellationToken aborted) =>
+        {
+            if (Check(request.Persona, request.Message, sp, out ChatClientAgent? agent) is { } problem) return problem;
+            RunOutcome outcome = await AgentRuns.RunAsync(
+                () => agent!.RunAsync(request.Message!, cancellationToken: aborted), aborted);
+            return outcome.Status is RunStatus.Completed or RunStatus.Truncated
+                ? Results.Ok(new PersonaReply(request.Persona!, agent!.Name!, outcome.Text, Wire(outcome.Status)))
+                : outcome.Status == RunStatus.Cancelled ? Results.StatusCode(499)
+                : Results.Problem($"The model call failed ({outcome.Error?.GetType().Name}).",
+                    statusCode: StatusCodes.Status502BadGateway, title: "provider_error");
         });
+        app.MapGet("/chat/stream", (string? persona, string? message, IServiceProvider sp, HttpContext http) =>
+            Check(persona, message, sp, out ChatClientAgent? agent) is { } problem
+                ? problem
+                : TypedResults.ServerSentEvents(Events(agent!, message!, http.RequestAborted)));
+        return app;
     }
 
-    // Dynamic keyed resolution — the runtime equivalent of
-    // [FromKeyedServices("<persona>")] for a key only known per request.
-    ChatClientAgent agent = services.GetRequiredKeyedService<ChatClientAgent>(personaKey);
-
-    AgentSession session = await agent.CreateSessionAsync(cancellationToken);
-
-    AgentResponse response = await agent.RunAsync(
-        request.Message,
-        session,
-        cancellationToken: cancellationToken);
-
-    return Results.Ok(new ChatResponseDto(
-        Persona: personaKey,
-        Agent: agent.Name ?? personaKey,
-        Message: response.Text ?? string.Empty,
-        InputTokens: (int?)response.Usage?.InputTokenCount,
-        OutputTokens: (int?)response.Usage?.OutputTokenCount));
-})
-.WithName("Chat")
-.WithDescription("Chat with the persona named in the request body (pirate, navigator, helper).");
-
-// ---------------------------------------------------------------
-// GET /personas — the available personas and their descriptions
-// ---------------------------------------------------------------
-app.MapGet("/personas", () => Results.Ok(
-    personaCatalog.Select(p => new PersonaDto(p.Key, p.Name, p.Description))))
-.WithName("ListPersonas")
-.WithDescription("Lists the available personas with their descriptions.");
-
-// ---------------------------------------------------------------
-// GET / — usage instructions
-// ---------------------------------------------------------------
-app.MapGet("/", () => Results.Ok(new
-{
-    service = "Multi-Persona Agent API",
-    endpoints = new
+    /// <summary>Validation and routing, both before any model call.</summary>
+    private static IResult? Check(string? persona, string? message, IServiceProvider sp, out ChatClientAgent? agent)
     {
-        chat = "POST /chat with JSON body { \"persona\": \"pirate|navigator|helper\", \"message\": \"your question\" }",
-        personas = "GET /personas"
+        agent = persona is null ? null : sp.GetKeyedService<ChatClientAgent>(persona);
+        if (agent is null)
+            return Results.Problem($"Unknown persona '{persona}'.", statusCode: StatusCodes.Status404NotFound, title: "unknown_persona");
+        if (string.IsNullOrWhiteSpace(message))
+            return Results.Problem("A message is required.", statusCode: StatusCodes.Status400BadRequest, title: "validation_error");
+        return null;
     }
-}));
 
-Console.WriteLine("=== Exercise: Multi-Persona API ===");
-Console.WriteLine("Endpoints: POST /chat (persona field in body), GET /personas");
-
-app.Run();
-
-// ---------------------------------------------------------------
-// Provider factory
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Creates an <see cref="IChatClient"/> from configuration.
-/// </summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-
-    return provider switch
+    private static async IAsyncEnumerable<SseItem<string>> Events(
+        ChatClientAgent agent, string message, [EnumeratorCancellation] CancellationToken aborted)
     {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
+        RunTracker tracker = new(aborted);
+        await using (IAsyncEnumerator<AgentResponseUpdate> updates =
+                     agent.RunStreamingAsync(message, cancellationToken: aborted).GetAsyncEnumerator())
+        {
+            while (await tracker.NextAsync(updates) is { } update)
+            {
+                if (update.Text is { Length: > 0 } text) yield return new SseItem<string>(text, "delta");
+            }
+        }
+        yield return new SseItem<string>(JsonSerializer.Serialize(new { status = Wire(tracker.Outcome.Status) }), "done");
+    }
 
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+    private static string Wire(RunStatus status) => status.ToString().ToLowerInvariant();
 }
 
-// ---------------------------------------------------------------
-// Request/Response records
-// ---------------------------------------------------------------
+internal static class SelfTest
+{
+    public static async Task<int> RunAsync()
+    {
+        Console.WriteLine("=== Multi-Persona API (self-test) ===");
+        int passed = 0, total = 0;
+        void Expect(string name, bool ok) { total++; if (ok) passed++; Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}"); }
 
-/// <summary>
-/// Incoming chat request.
-/// </summary>
-/// <param name="Persona">The persona to answer as: "pirate", "navigator", or "helper".</param>
-/// <param name="Message">The user message.</param>
-record ChatRequest(string Persona, string Message);
+        FakeChatClient model = new();
+        await using WebApplication app = Api.Build([], model,
+            b => { b.WebHost.UseUrls("http://127.0.0.1:0"); b.Logging.ClearProviders(); });
+        await app.StartAsync();
+        using HttpClient http = new()
+        {
+            BaseAddress = new Uri(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First()),
+        };
 
-/// <summary>
-/// Outgoing chat reply.
-/// </summary>
-/// <param name="Persona">The persona key that handled the request.</param>
-/// <param name="Agent">The name of the agent that responded.</param>
-/// <param name="Message">The agent's response text.</param>
-/// <param name="InputTokens">Number of input tokens consumed, if available.</param>
-/// <param name="OutputTokens">Number of output tokens generated, if available.</param>
-record ChatResponseDto(
-    string Persona,
-    string Agent,
-    string Message,
-    int? InputTokens,
-    int? OutputTokens);
+        HttpResponseMessage r = await http.PostAsJsonAsync("/chat", new PersonaRequest("wizard", "Hi"));
+        Expect("an unknown persona is 404 unknown_persona and no model call",
+            r.StatusCode == HttpStatusCode.NotFound && await Title(r) == "unknown_persona" && model.Calls.Count == 0);
+        r = await http.PostAsJsonAsync("/chat", new PersonaRequest("pirate", " "));
+        Expect("an empty message is 400 validation_error and no model call",
+            r.StatusCode == HttpStatusCode.BadRequest && await Title(r) == "validation_error" && model.Calls.Count == 0);
 
-/// <summary>
-/// A persona listing entry.
-/// </summary>
-/// <param name="Persona">The persona key to send in the /chat request body.</param>
-/// <param name="Name">The agent's name.</param>
-/// <param name="Description">What this persona is for.</param>
-record PersonaDto(string Persona, string Name, string Description);
+        model.Then(FakeReply.Text("Arrr, a function that calls itself."));
+        r = await http.PostAsJsonAsync("/chat", new PersonaRequest("auditor", "What is recursion?"));
+        PersonaReply? reply = await r.Content.ReadFromJsonAsync<PersonaReply>();
+        Expect("the request's persona picks the agent whose instructions reach the model",
+            reply is { Agent: "StrictAuditor", Status: "completed" }
+            && model.Calls[^1].Options?.Instructions == Api.Personas[1].Instructions);
+
+        model.Then(FakeReply.Throw(new HttpRequestException("model server returned 503")));
+        r = await http.PostAsJsonAsync("/chat", new PersonaRequest("pirate", "What is recursion?"));
+        Expect("a provider error is 502 provider_error, distinct from the 400",
+            r.StatusCode == HttpStatusCode.BadGateway && await Title(r) == "provider_error");
+
+        model.Then(FakeReply.Stream(ChatFinishReason.Stop, "Arrr, ", "recursion."),
+                   FakeReply.Throw(new HttpRequestException("connection reset"), "Arrr, "));
+        string ok = await http.GetStringAsync("/chat/stream?persona=pirate&message=recursion");
+        string broken = await http.GetStringAsync("/chat/stream?persona=pirate&message=recursion");
+        Console.WriteLine($"   last lines: {Last(ok)} / {Last(broken)}");
+        Expect("the stream ends with done/completed", Last(ok) == """data: {"status":"completed"}""");
+        Expect("a failed stream still ends with done/failed", Last(broken) == """data: {"status":"failed"}""");
+        r = await http.GetAsync("/chat/stream?persona=wizard&message=hi");
+        Expect("an unknown persona on the stream route is 404 before any event", r.StatusCode == HttpStatusCode.NotFound);
+
+        await app.StopAsync();
+        Console.WriteLine($"\nRESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
+    }
+
+    private static async Task<string?> Title(HttpResponseMessage r) =>
+        JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.TryGetProperty("title", out JsonElement t)
+            ? t.GetString() : null;
+
+    private static string Last(string sse) => sse.Split('\n', StringSplitOptions.RemoveEmptyEntries)[^1].TrimEnd('\r');
+}

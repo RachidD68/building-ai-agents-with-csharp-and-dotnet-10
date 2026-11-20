@@ -1,28 +1,21 @@
-# Ch04.MinimalApiAgent — Agent as a Web API
+# Ch04.MinimalApiAgent
 
-Exposes the pirate agent as an HTTP service using ASP.NET Core Minimal APIs.
+The policy agent behind two single-turn HTTP endpoints.
 
-## What You'll Learn
+| Route | Reply |
+|---|---|
+| `POST /chat` `{ "message": "..." }` | 200 `{ agent, message, status, singleTurn }` with status `completed` or `truncated`; 400 `validation_error`; 502 `provider_error`; 504 `time_budget` |
+| `GET /chat/stream?message=...` | server-sent events: `delta` events, then one `done` event `{ status, reason }` |
+| `GET /` | a description of the routes |
 
-- Running agents inside ASP.NET Core
-- Non-streaming JSON endpoint (`POST /chat`)
-- Streaming Server-Sent Events endpoint (`GET /chat/stream`)
-- Registering the agent as a singleton (state lives in the per-request session)
-- Foreshadows keyed-DI multi-persona routing (Challenge exercise `Ex03.MultiPersonaApi`)
-
-## Setup
-
-```bash
-cd src/Ch04.FirstAgent/Ch04.MinimalApiAgent
-dotnet user-secrets set "LlmProvider:Provider" "openai"
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
-```
-
-## Run
+- Single-turn: every request runs with no session, so no request sees another's history.
+- Budgets (`AgentApiLimits`): message length (2000 characters), output tokens (400), time (60 s). A message over the size budget is refused before any model call.
+- One retry owner: the endpoints do not retry; the HTTP resilience handler that `AddLlmChatClient` installs does, and the SDK's own retries are 0.
+- A client that disconnects mid-stream cancels the run; the server logs it as `Cancelled`.
 
 ```bash
-dotnet run
-# Then in another terminal:
-curl -X POST http://localhost:5000/chat -H "Content-Type: application/json" -d '{"message":"What is LINQ?"}'
-curl "http://localhost:5000/chat/stream?message=What+is+LINQ"
+dotnet run --project src/Ch04.FirstAgent/Ch04.MinimalApiAgent                  # Ollama llama3.2
+dotnet run --project src/Ch04.FirstAgent/Ch04.MinimalApiAgent -- --self-test   # fake model, loopback only
 ```
+
+The self-test starts the real app on a loopback port with `FakeChatClient` in place of the provider, so it needs no model and no outside network.

@@ -14,6 +14,7 @@
   </Folder>
   <Folder Name="/src/Ch04.FirstAgent/">
     <Project Path="src/Ch04.FirstAgent/Ch04.BasicAgent/Ch04.BasicAgent.csproj" />
+    <Project Path="src/Ch04.FirstAgent/Ch04.AgentTests/Ch04.AgentTests.csproj" />
     <Project Path="src/Ch04.FirstAgent/Ch04.MinimalApiAgent/Ch04.MinimalApiAgent.csproj" />
     <Project Path="src/Ch04.FirstAgent/Ch04.StreamingAgent/Ch04.StreamingAgent.csproj" />
   </Folder>
@@ -129,6 +130,7 @@
     <Project Path="src/Common/AgenticAI.Common.Azure/AgenticAI.Common.Azure.csproj" />
     <Project Path="src/Common/AgenticAI.Common.Foundry/AgenticAI.Common.Foundry.csproj" />
     <Project Path="src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <Project Path="src/Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
   </Folder>
   <Folder Name="/exercises/" />
   <Folder Name="/exercises/Ch02.Exercises/">
@@ -215,6 +217,9 @@
     <Project Path="exercises/AppA.Exercises/Ex04.JsonRoundTrip/Ex04.JsonRoundTrip.csproj" />
   </Folder>
   <Folder Name="/contoso/" />
+  <Folder Name="/contoso/v0-agent-fake-model/">
+    <Project Path="contoso/v0-agent-fake-model/Contoso.AgentFakeModel.csproj" />
+  </Folder>
   <Folder Name="/contoso/v1-owned-conversation/">
     <Project Path="contoso/v1-owned-conversation/Contoso.OwnedConversation.csproj" />
   </Folder>

@@ -1,27 +1,13 @@
-# Ch04.BasicAgent — Hello, Agent!
+# Ch04.BasicAgent
 
-Your first agent built with the Microsoft Agent Framework (MAF). Demonstrates creating a `ChatClientAgent` with a pirate persona, sending a message, and getting a complete response.
+Contoso's expense-policy assistant as a first `ChatClientAgent`: it answers questions and takes no action.
 
-## What You'll Learn
-
-- Creating agents with `ChatClientAgent` (constructor and options patterns)
-- Using the `IChatClient.AsAIAgent()` extension method
-- System prompts (instructions) and persona design
-- Stateless one-shot calls — `RunAsync()` with no session (the agent is stateless by default)
-- Overriding chat options per call with `ChatClientAgentRunOptions` (same agent, two temperatures)
-- Handling real provider failures (`ClientResultException`: 429, content filter, transient 5xx), not just cancellation
-- Non-streaming agent responses via `RunAsync()`
-
-## Setup
+- `ContosoPolicy.cs`: the agent and its instructions. The other first-agent projects, the tests and the Contoso v0 snapshot compile this file in as it is.
+- `Program.cs`: the three ways to build the agent (constructor with instructions, `ChatClientAgentOptions` with pinned `ChatOptions`, the `AsAIAgent` extension), a run with no session, a run with a session, and `ChatClientAgentRunOptions` overriding the options for one call (a 12-token ceiling, so the finish reason shows `length`).
+- Provider failures are caught by type (`HttpRequestException` for Ollama and other HTTP providers, `ClientResultException` for the OpenAI-compatible SDKs); Ctrl+C cancels the token that reaches the provider call.
 
 ```bash
-cd src/Ch04.FirstAgent/Ch04.BasicAgent
-dotnet user-secrets set "LlmProvider:Provider" "openai"
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "<your-token>"
+dotnet run --project src/Ch04.FirstAgent/Ch04.BasicAgent     # Ollama llama3.2 by default
 ```
 
-## Run
-
-```bash
-dotnet run
-```
+The offline proof is `Ch04.AgentTests`.

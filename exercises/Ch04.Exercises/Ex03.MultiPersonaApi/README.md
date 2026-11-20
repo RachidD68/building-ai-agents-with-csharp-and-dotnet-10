@@ -1,28 +1,30 @@
-# Exercise 03 — Multi-Persona API (Challenge)
+# Exercise 03: Multi-Persona API (Challenge)
 
 ## Prompt
 
-Extend `Ch04.MinimalApiAgent` so the `/chat` endpoint accepts a **persona field in the request body** ("pirate", "navigator", "helper"). Resolve a different `ChatClientAgent` per persona using keyed DI (`[FromKeyedServices]`). Add a `/personas` endpoint that returns the list of available personas **and their descriptions**.
+Expose several agents behind one API. Register each persona's agent as a keyed service; the request names the persona.
+
+```
+POST /chat          { "persona": "pirate", "message": "What is recursion?" }
+GET  /chat/stream   ?persona=pirate&message=...
+GET  /personas
+```
+
+## Acceptance
+
+- An unknown persona returns 404 (`unknown_persona`) with no model call.
+- A validation error (400, `validation_error`) is distinct from a provider error (502, `provider_error`).
+- The stream ends with an explicit `done` event carrying the terminal status.
+- An offline test covers all three.
 
 ## Hints
 
-- `builder.Services.AddKeyedSingleton<ChatClientAgent>("pirate", (sp, _) => ...)` registers a keyed agent.
-- In the endpoint, inject `[FromKeyedServices("pirate")] ChatClientAgent pirate` — or for dynamic selection, inject `IServiceProvider` and call `sp.GetRequiredKeyedService<ChatClientAgent>(key)`.
-- The persona arrives per request, so this solution uses the dynamic route.
+- `AddKeyedSingleton(key, (sp, _) => new ChatClientAgent(...))` and `GetKeyedService<ChatClientAgent>(key)` for the dynamic choice.
+- `TypedResults.ServerSentEvents` with `SseItem<string>`; `RunTracker` (from `Ch04.StreamingAgent`) tells you how the run ended.
 
-## Expected Outcome
+## Running
 
 ```bash
-curl -X POST http://localhost:5000/chat -H "Content-Type: application/json" \
-  -d '{"persona":"pirate","message":"What is recursion?"}'
-# {"persona":"pirate","agent":"CaptainCodeBeard","message":"Arrr, recursion be a function callin' itself..."}
-
-curl http://localhost:5000/personas
-# [{"persona":"pirate","name":"CaptainCodeBeard","description":"A pirate-themed AI assistant..."}, ...]
+dotnet run --project exercises/Ch04.Exercises/Ex03.MultiPersonaApi
+dotnet run --project exercises/Ch04.Exercises/Ex03.MultiPersonaApi -- --self-test
 ```
-
-## Key Concepts
-
-- Keyed DI services (`AddKeyedSingleton`, `GetRequiredKeyedService`)
-- One endpoint, many agents — persona selected by the request body
-- Discoverability via a `/personas` endpoint with descriptions

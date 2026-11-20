@@ -1,117 +1,85 @@
 // ============================================================================
-// Exercise 01 — Persona Switcher (Basic)
-// Type a persona description (e.g., "sarcastic support engineer") followed by
-// a question. A FRESH ChatClientAgent is spun up with those instructions for
-// each question — the IChatClient is reused across calls; only the agent
-// changes. FULLY STANDALONE.
+// Exercise 01: Persona Switcher (Basic)
+// ----------------------------------------------------------------------------
+// Type a persona, then a question. Each question gets a fresh ChatClientAgent
+// with that persona as its instructions; the IChatClient is shared, nothing
+// else is. The persona text goes into the instructions verbatim, which is an
+// injection vector: fine here, the security chapter treats it.
 //
-// Note: the instructions constructor accepts any string, so the user's text
-// goes into the system prompt verbatim. That is an injection vector — fine
-// for this exercise; the security chapter shows how to sanitize.
+//   dotnet run                    against the configured model (Ollama llama3.2)
+//   dotnet run -- --self-test     a fake IChatClient, no network; RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
+using AgenticAI.Testing;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+if (args.Contains("--self-test")) return await SelfTest();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-
-// One IChatClient for the whole run — reused by every agent we create below.
-IChatClient chatClient = CreateChatClient(config);
-
-Console.WriteLine("=== Exercise: Persona Switcher ===\n");
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-Console.WriteLine("Describe a persona, then ask it a question.");
-Console.WriteLine("A fresh agent is created with your persona for every question.");
-Console.WriteLine("Example persona: sarcastic support engineer");
-Console.WriteLine("Leave the persona blank (or type 'quit') to exit.\n");
-
-while (!cts.Token.IsCancellationRequested)
+Console.WriteLine("=== Persona Switcher ===");
+Console.WriteLine("Describe a persona, then ask a question. An empty persona or 'quit' exits.\n");
+while (!cts.IsCancellationRequested)
 {
     Console.Write("Persona: ");
     string? persona = Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrEmpty(persona) ||
-        persona.Equals("quit", StringComparison.OrdinalIgnoreCase))
-    {
-        break;
-    }
-
+    if (string.IsNullOrEmpty(persona) || persona.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
     Console.Write("Question: ");
     string? question = Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrEmpty(question))
-    {
-        Console.WriteLine("  (No question — try again.)\n");
-        continue;
-    }
-
-    // A fresh agent per question: same chat client, new instructions.
-    // The persona description the user typed IS the system prompt.
-    ChatClientAgent agent = new(
-        chatClient,
-        instructions: persona,
-        name: "PersonaAgent",
-        description: $"An agent acting as: {persona}");
+    if (string.IsNullOrEmpty(question)) continue;
 
     try
     {
-        // Single-turn call — no session needed; MAF creates a throwaway
-        // session internally just for this run.
-        AgentResponse response = await agent.RunAsync(
-            question,
-            cancellationToken: cts.Token);
-
-        Console.WriteLine($"\n[{persona}]: {response.Text}\n");
+        AgentResponse reply = await Personas.For(chatClient, persona).RunAsync(question, cancellationToken: cts.Token);
+        Console.WriteLine($"[{persona}]: {reply.Text.Trim()}\n");
     }
-    catch (OperationCanceledException)
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
     {
-        Console.WriteLine("\n[Cancelled]");
-        break;
+        Console.WriteLine("[cancelled]");
     }
 }
+return 0;
 
-Console.WriteLine("=== Exercise complete! ===");
-
-// ---------------------------------------------------------------
-// Provider factory
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Creates an <see cref="IChatClient"/> from User Secrets configuration.
-/// </summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
+static async Task<int> SelfTest()
 {
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
+    Console.WriteLine("=== Persona Switcher (self-test) ===");
+    int passed = 0, total = 0;
+    void Expect(string name, bool ok) { total++; if (ok) passed++; Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}"); }
 
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing AzureOpenAI:Endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
+    FakeChatClient model = new(FakeReply.Text("a"), FakeReply.Text("b"), FakeReply.Text("c"));
+    ChatClientAgent pirate = Personas.For(model, "pirate");
+    ChatClientAgent auditor = Personas.For(model, "strict auditor");
+    await pirate.RunAsync("What is recursion?");
+    await auditor.RunAsync("What is recursion?");
+    await pirate.RunAsync("And iteration?");
 
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing OpenAI:ApiKey"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
+    string?[] sent = [.. model.Calls.Select(c => c.Options?.Instructions)];
+    Console.WriteLine($"   instructions sent: {string.Join(" | ", sent.Select(s => s?.Split('.')[0]))}");
+    Expect("each call sends its own agent's persona", sent[0]!.Contains("pirate") && sent[1]!.Contains("strict auditor"));
+    Expect("creating a second agent does not change the first", sent[2] == sent[0]);
+    Expect("one shared client, two separate agents", model.Calls.Count == 3 && !ReferenceEquals(pirate, auditor));
+    Expect("no history is shared: each call sends one user message",
+        model.Calls.All(c => c.Messages.Count(m => m.Role == ChatRole.User) == 1));
 
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
+}
 
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+internal static class Personas
+{
+    /// <summary>A fresh agent for one persona. The client is shared; the agent holds no state of its own.</summary>
+    public static ChatClientAgent For(IChatClient chatClient, string persona) =>
+        new(chatClient,
+            instructions: $"You are a {persona}. Stay in that persona. Answer in at most three sentences.",
+            name: "Persona");
 }

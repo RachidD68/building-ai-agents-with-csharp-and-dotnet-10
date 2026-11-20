@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test doubles for IChatClient: a scripted fake that never touches the
+       network, and a recorder that wraps a real client. GA packages only.
+       The self-tests reference it; the samples' own logic never does. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+  </ItemGroup>
+
+</Project>

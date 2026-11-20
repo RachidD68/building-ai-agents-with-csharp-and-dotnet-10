@@ -1,26 +1,22 @@
-# Exercise 01 — Persona Switcher (Basic)
+# Exercise 01: Persona Switcher (Basic)
 
 ## Prompt
 
-Build a console app that lets the user type a persona description (e.g., "sarcastic support engineer") followed by a question, and spins up a **fresh `ChatClientAgent`** with those instructions for each question. Reuse the `IChatClient` across calls; only the agent changes.
+Build a console app that reads a persona description and a question, and answers each question with a fresh `ChatClientAgent` whose instructions are that persona. Reuse the `IChatClient`; only the agent changes.
+
+## Acceptance
+
+- A fake-client test asserts which instructions reached the model for each call.
+- Switching persona creates no shared mutable state: building a second agent does not change what the first one sends, and no history passes between calls.
 
 ## Hints
 
-- The instructions constructor accepts any string — the typed persona description goes into the system prompt verbatim.
-- Users providing their own prompts introduces an injection vector — for this exercise don't worry about it, but the security chapter shows how to sanitize.
-- A single question needs no session: omit it and MAF creates a throwaway session for the call.
+- The instructions go into `ChatOptions.Instructions` of each model call; `FakeChatClient.Calls` shows them.
+- The persona text goes into the instructions verbatim. That is an injection vector; the security chapter treats it.
 
-## Expected Outcome
+## Running
 
+```bash
+dotnet run --project exercises/Ch04.Exercises/Ex01.PersonaSwitcher
+dotnet run --project exercises/Ch04.Exercises/Ex01.PersonaSwitcher -- --self-test
 ```
-Persona: sarcastic support engineer
-Question: Why is my build failing?
-
-[sarcastic support engineer]: Oh, the build is failing? Groundbreaking. Have you tried reading the error message...
-```
-
-## Key Concepts
-
-- One `IChatClient`, many agents — agents are cheap; connections are not
-- Persona via the instructions constructor
-- Session-less single-turn `RunAsync`

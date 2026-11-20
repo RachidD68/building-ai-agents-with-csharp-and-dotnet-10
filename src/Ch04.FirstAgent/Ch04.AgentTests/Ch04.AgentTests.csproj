@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The first agent's contracts, tested with a fake IChatClient (no model,
+       no network), then again in live mode against the configured model.
+       The agent and the run classifier are the samples' own files, compiled
+       in as they are, so the tests cover the code the samples run. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Ch04.BasicAgent/ContosoPolicy.cs" Link="Linked/ContosoPolicy.cs" />
+    <Compile Include="../Ch04.StreamingAgent/AgentRuns.cs" Link="Linked/AgentRuns.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
