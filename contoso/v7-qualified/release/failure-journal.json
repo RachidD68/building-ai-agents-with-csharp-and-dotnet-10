@@ -1,0 +1,77 @@
+{
+  "entries": [
+    {
+      "id": "FJ-01",
+      "layer": "real-provider",
+      "row": "F7",
+      "finding": "evidence-live crashed while scoring a live answer: IndexOutOfRangeException in the source-generated DayPattern regex of Ch21.EvidenceEval's scorer. The step counted 0 cases and was refused.",
+      "disposition": "deferred",
+      "reason": "Reproduced offline: EvidenceScorer.DayCounts(\"rather than . s\") throws with the source-generated regex and with RegexOptions.Compiled; the interpreted Regex returns no match. The fix belongs to the evaluation chapter's scorer. This candidate makes no live claim on F7, F8, F9 or C8."
+    },
+    {
+      "id": "FJ-02",
+      "layer": "real-provider",
+      "row": "F8",
+      "finding": "Not measured: the evidence-live step was refused (FJ-01).",
+      "disposition": "deferred",
+      "reason": "Rerun the real-provider layer on a new candidate once FJ-01 is fixed."
+    },
+    {
+      "id": "FJ-03",
+      "layer": "real-provider",
+      "row": "F9",
+      "finding": "Not measured: the evidence-live step was refused (FJ-01).",
+      "disposition": "deferred",
+      "reason": "Rerun the real-provider layer on a new candidate once FJ-01 is fixed."
+    },
+    {
+      "id": "FJ-04",
+      "layer": "real-provider",
+      "row": "C8",
+      "finding": "Not measured: the evidence-live step was refused (FJ-01), so no live run shows that the model calls no forbidden action tool.",
+      "disposition": "capability-disabled",
+      "reason": "claims.decide ships disabled; the agent proposes no action through this release's API."
+    },
+    {
+      "id": "FJ-05",
+      "layer": "real-provider",
+      "row": "F10",
+      "finding": "Not run: no Azure OpenAI endpoint is configured on the qualification machine.",
+      "disposition": "known-limitation",
+      "reason": "The cloud path is compiled and declared in the manifest; it is not qualified."
+    },
+    {
+      "id": "FJ-06",
+      "layer": "real-provider",
+      "row": "F6",
+      "finding": "F6 passed, but its tally counts only the handbook desk's verdict lines. The PolicyFaq live section prints answers with no 'as expected' or 'differs' line, so none of its scenarios was selected, and the promise ('every FAQ scenario') is wider than the cases counted. A verdict line checks outcome and citation, not that the answer is right.",
+      "disposition": "known-limitation",
+      "reason": "The next candidate narrows the promise or gives the PolicyFaq live run verdict lines; until then F6 covers the three handbook-desk scenarios only."
+    },
+    {
+      "id": "FJ-07",
+      "layer": "integration",
+      "row": "C6",
+      "finding": "Approvals lead to payments, and the only payment provider is simulated.",
+      "disposition": "capability-disabled",
+      "reason": "claims.decide ships disabled in the release profile (capabilities.json); C6 shows its routes refused with that reason."
+    },
+    {
+      "id": "FJ-08",
+      "layer": "human",
+      "row": "H1",
+      "finding": "The handoff drill has been run as a script by the people who built it, not by an engineer who did not.",
+      "disposition": "deferred",
+      "reason": "Human acceptance is kept apart from the campaign; the gaps such an engineer hits go into this journal."
+    }
+  ],
+  "decision": {
+    "decision": "not taken: the evidence is ready for review",
+    "acceptance": "pending: human acceptance is recorded apart from this campaign (rows H1 and H2)",
+    "conditions": [
+      "Ship the release profile only: claims.decide disabled, simulated payments.",
+      "No live quality claim on F7, F8, F9 or C8 until FJ-01 is fixed and the real-provider layer is rerun on a new candidate.",
+      "The Azure OpenAI path stays unqualified (FJ-05)."
+    ]
+  }
+}
