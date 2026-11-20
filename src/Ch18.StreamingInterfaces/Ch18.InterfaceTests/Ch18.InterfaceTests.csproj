@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The interface chapter's proof across its four projects: the AG-UI host
+       (Ch18.AguiServer) in process with its status stream and review routes,
+       the console client's views (Ch18.AguiClient, Ch18.SseStatusStream), and
+       the approval desk (Ch18.ApprovalUi). A console harness (RESULT n/n),
+       offline: fake model, minted tokens. AG-UI packages are 1.5.0-preview
+       (see Ch18.AguiServer). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);MAAI001;MEAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Ch18.AguiClient/Ch18.AguiClient.csproj" />
+  </ItemGroup>
+
+</Project>

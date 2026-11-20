@@ -52,10 +52,10 @@ public static class ClaimsApi
         return app;
     }
 
-    private sealed record Context(DurableClaims Durable, ReimbursementDesk Desk, Caller Caller, SessionRow Session);
+    public sealed record Context(DurableClaims Durable, ReimbursementDesk Desk, Caller Caller, SessionRow Session);
 
     // Authorized load: the claim is found only for a caller who may see it.
-    private static Context? Open(HttpContext http, string appDb, string journal, string id)
+    internal static Context? Open(HttpContext http, string appDb, string journal, string id)
     {
         if (CallerIdentity.From(http.User) is not { } who || !Guid.TryParse(id, out Guid op)) return null;
         DurableClaims durable = new(appDb);

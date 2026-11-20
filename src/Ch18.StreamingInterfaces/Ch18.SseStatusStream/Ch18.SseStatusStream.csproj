@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The interface chapter's GA path: the operation's state, the response's
+       text and tool status as separate, typed Server-Sent Events, with a resume
+       cursor, a versioned snapshot and a bounded queue per client.
+       TypedResults.ServerSentEvents and SseItem<T> are in .NET 10 itself; no
+       preview package. Contoso v6 and the other ch18 projects reference this
+       one for the contract (OperationLog, StatusEvent, StatusView). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+</Project>

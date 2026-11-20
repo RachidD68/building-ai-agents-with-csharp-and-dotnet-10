@@ -247,6 +247,15 @@
           "SQLitePCLRaw.bundle_e_sqlite3": "[2.1.13, )"
         }
       },
+      "ch18.ssestatusstream": {
+        "type": "Project",
+        "dependencies": {
+          "AgenticAI.Common": "[1.0.0, )",
+          "Microsoft.Agents.AI": "[1.28.0, )",
+          "Microsoft.AspNetCore.TestHost": "[10.0.13, )",
+          "Microsoft.Extensions.AI": "[10.11.0, )"
+        }
+      },
       "contoso.authorizedreimbursement": {
         "type": "Project",
         "dependencies": {

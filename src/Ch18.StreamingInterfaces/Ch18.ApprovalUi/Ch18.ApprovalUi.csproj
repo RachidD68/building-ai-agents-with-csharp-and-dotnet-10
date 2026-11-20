@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The reviewer's side of an approval: the POST names a proposal and the
+       version and digest the reviewer saw; the server loads the proposal
+       itself and checks ownership, role (loaded fresh), separation of duties,
+       version, digest and expiry. A repeat is idempotent; reject and revise
+       are different decisions. The commit is the authorized-actions chapter's
+       policy and idempotent commit, referenced as they are. GA only. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ReimbursementPolicy (digest, ApprovalRecord, Evaluate) and OperationStore (commit once). -->
+    <ProjectReference Include="../../Ch08.AuthorizedActions/Ch08.IdempotentCommit/Ch08.IdempotentCommit.csproj" />
+  </ItemGroup>
+
+</Project>

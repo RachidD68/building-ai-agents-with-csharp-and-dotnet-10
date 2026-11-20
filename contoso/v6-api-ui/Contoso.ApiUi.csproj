@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Contoso snapshot v6, "API and interface". This chapter adds the API half:
-       v5's durable claims behind the hosting chapter's composition (validated
-       (tid, sub) identity key, owned conversations, per-caller quota, one retry
-       owner). The next chapter adds the interface to this same project.
+  <!-- Contoso snapshot v6, "API and interface". The hosting chapter adds the API
+       half: v5's durable claims behind its composition (validated (tid, sub)
+       identity key, owned conversations, per-caller quota, one retry owner).
+       The interface chapter adds the interface half: the claim's operation
+       state as typed, resumable SSE (Ch18.SseStatusStream, GA) and a review
+       and approval bound to the exact arguments (ch. 8's digest).
        Microsoft.Agents.AI.Hosting is a preview package (via Ch17.AspNetCoreHost);
-       TestHost is used by the self-test only. Simulated effects only. -->
+       AG-UI is not mapped here (its only cached build needs Hosting 1.5, see
+       Ch18.AguiServer). TestHost is used by the self-test only. Simulated
+       effects only. -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);MAAI001</NoWarn>
   </PropertyGroup>
@@ -19,6 +23,8 @@
     <ProjectReference Include="../v5-durable-resume/Contoso.DurableResume.csproj" />
     <!-- The hosting chapter's composition: AgentHost, CallerIdentity, the owned store. -->
     <ProjectReference Include="../../src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj" />
+    <!-- The interface chapter's status stream contract (OperationLog, StatusEvent, StatusView). -->
+    <ProjectReference Include="../../src/Ch18.StreamingInterfaces/Ch18.SseStatusStream/Ch18.SseStatusStream.csproj" />
   </ItemGroup>
 
 </Project>

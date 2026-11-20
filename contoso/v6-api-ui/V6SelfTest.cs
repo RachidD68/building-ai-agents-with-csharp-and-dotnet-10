@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ch17.AspNetCoreHost;
+using Ch18.SseStatusStream;
 using Contoso.DurableResume;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -15,7 +16,10 @@ namespace Contoso.ApiUi;
 /// <summary>
 /// --self-test: v5's prepare runs as a child process, the v6 API runs on a
 /// TestServer over the same store, then v5's resume runs as a child process
-/// and the API reports the result. Tokens minted here, fake model, offline.
+/// and the API reports the result (sections 1-4, the API half). Section 5
+/// does it again through the interface half: status events, the review
+/// screen, a bound approval, a resume while a client follows the stream.
+/// Tokens minted here, fake model, offline.
 /// </summary>
 internal static class V6SelfTest
 {
@@ -23,7 +27,7 @@ internal static class V6SelfTest
 
     public static async Task<int> RunAsync()
     {
-        Console.WriteLine("=== Contoso v6: the API over v5 (self-test, offline) ===\n");
+        Console.WriteLine("=== Contoso v6: the API and the interface over v5 (self-test, offline) ===\n");
         string store = Path.Combine(Path.GetTempPath(), $"contoso-v6-selftest-{Guid.NewGuid():N}");
         try
         {
@@ -72,6 +76,55 @@ internal static class V6SelfTest
                 Check($"one payment in the provider's journal: {DurableClaims.JournalReferences(Path.Combine(store, "provider.db")).Count}",
                     DurableClaims.JournalReferences(Path.Combine(store, "provider.db")).Count == 1);
             }
+
+            Console.WriteLine("\n-- 5. The interface half: a second claim's events, review and approval");
+            (int prep2, string prep2Out) = V5("prepare", "--store", store);
+            Guid op2 = new DurableClaims(Path.Combine(store, "app.db")).LoadSession("latest")!.OperationId;
+            Check("a second prepare: a new claim AwaitingReview", prep2 == 0 && op2 != op && prep2Out.Contains("Intake: AwaitingReview", StringComparison.Ordinal));
+            await using (WebApplication app = await StartAsync(store, key))
+            {
+                HttpClient http = app.GetTestClient();
+                string alice = Mint(key, "contoso", "E-1001"), bob = Mint(key, "contoso", "E-2002"), rita = Mint(key, "contoso", "rita");
+                string fabrikamAlice = Mint(key, "fabrikam", "E-1001");
+                StatusView view = new();
+                List<StatusEvent> first = await EventsAsync(http, alice, op2, 0, e => e.State == OperationState.AwaitingApproval);
+                first.ForEach(view.Apply);
+                Check($"alice's events: {string.Join(", ", first.Select(e => $"{e.Type} {e.State}"))}; not done",
+                    view.State == OperationState.AwaitingApproval && !view.ShowsDone);
+                int bobEvents = await CodeAsync(http, bob, $"/claims/{op2:D}/events");
+                int fabrikamEvents = await CodeAsync(http, fabrikamAlice, $"/claims/{op2:D}/events");
+                int anonymous = await CodeAsync(http, null, $"/claims/{op2:D}/snapshot");
+                Check($"bob's events for alice's claim: {bobEvents}; fabrikam/E-1001: {fabrikamEvents}; no token: {anonymous}",
+                    bobEvents == 404 && fabrikamEvents == 404 && anonymous == 401);
+                ClaimReview review = (await (await http.SendAsync(Auth(HttpMethod.Get, $"/claims/{op2:D}/review", rita))).Content.ReadFromJsonAsync<ClaimReview>())!;
+                int bobReview = await CodeAsync(http, bob, $"/claims/{op2:D}/review");
+                Check($"rita's review screen: {review.Amount} {review.Currency}, account version {review.AccountVersion}; bob's: {bobReview}",
+                    review.Amount > 0 && bobReview == 404);
+                Check("alice approves her own claim: 403 separation_of_duties",
+                    await ApproveAsync(http, alice, op2, review.AccountVersion, review.Digest, "approve") == "403 separation_of_duties");
+                Check("an older account version: 409 stale_version",
+                    await ApproveAsync(http, rita, op2, review.AccountVersion - 1, review.Digest, "approve") == "409 stale_version");
+                string digestOf12 = Ch08.ActionPolicy.ReimbursementPolicy.Digest("contoso", "E-1001",
+                    new Ch08.ActionPolicy.ReimbursementProposal(op2, "E-1001", 12m, review.Currency, review.AccountVersion));
+                Check("a digest of other arguments: 409 digest_mismatch",
+                    await ApproveAsync(http, rita, op2, review.AccountVersion, digestOf12, "approve") == "409 digest_mismatch");
+                Task<string> click1 = Task.Run(() => ApproveAsync(http, rita, op2, review.AccountVersion, review.Digest, "approve"));
+                Task<string> click2 = Task.Run(() => ApproveAsync(http, rita, op2, review.AccountVersion, review.Digest, "approve"));
+                string[] clicks = [await click1, await click2];
+                Check($"rita double-clicks approve (Task.Run): {clicks[0]} / {clicks[1]}",
+                    clicks.Count(c => c == "200 approved") == 1 && clicks.Count(c => c == "200 approved (replayed)") == 1);
+                long cursor = view.Cursor;
+                (await EventsAsync(http, alice, op2, cursor, e => e.State == OperationState.Running)).ForEach(view.Apply);
+                Check($"alice resumes from cursor {cursor}: {view.State} ({view.Reason}), not done", view.Reason == "approved_awaiting_payment" && !view.ShowsDone);
+                (int res2, string res2Out) = V5("resume", op2.ToString("D"), "--store", store);
+                (await EventsAsync(http, alice, op2, view.Cursor, e => OperationStates.IsTerminal(e.State))).ForEach(view.Apply);
+                Check($"v5 resume pays ({(res2Out.Contains("[DELIVERED]", StringComparison.Ordinal) ? "[DELIVERED]" : "not delivered")}); alice's stream: {view.State} ({view.Reason}), done {view.ShowsDone}",
+                    res2 == 0 && view.State == OperationState.Completed && view.ShowsDone);
+                string retry = await ApproveAsync(http, rita, op2, review.AccountVersion, review.Digest, "approve");
+                int payments = DurableClaims.JournalReferences(Path.Combine(store, "provider.db")).Count;
+                Check($"rita's lost response, retried after payment: {retry}; payments in the journal: {payments}",
+                    retry == "200 approved (replayed)" && payments == 2);
+            }
         }
         finally
         {
@@ -95,10 +148,11 @@ internal static class V6SelfTest
             ["Authentication:Schemes:Bearer:SigningKeys:0:Value"] = Convert.ToBase64String(key),
             ["Conversations:DatabasePath"] = Path.Combine(store, "conversations.db"),
         });
-        AgentHost.Configure(builder, new AgentHostOptions { ChatClient = new HistoryEchoChatClient(), ServiceDefaults = false });
+        AgentHost.Configure(builder, new AgentHostOptions { ChatClient = new HistoryEchoChatClient(), ServiceDefaults = false })
+            .Services.AddSingleton<ClaimFeed>().AddHostedService(sp => sp.GetRequiredService<ClaimFeed>());
         WebApplication app = builder.Build();
         AgentHost.Map(app);
-        ClaimsApi.Map(app, store);
+        InterfaceApi.Map(ClaimsApi.Map(app, store), store);
         await app.StartAsync();
         return app;
     }
@@ -158,6 +212,44 @@ internal static class V6SelfTest
             return (-1, "timed out");
         }
         return (p.ExitCode, stdout.Result + stderr.Result);
+    }
+
+    private static HttpRequestMessage Auth(HttpMethod method, string path, string? token)
+    {
+        HttpRequestMessage r = new(method, path);
+        if (token is not null) r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return r;
+    }
+
+    private static async Task<int> CodeAsync(HttpClient http, string? token, string path)
+    {
+        using HttpResponseMessage r = await http.SendAsync(Auth(HttpMethod.Get, path, token), HttpCompletionOption.ResponseHeadersRead);
+        return (int)r.StatusCode;
+    }
+
+    private static async Task<string> ApproveAsync(HttpClient http, string token, Guid op, long version, string digest, string decision)
+    {
+        using HttpRequestMessage r = Auth(HttpMethod.Post, $"/claims/{op:D}/approval", token);
+        r.Content = JsonContent.Create(new ApprovalRequest(version, digest, decision));
+        using HttpResponseMessage response = await http.SendAsync(r);
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return $"{(int)response.StatusCode} {doc.RootElement.GetProperty("result").GetString()}";
+    }
+
+    private static async Task<List<StatusEvent>> EventsAsync(HttpClient http, string token, Guid op, long after, Func<StatusEvent, bool> stop)
+    {
+        List<StatusEvent> got = [];
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        try
+        {
+            await foreach (StatusEvent e in StatusStreamClient.ReadAsync(http, $"/claims/{op:D}/events", after, token, cts.Token))
+            {
+                got.Add(e);
+                if (stop(e)) break;
+            }
+        }
+        catch (OperationCanceledException) { }
+        return got;
     }
 
     private static void Check(string name, bool ok)
