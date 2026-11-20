@@ -1,0 +1,12 @@
+[
+  {
+    "Name": "refund-escalation",
+    "Owner": "policy-desk",
+    "Version": "1.0.0",
+    "Origin": "skills/refund-escalation",
+    "Sha256": "a088211eacd410b54ec587ac92981cf8d802f48fc52793acb4def5531638d1c6",
+    "ApprovedBy": "policy-desk-lead",
+    "Withdrawn": false,
+    "WithdrawnReason": null
+  }
+]

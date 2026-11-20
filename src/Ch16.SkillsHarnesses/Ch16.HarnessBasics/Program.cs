@@ -1,43 +1,45 @@
 // ============================================================================
 // The Agent Harness: your first harness agent (MAF 1.28)
 // ----------------------------------------------------------------------------
-// Everything Part V built by hand -- a chat client wrapped in middleware, a
-// context provider for memory, tool approval, OpenTelemetry -- the harness
-// composes for you behind one call:
+// One call composes a chat client, function calling, tool approval, a to-do
+// list, plan/execute modes, file memory, skills discovery, hosted web search
+// and OpenTelemetry:
 //
 //     HarnessAgent agent = chatClient.AsHarnessAgent(options);
 //
-// The result is an ordinary AIAgent (HarnessAgent derives from
-// DelegatingAIAgent), so sessions, streaming and context providers work
-// exactly as they did in Chapters 5 and 6. What changes is what you get for
-// free: a to-do list the model maintains, plan/execute agent modes, file
-// memory, skills discovery, tool-approval policy and OpenTelemetry -- all on
-// by default, each one switched off by an explicit flag.
+// HarnessAgent derives from DelegatingAIAgent, so sessions and streaming work
+// as they do for any AIAgent. Every default has a Disable* switch, and this
+// project prints a capability report after the run: what a bare
+// HarnessAgentOptions switches on, what these options leave on, how many tools
+// of each kind the model was sent, and how many it called.
 //
-// This first project shows the smallest possible harness agent and prints
-// what the harness added, so the defaults are visible rather than magic.
+// Instructions: HarnessInstructions REPLACES HarnessAgent.DefaultInstructions
+// when you set it (null keeps the default); ChatOptions.Instructions follows.
+// The providers (to-do, modes, skills, memory) add their own text on top.
 //
-// NOTE ON PROVIDERS: the harness adds a HostedWebSearchTool by default, which
-// only cloud providers implement. Against Ollama we set DisableWebSearch so
-// the local run does not advertise a tool the backend cannot serve.
+//   dotnet run                  one live run against the configured provider
+//   dotnet run -- --self-test   offline checks with a scripted client
 // ============================================================================
 
+using AgenticAI.Common.Extensions;
+using AgenticAI.Testing;
+using Ch16.Harness;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
-// A harness agent sends a much larger tool schema than a plain chat call and
-// then loops, so the two-minute per-attempt envelope that suits the first-agent chapter is
-// too tight on local hardware. Widen it rather than let Polly cancel a call
-// that was going to succeed.
+// A harness request carries a large tool surface and then loops, so widen the
+// per-attempt timeout rather than let the retry policy cancel a slow local call.
 hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration,
     attemptTimeout: TimeSpan.FromMinutes(8));
 
 using IHost host = hostBuilder.Build();
-IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
+// The recorder changes nothing; it keeps what each call sent for the report.
+RecordingChatClient chatClient = new(host.Services.GetRequiredService<IChatClient>());
 
 string provider = hostBuilder.Configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
 bool isLocal = provider is "ollama";
@@ -48,51 +50,28 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 Console.WriteLine("=== The Agent Harness (basics) ===");
 Console.WriteLine();
 
-// ── The whole composition ─────────────────────────────────────────────
-// One call. HarnessAgentOptions is where you tune it; every default is
-// deliberate, and every default can be switched off.
 HarnessAgentOptions options = new()
 {
     Name = "ContosoHarness",
     Description = "A support assistant built on the MAF agent harness.",
-
-    // HarnessInstructions sit BETWEEN the harness's own DefaultInstructions
-    // and your ChatOptions.Instructions -- three layers, outermost first.
     HarnessInstructions =
         "You are working inside Contoso's support desk. Prefer short, concrete answers.",
-
     ChatOptions = new ChatOptions
     {
         Instructions = "Answer as a calm senior engineer. Never invent order numbers.",
     },
-
-    // Hosted web search is a cloud-only tool; Ollama cannot serve it.
+    // Hosted web search is on by default; a local Ollama model cannot serve it.
     DisableWebSearch = isLocal,
-
-    // File memory writes to {cwd}/agent-file-memory/... by default. The
-    // basics demo stays in memory so it leaves nothing behind on disk.
+    // File memory writes under {cwd}/agent-file-memory by default.
     DisableFileMemory = true,
 };
 
 HarnessAgent agent = chatClient.AsHarnessAgent(options);
-
-Console.WriteLine($"Agent      : {agent.Name}");
-Console.WriteLine($"Type       : {agent.GetType().Name} (derives from {agent.GetType().BaseType?.Name})");
-Console.WriteLine();
-Console.WriteLine("What the harness switched on for this run:");
-Console.WriteLine($"  to-do tracking      : {(options.DisableTodoProvider ? "off" : "ON  (TodoProvider)")}");
-Console.WriteLine($"  agent modes         : {(options.DisableAgentModeProvider ? "off" : "ON  (AgentModeProvider: plan / execute)")}");
-Console.WriteLine($"  agent skills        : {(options.DisableAgentSkillsProvider ? "off" : "ON  (discovered from the working directory)")}");
-Console.WriteLine($"  tool auto-approval  : {(options.DisableToolAutoApproval ? "off" : "ON  (ToolApprovalAgent wraps the agent)")}");
-Console.WriteLine($"  OpenTelemetry       : {(options.DisableOpenTelemetry ? "off" : $"ON  (source: {options.OpenTelemetrySourceName ?? "Experimental.Microsoft.Agents.AI"})")}");
-Console.WriteLine($"  file memory         : {(options.DisableFileMemory ? "off (this demo)" : "ON")}");
-Console.WriteLine($"  hosted web search   : {(options.DisableWebSearch ? "off (local provider)" : "ON")}");
+Console.WriteLine($"Agent : {agent.Name} ({agent.GetType().Name} : {agent.GetType().BaseType?.Name})");
 Console.WriteLine();
 
-// ── A session, exactly as in the conversations and memory chapter ────────────────────────────────
-// The harness does not invent a new session model. AgentSession works here
-// the same way it works for a plain ChatClientAgent.
 AgentSession session = await agent.CreateSessionAsync(cts.Token);
+List<ChatMessage> transcript = [];
 
 string[] turns =
 [
@@ -104,15 +83,24 @@ foreach (string turn in turns)
 {
     Console.WriteLine($"You: {turn}");
     Console.Write("Agent: ");
+    List<AgentResponseUpdate> updates = [];
     await foreach (AgentResponseUpdate update in
         agent.RunStreamingAsync(turn, session, cancellationToken: cts.Token))
     {
+        updates.Add(update);
         Console.Write(update.Text);
     }
+    transcript.AddRange(updates.ToAgentResponse().Messages);
     Console.WriteLine();
     Console.WriteLine();
 }
 
-// The second turn answers from history, which is the point: the harness
-// carries the conversation without you wiring a chat-history provider.
+Console.WriteLine("Capability report for this run:");
+CapabilityReport.Print(CapabilityReport.Build(options,
+    CapabilityReport.Advertised(chatClient.Calls.Select(c => c.Options)),
+    CapabilityReport.Called(transcript)), Console.Out);
+(int instructionChars, int tools, int schemaChars) = CapabilityReport.Size(chatClient.Calls.FirstOrDefault()?.Options);
+Console.WriteLine($"  first request: {instructionChars} instruction chars, {tools} tools, {schemaChars} schema chars");
+Console.WriteLine();
 Console.WriteLine("=== Harness basics demo complete! ===");
+return 0;

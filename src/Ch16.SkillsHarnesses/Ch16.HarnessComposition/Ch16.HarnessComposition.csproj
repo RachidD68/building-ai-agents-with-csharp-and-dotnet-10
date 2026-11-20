@@ -16,6 +16,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One capability report for both harness projects. -->
+    <Compile Include="../Ch16.HarnessBasics/CapabilityReport.cs" Link="CapabilityReport.cs" />
   </ItemGroup>
 
   <ItemGroup>

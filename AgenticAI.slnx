@@ -100,11 +100,13 @@
   </Folder>
   <Folder Name="/src/Ch16.SkillsHarnesses/">
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.AgentSkills/Ch16.AgentSkills.csproj" />
+    <Project Path="src/Ch16.SkillsHarnesses/Ch16.CodingAgent/Ch16.CodingAgent.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.HarnessBackgroundAgents/Ch16.HarnessBackgroundAgents.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.HarnessBasics/Ch16.HarnessBasics.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.HarnessComposition/Ch16.HarnessComposition.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.HarnessFiles/Ch16.HarnessFiles.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.HarnessLoop/Ch16.HarnessLoop.csproj" />
+    <Project Path="src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj" />
   </Folder>
   <Folder Name="/src/Ch17.HostingIdentity/">
     <Project Path="src/Ch17.HostingIdentity/Ch17.A2APreview/Ch17.A2APreview.csproj" />

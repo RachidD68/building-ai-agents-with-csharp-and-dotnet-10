@@ -16,6 +16,9 @@
 //
 // Both properties are [Experimental("MAAI001")] as of 1.28; the csproj scopes the
 // suppression to this project.
+//
+//   dotnet run                  live run against the configured provider
+//   dotnet run -- --self-test   offline checks with a scripted client
 // ============================================================================
 
 using Microsoft.Agents.AI;
@@ -23,6 +26,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
 hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration,
@@ -142,3 +147,4 @@ foreach (string f in memoryFiles.Take(5))
 }
 Console.WriteLine();
 Console.WriteLine("=== Harness files demo complete! ===");
+return 0;

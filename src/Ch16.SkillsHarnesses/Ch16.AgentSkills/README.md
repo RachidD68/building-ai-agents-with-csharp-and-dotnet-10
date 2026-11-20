@@ -39,3 +39,9 @@ run the demo locally.
 ```bash
 dotnet run --project src/Ch16.SkillsHarnesses/Ch16.AgentSkills
 ```
+
+Offline checks (scripted client, no model, no Python):
+
+```bash
+dotnet run --project src/Ch16.SkillsHarnesses/Ch16.AgentSkills -- --self-test
+```

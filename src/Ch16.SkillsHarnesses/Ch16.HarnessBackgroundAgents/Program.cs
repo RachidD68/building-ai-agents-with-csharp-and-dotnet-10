@@ -1,30 +1,32 @@
 // ============================================================================
 // Background agents: delegating work and collecting it later
 // ----------------------------------------------------------------------------
-// The multi-agent chapter composed agents synchronously: the orchestrator called a
-// specialist and waited. BackgroundAgentsProvider is the asynchronous form.
-// You hand the harness a set of named agents; it injects tools the model uses
-// to start work, then carry on and collect results later:
+// BackgroundAgentsProvider is the asynchronous form of agent composition. You
+// hand the harness named agents; it sends the model six tools:
 //
-//   background_agents_start_task     kick a named agent off, get a task id
-//   wait_for_first_completion        block until one finishes
-//   get_task_results                 collect finished output
-//   get_all_tasks                    see what is outstanding
-//   continue_task                    send more input to a running task
-//   clear_completed_task             drop a finished task
+//   background_agents_start_task                 start a named agent, get a task id
+//   background_agents_wait_for_first_completion  block, at most WaitTimeout
+//   background_agents_get_task_results           collect finished output
+//   background_agents_get_all_tasks              see what is outstanding
+//   background_agents_continue_task              send more input to a task
+//   background_agents_clear_completed_task       drop a finished task
 //
-// BackgroundAgentsProvider.ReleaseSessionAsync (added in 1.18) cancels and
-// releases everything still running for a session -- important, because a
-// task nobody collects is a task still burning tokens.
+// A task outlives the turn that started it. BackgroundAgentsProvider.
+// ReleaseSessionAsync cancels and releases whatever is still running for a
+// session; get the provider with agent.GetService<BackgroundAgentsProvider>()
+// and release in a finally block. All of this is [Experimental("MAAI001")].
 //
-// All of this is [Experimental("MAAI001")] as of 1.28.
+//   dotnet run                  live run against the configured provider
+//   dotnet run -- --self-test   offline checks with scripted and hanging clients
 // ============================================================================
 
+using AgenticAI.Common.Extensions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
 hostBuilder.Services.AddLlmChatClient(hostBuilder.Configuration,
@@ -39,9 +41,7 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 Console.WriteLine("=== Background agents ===");
 Console.WriteLine();
 
-// ── Two specialists, as plain agents ──────────────────────────────────
-// Nothing special about them: a background agent is an ordinary AIAgent that
-// the harness is allowed to run out of band.
+// A background agent is an ordinary AIAgent the harness may run out of band.
 ChatClientAgent researcher = new(
     chatClient,
     name: "Researcher",
@@ -52,12 +52,6 @@ ChatClientAgent copywriter = new(
     name: "Copywriter",
     instructions: "You turn notes into one plain sentence a customer would understand.");
 
-Console.WriteLine("Background agents available to the harness:");
-Console.WriteLine("  Researcher  — gathers short factual notes");
-Console.WriteLine("  Copywriter  — turns notes into a customer-facing sentence");
-Console.WriteLine();
-
-// ── The harness that delegates to them ────────────────────────────────
 HarnessAgentOptions options = new()
 {
     Name = "Coordinator",
@@ -66,59 +60,50 @@ HarnessAgentOptions options = new()
         "background task for the right specialist, then collect the result and " +
         "summarise it yourself. Do not do the specialists' work inline.",
     ChatOptions = new ChatOptions { Instructions = "Be concise." },
-
     BackgroundAgents = [researcher, copywriter],
     BackgroundAgentsProviderOptions = new BackgroundAgentsProviderOptions
     {
-        // How long wait_for_first_completion will block before giving up.
-        WaitTimeout = TimeSpan.FromMinutes(3),
+        WaitTimeout = TimeSpan.FromMinutes(3),   // the longest one wait call may block
     },
-
     DisableWebSearch = true,
     DisableFileMemory = true,
     DisableAgentSkillsProvider = true,
 };
 
 HarnessAgent coordinator = chatClient.AsHarnessAgent(options);
+BackgroundAgentsProvider provider = coordinator.GetService<BackgroundAgentsProvider>()
+    ?? throw new InvalidOperationException("The harness did not create a BackgroundAgentsProvider.");
 AgentSession session = await coordinator.CreateSessionAsync(cts.Token);
 
 const string task =
     "Produce one customer-facing sentence about the Contoso Ergonomic Keyboard. " +
     "Use the Researcher for the facts and the Copywriter for the wording.";
 
-Console.WriteLine($"You: {task}");
-Console.Write("Agent: ");
-await foreach (AgentResponseUpdate update in
-    coordinator.RunStreamingAsync(task, session, cancellationToken: cts.Token))
-{
-    Console.Write(update.Text);
-}
-Console.WriteLine();
-Console.WriteLine();
-
-// ── Always release the session ────────────────────────────────────────
-// Anything still running is cancelled here. Skipping this is how a demo
-// leaves model calls burning after the console has already exited.
-BackgroundAgentsProvider? provider = options.AIContextProviders?
-    .OfType<BackgroundAgentsProvider>().FirstOrDefault();
-
-IReadOnlyList<BackgroundTaskInfo>? outstanding = null;
 try
 {
-    outstanding = provider?.GetIncompleteTasks(session);
+    Console.WriteLine($"You: {task}");
+    Console.Write("Agent: ");
+    await foreach (AgentResponseUpdate update in
+        coordinator.RunStreamingAsync(task, session, cancellationToken: cts.Token))
+    {
+        Console.Write(update.Text);
+    }
+    Console.WriteLine();
+    Console.WriteLine();
 }
-catch (Exception)
+finally
 {
-    // The provider is owned by the harness in this configuration; if it is
-    // not reachable from options, releasing is still the harness's job.
-}
-
-Console.WriteLine($"Outstanding background tasks at exit: {outstanding?.Count ?? 0}");
-if (provider is not null)
-{
-    await provider.ReleaseSessionAsync(session, true, null, cts.Token);
-    Console.WriteLine("Session released — any running background task was cancelled.");
+    // A task nobody collects is still calling the model. Release on every path.
+    IReadOnlyList<BackgroundTaskInfo> outstanding = provider.GetIncompleteTasks(session);
+    Console.WriteLine($"Outstanding background tasks at the end of the turn: {outstanding.Count}");
+    foreach (BackgroundTaskInfo info in outstanding)
+    {
+        Console.WriteLine($"  #{info.Id} {info.AgentName}: {info.Status} ({info.Description})");
+    }
+    await provider.ReleaseSessionAsync(session, cancelRunning: true, timeout: TimeSpan.FromSeconds(30), CancellationToken.None);
+    Console.WriteLine($"Released. Incomplete tasks now: {provider.GetIncompleteTasks(session).Count}");
 }
 
 Console.WriteLine();
 Console.WriteLine("=== Harness background-agents demo complete! ===");
+return 0;
