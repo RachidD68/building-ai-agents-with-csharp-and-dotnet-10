@@ -61,6 +61,20 @@ internal static class SelfTest
         Check(search.StartsWith("threw", StringComparison.Ordinal),
             "the mismatch surfaces only at query time, after ingestion");
 
+        // The same wrong model on both paths: every vector is 1536, so nothing ever compares sizes.
+        string sameModel;
+        try
+        {
+            ReadOnlyMemory<float> query = (await wide.GenerateAsync("values")).Vector;
+            int n = 0;
+            await foreach (VectorSearchResult<DocumentChunk> _ in unchecked1536.SearchAsync(query, 3)) n++;
+            sameModel = $"returned {n} hit(s)";
+        }
+        catch (Exception ex) { sameModel = $"threw {ex.GetType().Name}"; }
+        Console.WriteLine($"  a 1536-dimension query (the same wrong model): {sameModel}");
+        Check(sameModel.StartsWith("returned", StringComparison.Ordinal),
+            "DEFECT REPRODUCED: with the same wrong model on both paths, the store never complains");
+
         Console.WriteLine("\n-- 3. The fix: the dimension check at startup --");
         string startup;
         try { await Pipeline.CheckModelAsync(wide); startup = "passed"; }
