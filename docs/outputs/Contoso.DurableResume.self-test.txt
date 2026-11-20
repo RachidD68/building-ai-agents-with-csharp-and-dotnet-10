@@ -1,0 +1,22 @@
+# Contoso.DurableResume --self-test
+# code: CodeSample 1bc822f, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Contoso.DurableResume.dll --self-test, exit 0
+
+=== Contoso v5: durable resume (self-test, offline) ===
+
+-- 1. Alice's taxi claim waits on disk; rita decides; a third process pays
+  PASS  prepare: the receipt claim is AwaitingReview (approval_missing) and the process exits
+  PASS  resume before a decision waits (exit 5), no payment
+  PASS  alice cannot approve her own claim; bob holds no reviewer role
+  PASS  rita's decision is recorded for 64.80 EUR at account version 7
+  PASS  a build with another graph -> BLOCKED graph_version_mismatch, no payment
+  PASS  resume restores the paused review in a new process and the v2 desk pays: Delivered
+  PASS  prepare, review and resume were three different processes
+  PASS  a second resume re-reads the claim: still Delivered, still one payment
+
+-- 2. Where resume must stop
+  PASS  rita's role revoked after her decision -> BLOCKED reviewer_revoked, no payment
+  PASS  the account moved after the decision -> BLOCKED stale_approval, no payment
+  PASS  resumed 25 hours after the decision -> BLOCKED approval_expired, no payment
+
+RESULT 11/11

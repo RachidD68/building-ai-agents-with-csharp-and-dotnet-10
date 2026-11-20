@@ -1,0 +1,35 @@
+# Ch15.DurableReview live run: three processes (prepare with Ollama llama3.2, review, resume)
+# code: CodeSample 80fc831, Release build on Windows; store: a fresh temp folder; started 2026-11-20T16:22:59.9806152+00:00
+
+$ dotnet Ch15.DurableReview.dll prepare --store <temp>
+=== Durable Review: prepare ===
+
+Review requested for CLM-1001 v1: 64.80 EUR from alice
+Summary: Claim CLM-1001 from Alice is for €64.80.
+
+Claim:      CLM-1001 v1
+Session:    fc3574083663476c853ead3a46b27e8a
+Checkpoint: 491d795350a7425ca2d269a54fd5f973
+Graph:      review-rules-1/b6fef53c2e64
+
+This process now exits. Next: review CLM-1001 rita approve, then resume CLM-1001
+(exit 0)
+
+$ dotnet Ch15.DurableReview.dll review CLM-1001 rita approve --store <temp>
+=== Durable Review: review ===
+
+Decision recorded: approve by rita for CLM-1001 v1, valid until 2026-11-21 16:24Z
+(exit 0)
+
+$ dotnet Ch15.DurableReview.dll resume CLM-1001 --store <temp>
+=== Durable Review: resume ===
+
+Graph: paused by review-rules-1/b6fef53c2e64, this build runs review-rules-1/b6fef53c2e64
+Decision: approve by rita for v1, still valid
+
+  [summarize] restoring callback: 1 summary written, last CLM-1001 v1
+  [summarize] OnCheckpointRestoredAsync (runs after the callback)
+Review request re-emitted in a new process: CLM-1001 v1
+[APPROVED] CLM-1001 v1 by rita (rules review-rules-1)
+(exit 0)
+

@@ -1,0 +1,54 @@
+# Ch15.DurableReview --self-test
+# code: CodeSample 80fc831, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Ch15.DurableReview.dll --self-test, exit 0
+
+=== Durable Review: cross-process self-test ===
+
+-- Graph version (in process)
+  PASS  two fresh builds of the same graph have the same version
+  PASS  an extra step changes the version
+  PASS  new rules on the same graph change the version
+
+-- prepare, review and resume: three processes
+  PASS  prepare exits 0 at the review port and finalizes nothing
+  PASS  checkpoint files and app.db are on disk
+  PASS  resume before any decision waits (exit 5), nothing resumed
+  PASS  rita's decision is recorded for v1
+  PASS  prepare, review and resume ran in three different processes
+  PASS  resume restores the checkpoint prepare wrote and gets the request again
+  PASS  executor state crossed the process boundary; the callback ran before OnCheckpointRestoredAsync
+  PASS  resume -> [APPROVED] CLM-1001 v1 by rita, without calling a model
+  PASS  a second resume of a finished claim fails closed
+  PASS  reject -> [REJECTED], nothing approved
+
+-- Who may decide
+  PASS  bob holds no reviewer role: refused
+  PASS  rita cannot review her own claim: refused
+  PASS  an unknown decision word is not a decision
+  PASS  three concurrent review processes: exactly one decision stored, the others refused
+
+-- Where resume must stop
+  PASS  amended after approval -> BLOCKED stale_approval (v1 decision, claim v2)
+        BLOCKED stale_approval: the decision covers v1; the claim is now v2. Nothing was finalized; the review stays pending.
+  PASS  a v2 decision against the v1 checkpoint -> BLOCKED stale_checkpoint
+  PASS  prepare again for v2, then resume -> [APPROVED] v2
+  PASS  resumed 25 hours after the decision -> BLOCKED approval_expired
+        BLOCKED approval_expired: the decision expired at 2026-11-21 09:00Z. Nothing was finalized; the review stays pending.
+  PASS  reviewer's role revoked before resume -> BLOCKED reviewer_revoked
+        BLOCKED reviewer_revoked: rita no longer holds finance-reviewer. Nothing was finalized; the review stays pending.
+
+-- A new build meets a pending review
+  PASS  upgraded graph -> BLOCKED graph_version_mismatch before the checkpoint is touched
+        BLOCKED graph_version_mismatch: migrate the pending review explicitly, or finish it with the build that paused it. Nothing was finalized; the review stays pending.
+  PASS  without the check, MAF itself refuses the changed shape (InvalidDataException)
+        BLOCKED checkpoint_incompatible: The specified checkpoint is not compatible with the workflow associated with this runner.. Nothing was finalized; the review stays pending.
+  PASS  same graph, new rules -> BLOCKED graph_version_mismatch
+  PASS  DEFECT REPRODUCED: without the check, MAF resumes a v1-rules approval under review-rules-2
+
+-- Two resumes at once, and a damaged store
+  PASS  two concurrent resume processes: exactly one [APPROVED], the other fails
+        FAILED: checkpoint d2f7c56927ae4f07a0631405fa3d2f9a is missing, busy or unreadable (InvalidOperationException: The store at '%TEMP%\durable-review-selftest-602a82082119498c8e00237b06f72050\twice\checkpoints' is already in use by another process.) Nothing was finalized.
+  PASS  deleted checkpoint file -> FAILED (exit 3), nothing approved
+        FAILED: checkpoint 68a000074e0d4e1989adf459e8727be2 is missing, busy or unreadable (KeyNotFoundException: Checkpoint '68a000074e0d4e1989adf459e8727be2' not found in store at '%TEMP%\durable-review-selftest-602a82082119498c8e00237b06f72050\damaged\checkpoints'.) Nothing was finalized.
+
+RESULT 28/28
