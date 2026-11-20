@@ -1,0 +1,22 @@
+# code ae9ec5b | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+  PASS  English: o200k_base counts 21 tokens
+  PASS  English: cl100k_base counts 21 tokens
+  PASS  Arabic: o200k_base counts 33 tokens
+  PASS  Arabic: cl100k_base counts 70 tokens
+  PASS  C#: o200k_base counts 39 tokens
+  PASS  C#: cl100k_base counts 39 tokens
+  PASS  DEFECT REPRODUCED: len/4 undercounts the Arabic sample by more than 25%
+  PASS  len/4 stays within 25% for the English and C# samples
+  PASS  the two encodings disagree on the Arabic sample
+  PASS  the planned request fits with 1,368 tokens free
+  PASS  history growth that eats the output reserve is refused
+  PASS  an input that fits the window but not the reserve is refused
+  PASS  the second turn costs more input than the first
+  PASS  a low temperature concentrates mass on the top token
+  PASS  temperature 1 leaves the distribution unchanged
+  PASS  top-p 0.7 keeps the two most likely tokens
+  PASS  a vector is identical to itself (cosine 1)
+
+RESULT 17/17

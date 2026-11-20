@@ -1,0 +1,28 @@
+# code a3d689a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+  PASS  each trial lands in its own bucket: correct, wrong, transport, truncated, refused
+  PASS  the run goes on after a transport error (5 trials recorded)
+  PASS  the counts keep the buckets apart (1 each, 0 invalid, 0 provider error)
+  PASS  DEFECT REPRODUCED: a parse-only check calls the cut reply invalid and hides the cap
+  PASS  the finish reason is read first: Length means Truncated
+  PASS  a reply cut at the cap stays Truncated even when the fragment parses
+  PASS  ContentFilter is a refusal, not an invalid reply
+  PASS  prose instead of the JSON contract is Invalid
+  PASS  a decision outside allow/review/deny is Invalid
+  PASS  an HttpClient timeout is a TransportError
+  PASS  a provider that rejects the request is a ProviderError, with its message kept
+  PASS  the caller's cancellation stops the run instead of counting as a failure
+  PASS  every call gets its own copy of the options, with the cap in it
+  PASS  DEFECT REPRODUCED: the request still says MaxOutputTokens=8 while the reply used 40
+  PASS  the profile reports the ignored cap from the usage
+  PASS  a cap the replies respect is reported as honored
+  PASS  requested reasoning with no reasoning tokens or content: NO EVIDENCE
+  PASS  reasoning tokens in the usage: observed
+  PASS  every call rejected: the option was refused, not ignored
+  PASS  the Markdown is dated and names the M.E.AI pin
+  PASS  the table has separate Invalid, Refused, Truncated, Transport and Provider error columns
+  PASS  failed trials and configurations not run are listed
+  PASS  the files carry the run date in their names
+
+RESULT 23/23
