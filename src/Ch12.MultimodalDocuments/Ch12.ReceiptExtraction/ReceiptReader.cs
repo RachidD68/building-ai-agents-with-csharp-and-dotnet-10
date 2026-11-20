@@ -38,6 +38,10 @@ public sealed class ReceiptReader(IChatClient visionClient)
         {
             ResponseFormat = ChatResponseFormat.ForJsonSchema<ReceiptReading>(Json),
             Temperature = 0f,
+            // A page reading is a few hundred tokens. The cap bounds a runaway
+            // reply (seen with llava on CPU: 1,250+ tokens in ten minutes); a reply
+            // cut off by it is not JSON, so the page counts as unread.
+            MaxOutputTokens = 600,
         });
         try
         {

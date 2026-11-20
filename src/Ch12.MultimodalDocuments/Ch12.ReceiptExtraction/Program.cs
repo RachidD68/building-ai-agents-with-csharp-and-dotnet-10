@@ -220,6 +220,10 @@ internal static class SelfTest
             probe.LastImage is { MediaType: "image/png" } img && img.Data.Length == corpus["taxi-clean"].Pages[0].Length);
         Expect("the request asked for the ReceiptReading JSON schema",
             probe.LastFormat is ChatResponseFormatJson { Schema: not null });
+        Expect("the request caps the reply at 600 output tokens", probe.LastMaxOutputTokens == 600);
+        ReceiptProposal cut = await Run(corpus, "taxi-clean", Reply(total: "64.80")[..120]);
+        Expect("a reply cut off by the cap is not a reading: every field Unreadable",
+            cut is { Total.State: FieldState.Unreadable, ReadyForPolicy: false });
 
         // Defect reproductions: the first-edition extraction (Invoice record,
         // "If a value is not visible, use an empty string or 0"). Each PASS
@@ -291,12 +295,14 @@ internal sealed class ScriptedVisionClient(IReadOnlyList<string> replies) : ICha
     private int _next;
     public DataContent? LastImage { get; private set; }
     public ChatResponseFormat? LastFormat { get; private set; }
+    public int? LastMaxOutputTokens { get; private set; }
 
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         LastImage = messages.SelectMany(m => m.Contents).OfType<DataContent>().LastOrDefault();
         LastFormat = options?.ResponseFormat;
+        LastMaxOutputTokens = options?.MaxOutputTokens;
         string reply = replies[Math.Min(_next++, replies.Count - 1)];
         return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply)));
     }

@@ -161,6 +161,9 @@ Console.WriteLine("Test 4: the Ollama connector's request body (OllamaSharp 5.4.
     await ollama.GetResponseAsync([new ChatMessage(ChatRole.User, "q")],
         new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema<Invoice>(), Temperature = 0f });
     Check("ForJsonSchema<T> becomes Ollama's \"format\" schema", wire.Body.Contains("\"format\":{"));
+
+    await ollama.GetResponseAsync([new ChatMessage(ChatRole.User, "q")], new ChatOptions { MaxOutputTokens = 600 });
+    Check("MaxOutputTokens becomes Ollama's \"num_predict\"", wire.Body.Contains("\"num_predict\":600"));
 }
 
 // ── Summary / exit code ──────────────────────────────────────────────────────
