@@ -1,4 +1,5 @@
-# code 1ee46f2-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 1ee46f2 plus uncommitted edits | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# note: the uncommitted edits were not recorded; src/Ch04.FirstAgent and src/Common are identical at 1ee46f2 and 7f4d64c, and the 7f4d64c Release self-test prints the same check lines as the 1ee46f2 run
 $ dotnet run -- --live
 
 === The first agent's first test (live) ===

@@ -1,4 +1,4 @@
-# code 1ee46f2-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 7f4d64c | SDK 11.0.100 | Windows 11 | Release build (dotnet build -c Release -warnaserror); the check lines are identical to the 1ee46f2 run
 $ dotnet run -- --self-test
 
 === The first agent's first test (self-test) ===
