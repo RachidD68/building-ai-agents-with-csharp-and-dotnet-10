@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- An owned conversation: an AgentSessionStore whose key comes from the
+       authenticated caller (tenant + subject), with owner-only load, save and
+       delete, a schema version and a concurrency token. SQLite file in a
+       temporary folder. No model: a fake chat client answers. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- MAAI001: AgentSessionStore and AgentSessionStoreKey are experimental in
+         Microsoft.Agents.AI 1.28.0. The chapter flags it where they are used. -->
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <!-- The same SQLite pin as the authorized-actions chapter's IdempotentCommit. -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+</Project>

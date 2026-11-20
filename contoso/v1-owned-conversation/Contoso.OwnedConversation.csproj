@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contoso snapshot v1, "Owned conversation": the expense assistant keeps a
+       conversation across a restart, stored under a key built from the
+       authenticated caller (tenant + subject). Only its owner can load it or
+       delete it, deleting twice is a no-op, and two tabs that save from the same
+       version get one success and one explicit conflict. A console app; the
+       API/UI snapshot adds ASP.NET Core and real authentication later. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- MAAI001: AgentSessionStore is experimental in Microsoft.Agents.AI 1.28.0. -->
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GA-only provider switch: Ollama by default. -->
+    <ProjectReference Include="../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- The conversations chapter's owned session store, used as it is. -->
+    <ProjectReference Include="../../src/Ch06.ConversationsMemory/Ch06.SessionOwnership/Ch06.SessionOwnership.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

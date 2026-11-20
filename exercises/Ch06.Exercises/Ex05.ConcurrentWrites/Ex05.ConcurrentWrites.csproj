@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Challenge exercise: two writers save the same conversation from the same
+       loaded version. One wins, the other gets a conflict, reloads and applies
+       its turn again, so no turn is lost. No model: EchoChatClient answers. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- MAAI001: AgentSessionStore is experimental in Microsoft.Agents.AI 1.28.0. -->
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built on the chapter's SqliteSessionStore, as the exercise asks. -->
+    <ProjectReference Include="../../../src/Ch06.ConversationsMemory/Ch06.SessionOwnership/Ch06.SessionOwnership.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Keeping the prompt under a token budget. Absorbs the first edition's
+       Ch06.HistoryReduction: the same four strategies run live on the configured
+       model, and the self-test measures input tokens per turn with a fake client
+       that reports UsageDetails. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- MEAI001: MessageCountingChatReducer / SummarizingChatReducer are experimental.
+         MAAI001: the Microsoft.Agents.AI.Compaction pipeline is experimental.
+         The GA alternative is a hand-written IChatReducer (LastTurnsChatReducer). -->
+    <NoWarn>$(NoWarn);MEAI001;MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

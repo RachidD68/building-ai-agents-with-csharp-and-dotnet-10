@@ -192,15 +192,12 @@ while (!cts.Token.IsCancellationRequested)
             removedFromDisk = true;
         }
 
-        if (removedFromMemory || removedFromDisk)
-        {
-            if (currentSessionName == name) currentSessionName = null;
-            Console.WriteLine($"  Deleted session '{name}'.\n");
-        }
-        else
-        {
-            Console.WriteLine($"  Session '{name}' not found.\n");
-        }
+        // Deleting is idempotent: a second /delete of the same name succeeds too,
+        // because the outcome the user asked for (no such session) holds.
+        if (currentSessionName == name) currentSessionName = null;
+        Console.WriteLine(removedFromMemory || removedFromDisk
+            ? $"  Deleted session '{name}'.\n"
+            : $"  Deleted session '{name}' (nothing was stored under that name).\n");
         continue;
     }
 
