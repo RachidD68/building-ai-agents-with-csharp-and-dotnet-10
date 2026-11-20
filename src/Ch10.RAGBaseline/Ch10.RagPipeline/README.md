@@ -1,28 +1,19 @@
-# Introduction to RAG (Full RAG Pipeline)
+# Ch10.RagPipeline: the RAG pipeline step by step
 
-Demonstrates the complete Retrieval-Augmented Generation pipeline: Ingest, Chunk, Embed, Store, Retrieve.
+`Pipeline.cs` holds the steps; `Program.cs` runs them over `data/*.txt` against a real embedding model.
 
-## Pipeline Stages
-
-| Stage | Description |
-|-------|-------------|
-| **Ingest** | Load `.txt` files from the `data/` directory |
-| **Chunk** | Split documents by paragraph boundaries |
-| **Embed** | Generate vector embeddings via `IEmbeddingGenerator` |
-| **Store** | Upsert chunks into an `InMemoryCollection` vector store |
-| **Retrieve** | Search by cosine similarity against a query embedding |
-
-## Key Concepts
-
-| Concept | Description |
-|---------|-------------|
-| `VectorStoreCollection<TKey, TRecord>` | Abstract base for vector store collections |
-| `InMemoryCollection` | In-memory vector store from Semantic Kernel |
-| `[VectorStoreKey/Data/Vector]` | Attributes for schema mapping |
-| `SearchAsync()` | Vector similarity search with top-K results |
+| Step | Code |
+|------|------|
+| Check the model | `CheckModelAsync`: one probe embedding against `DocumentChunk.Dimensions` (768, `nomic-embed-text`), before any file is read |
+| Chunk | `Chunk`: split at blank lines, skip paragraphs under 20 characters, id `<file>-<paragraph index>` |
+| Embed and store | `IngestAsync`: one batched call, every vector checked, then one upsert; nothing is stored if a vector has the wrong size |
+| Retrieve | `SearchAsync`: embed the query, top K by cosine similarity |
 
 ## Running
 
 ```bash
-dotnet run --project src/Ch10.RAGBaseline/Ch10.RagPipeline
+dotnet run --project src/Ch10.RAGBaseline/Ch10.RagPipeline                  # Ollama nomic-embed-text by default
+dotnet run --project src/Ch10.RAGBaseline/Ch10.RagPipeline -- --self-test   # fixed vectors, no model; RESULT n/n
 ```
+
+The self-test reproduces the failure the check prevents: `InMemoryCollection` stores a 1536-dimension vector under a 768-dimension schema without complaint, and the mismatch only surfaces when a 768-dimension query searches it. With the check, a 1536-dimension model fails at startup and nothing is stored.

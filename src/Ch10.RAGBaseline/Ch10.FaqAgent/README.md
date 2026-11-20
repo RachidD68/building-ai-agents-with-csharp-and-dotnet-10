@@ -1,53 +1,38 @@
-# Introduction to RAG (FAQ Agent -- Part III Capstone)
+# Ch10.FaqAgent: a grounded RAG baseline
 
-The Contoso FAQ agent, grounded in a Markdown knowledge base. RAG is wired with
-MAF's built-in **`TextSearchProvider`**: it runs a search before every agent call
-and injects the hits as context — citations included. The agent answers from the
-documents and says "I don't know" when the answer isn't in the knowledge base.
-
-## Architecture
+The Contoso FAQ agent, grounded in a Markdown handbook (`docs/`, 11 files). It answers from retrieved handbook excerpts, cites their source, and abstains when nothing relevant is retrieved.
 
 ```
-User Question
-    |
-    v
-[TextSearchProvider runs BEFORE the call] --> FaqSearchService.SearchAsync
-    |                                              |
-    |                                    [Embed Query] -> [Vector Search] -> [Top-K, score-filtered]
-    |                                              |
-    v                                              v
-[ChatClientAgent]  <--- provider injects the hits (with SourceName citations)
-    |
-    v
-Grounded Answer  (or the "I don't know" fallback on no strong hit)
+ingest (once):   CheckModelAsync (768 dimensions) -> chunk by paragraph -> embed (one batch) -> store
+query (per call): context provider -> FaqSearchService.RetrieveAsync
+                  (embed question -> vector search top 3 -> keep score >= threshold)
+                  -> excerpts with [source] -> model -> cited answer, or the abstention text
 ```
 
-- `FaqSearchService` — the retrieval pipeline (embed -> search -> keep strong
-  matches), the same logic taught in `Ch10.RagPipeline`, mapped to
-  `TextSearchProvider.TextSearchResult`.
-- `RecentMessageMemoryLimit = 6` — recent turns feed the search input, so a
-  follow-up like *"what about for contractors?"* still retrieves correctly.
-- The hand-rolled equivalent lives in `Ch10.FaqAgent.CustomProvider` (the
-  "under the hood" version).
-
-## FAQ Documents (11 files)
-
-Covers: PTO, remote work, benefits, expenses, performance reviews, company
-values, onboarding, engineering practices, code of conduct, sick leave,
-security policy.
+- `FaqIngest`: the dimension check runs on a probe text before any document is read, so a model with another vector size fails at startup.
+- `FaqSearchService`: stateless retrieval; the question is an argument. The threshold (0.55 here) is this corpus's starting point with `nomic-embed-text`, not a rule; `Ch10.RetrievalEval` sweeps it.
+- `FaqAgentFactory`: one place that wires the agent for the live run and the self-test.
+- `FaqContextProvider`: the custom provider. It derives from `MessageAIContextProvider` and takes the question from `InvokingContext.RequestMessages`. It has no mutable field, so one instance is safe as a singleton. (It replaces the first edition's `Ch10.FaqAgent.CustomProvider`, whose `CurrentQuery` property the caller had to set before each call.)
 
 ## Running
 
 ```bash
-# Uses Ollama by default (nomic-embed-text for embeddings, llama3.2 for chat).
-# Pull the embedding model once: ollama pull nomic-embed-text
-dotnet run --project src/Ch10.RAGBaseline/Ch10.FaqAgent
+dotnet run --project src/Ch10.RAGBaseline/Ch10.FaqAgent                          # TextSearchProvider, search before each call
+dotnet run --project src/Ch10.RAGBaseline/Ch10.FaqAgent -- --provider on-demand  # TextSearchProvider as a search tool
+dotnet run --project src/Ch10.RAGBaseline/Ch10.FaqAgent -- --provider custom     # FaqContextProvider
+dotnet run --project src/Ch10.RAGBaseline/Ch10.FaqAgent -- --self-test           # offline; RESULT n/n
 ```
 
-> Note: the in-memory vector store is `CommunityToolkit.VectorData.InMemory`,
-> which is built against the current `Microsoft.Extensions.VectorData.Abstractions`,
-> so the project takes both versions from `Directory.Packages.props` with no
-> `VersionOverride`. (Earlier builds used the Semantic Kernel InMemory connector,
-> which needed `VectorData.Abstractions` held at `10.1.0`.) A frontier chat model (gpt-5.6-luna via the
-> `openai`/`azure` providers) gives crisper grounded answers than a
-> small local model.
+Ollama by default: `llama3.2` for chat and `nomic-embed-text` (768 dimensions) for embeddings. With `openai` or `azure`, set the embedding model and change `FaqChunk.Dimensions` to its size; the startup check tells you when they differ.
+
+## What the self-test proves
+
+A keyword embedding generator and a fake model replace both models, so the checks prove what was retrieved and what reached the model, not how a real model uses the evidence:
+
+- the dimension check refuses a 1536-dimension model before ingestion;
+- `TextSearchProvider` searches with the caller's question, injects one message, and the answer cites the source; an out-of-handbook question injects nothing and abstains;
+- `RecentMessageMemoryLimit` puts earlier user questions (not the answers) into the search input: a follow-up finds its topic, and an earlier topic also rides along into a new question;
+- on-demand mode offers a `search_handbook` tool and searches nothing before the call;
+- `RequestMessages` carries only this call's question;
+- **defect reproduced**: the first edition's shared provider with a mutable `CurrentQuery` answers one request from another request's chunks when two run at once;
+- the fix: eight concurrent questions on one shared agent (both providers) each see only their own chunks, with all eight searches in flight at the same time.

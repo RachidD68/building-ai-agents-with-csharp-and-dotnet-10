@@ -1,26 +1,17 @@
-# Introduction to RAG (Embeddings Demo)
+# Ch10.EmbeddingsDemo: embeddings and cosine similarity
 
-Generates embeddings for sample sentences and displays a cosine similarity matrix, demonstrating that semantically similar sentences score higher even when using different words.
-
-## Key Concepts
+Generates embeddings for five sample sentences and prints their cosine similarity matrix and the most similar pairs: sentences on the same topic score higher even when they share no words.
 
 | Concept | Description |
 |---------|-------------|
-| `IEmbeddingGenerator<string, Embedding<float>>` | Provider-agnostic embedding abstraction |
-| `EmbeddingClient.AsIEmbeddingGenerator()` | Extension to create embedding generator from OpenAI client |
-| `TensorPrimitives.CosineSimilarity` | Efficient similarity calculation via .NET numerics |
-| Semantic similarity | Similar meaning yields high scores regardless of word choice |
-
-## Configuration
-
-Set the embedding model in user secrets:
-
-```bash
-dotnet user-secrets set "LlmProvider:AzureOpenAI:EmbeddingModel" "text-embedding-3-small"
-```
+| `IEmbeddingGenerator<string, Embedding<float>>` | Provider-agnostic embedding abstraction; `OllamaApiClient` implements it directly |
+| `TensorPrimitives.CosineSimilarity` | Cosine similarity over two vectors of the same size |
 
 ## Running
 
 ```bash
-dotnet run --project src/Ch10.RAGBaseline/Ch10.EmbeddingsDemo
+dotnet run --project src/Ch10.RAGBaseline/Ch10.EmbeddingsDemo                  # Ollama nomic-embed-text by default
+dotnet run --project src/Ch10.RAGBaseline/Ch10.EmbeddingsDemo -- --self-test   # fixed vectors, no model; RESULT n/n
 ```
+
+The self-test checks cosine similarity on hand-written vectors: the same direction scores 1, orthogonal 0, opposite -1, length does not count, and two vectors of different sizes cannot be compared (`ArgumentException`).

@@ -3,16 +3,21 @@
 // Embeds a hard-coded corpus of 20 sentences (one batched call), then embeds
 // each query and shows the TOP-3 most similar sentences with their scores,
 // using TensorPrimitives.CosineSimilarity. FULLY STANDALONE.
+//
+//   dotnet run                  against the configured embedding model
+//   dotnet run -- --self-test   fixed vectors, no model; RESULT n/n
 // ============================================================================
 
 using System.ClientModel;
-using System.Numerics.Tensors;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Ex01.SimilarityExplorer;
+
+if (args.Contains("--self-test")) return SelfTest.Run();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
@@ -66,10 +71,12 @@ try
 catch (OperationCanceledException)
 {
     Console.WriteLine("\n[Cancelled]");
-    return;
+    return 130;
 }
 
-Console.WriteLine($"Done ({corpusEmbeddings[0].Vector.Length} dimensions each).\n");
+// The index refuses a query whose size differs from the corpus vectors.
+SimilarityIndex index = new(corpus, [.. corpusEmbeddings.Select(e => e.Vector)]);
+Console.WriteLine($"Done ({index.Dimensions} dimensions each).\n");
 
 // ---------------------------------------------------------------
 // Step 3: Sample queries — top-3 most similar sentences with scores.
@@ -92,7 +99,7 @@ foreach (string query in sampleQueries)
     catch (OperationCanceledException)
     {
         Console.WriteLine("\n[Cancelled]");
-        return;
+        return 130;
     }
 }
 
@@ -122,6 +129,7 @@ while (true)
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
 // Helpers
@@ -129,22 +137,23 @@ Console.WriteLine("=== Exercise complete! ===");
 
 /// <summary>
 /// Embeds the query and prints the three most similar corpus sentences,
-/// ranked by cosine similarity (SIMD-accelerated TensorPrimitives).
+/// ranked by cosine similarity (SimilarityIndex, SIMD-accelerated TensorPrimitives).
 /// </summary>
 async Task ShowTopMatchesAsync(string query)
 {
     Embedding<float> queryEmbedding =
         await embeddingGenerator.GenerateAsync(query, cancellationToken: cts.Token);
 
-    var top3 = corpus
-        .Select((text, i) => (
-            Text: text,
-            Score: TensorPrimitives.CosineSimilarity(
-                corpusEmbeddings[i].Vector.Span,
-                queryEmbedding.Vector.Span)))
-        .OrderByDescending(m => m.Score)
-        .Take(3)
-        .ToList();
+    IReadOnlyList<(string Text, float Score)> top3;
+    try
+    {
+        top3 = index.Top(queryEmbedding.Vector, k: 3);
+    }
+    catch (InvalidOperationException ex)
+    {
+        Console.WriteLine($"Query: \"{query}\"\n  {ex.Message}\n");
+        return;
+    }
 
     Console.WriteLine($"Query: \"{query}\"");
     for (int rank = 0; rank < top3.Count; rank++)

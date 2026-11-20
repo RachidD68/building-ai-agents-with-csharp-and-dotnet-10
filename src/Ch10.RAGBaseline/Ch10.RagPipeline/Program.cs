@@ -1,17 +1,13 @@
-﻿// ============================================================================
-// Introduction to RAG (Full RAG Pipeline)
-// Demonstrates the complete Retrieval-Augmented Generation pipeline:
-//   Ingest -> Chunk -> Embed -> Store -> Retrieve
+// ============================================================================
+// The RAG pipeline: check the model -> ingest -> chunk -> embed -> store -> retrieve
+// ----------------------------------------------------------------------------
+// Pipeline.cs holds the steps; this file runs them against a real embedding
+// model (Ollama nomic-embed-text by default, 768 dimensions).
 //
-// Key concepts:
-//   - Microsoft.Extensions.VectorData.Abstractions for the vector store interface
-//   - InMemoryCollection from Semantic Kernel for in-memory vector storage
-//   - IEmbeddingGenerator for generating embeddings
-//   - Cosine similarity search for retrieval
-//   - Paragraph-based chunking strategy
+//   dotnet run                  the pipeline over data/*.txt, four queries
+//   dotnet run -- --self-test   fixed vectors, no model; RESULT n/n
 // ============================================================================
 
-using System.Numerics.Tensors;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Microsoft.Extensions.AI;
@@ -22,21 +18,20 @@ using Microsoft.Extensions.VectorData;
 using CommunityToolkit.VectorData.InMemory;
 using Ch10.RagPipeline;
 
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 using IHost host = builder.Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-Console.WriteLine("=== RAG Pipeline — Ingest, Chunk, Embed, Store, Retrieve ===\n");
+Console.WriteLine("=== RAG pipeline: ingest, chunk, embed, store, retrieve ===");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Step 1: Create the embedding generator
-// ---------------------------------------------------------------
-string provider = config["LlmProvider:Provider"] ?? "azure";
-IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLowerInvariant() switch
+string provider = (config["LlmProvider:Provider"] ?? "ollama").ToLowerInvariant();
+IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider switch
 {
     "azure" => new AzureOpenAIClient(
             new Uri(config.GetRequiredValue("LlmProvider:AzureOpenAI:Endpoint")),
@@ -48,9 +43,8 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         .GetEmbeddingClient(config["LlmProvider:OpenAI:EmbeddingModel"] ?? "text-embedding-3-small")
         .AsIEmbeddingGenerator(),
 
-    // Local, offline embeddings via Ollama. OllamaApiClient implements
-    // IEmbeddingGenerator<string, Embedding<float>> directly, so the rest of the
-    // pipeline is identical — only the dimension differs (nomic-embed-text is 768).
+    // OllamaApiClient implements IEmbeddingGenerator<string, Embedding<float>>
+    // directly, so the rest of the pipeline does not change.
     "ollama" => new OllamaSharp.OllamaApiClient(
         new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
         config["LlmProvider:Ollama:EmbeddingModel"] ?? "nomic-embed-text"),
@@ -59,95 +53,35 @@ IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = provider.ToLo
         $"Unsupported provider '{provider}' for embeddings. Use azure, openai, or ollama.")
 };
 
-// ---------------------------------------------------------------
-// Step 2: Create the in-memory vector store collection
-// ---------------------------------------------------------------
-InMemoryCollection<string, DocumentChunk> collection = new("documents");
-await collection.EnsureCollectionExistsAsync(cts.Token);
+// Step 0: the vector size is part of the schema. Check it before reading a file.
+await Pipeline.CheckModelAsync(embeddingGenerator, cts.Token);
+Console.WriteLine($"Embedding model checked: {DocumentChunk.Dimensions} dimensions.");
 
-Console.WriteLine("Vector store collection created: 'documents'\n");
-
-// ---------------------------------------------------------------
-// Step 3: INGEST — Load text files from the data/ directory
-// ---------------------------------------------------------------
+// Steps 1-3: ingest and chunk the text files, embed in one batch, store.
 string dataPath = Path.Combine(AppContext.BaseDirectory, "data");
 if (!Directory.Exists(dataPath))
 {
-    Console.WriteLine($"Data directory not found: {dataPath}");
-    Console.WriteLine("Creating sample data files...");
+    Console.WriteLine("Creating the sample data files...");
     Directory.CreateDirectory(dataPath);
     CreateSampleDataFiles(dataPath);
 }
 
-string[] textFiles = Directory.GetFiles(dataPath, "*.txt");
-Console.WriteLine($"Found {textFiles.Length} text files to ingest.\n");
-
-// ---------------------------------------------------------------
-// Step 4: CHUNK — Split documents by paragraph
-// ---------------------------------------------------------------
 List<DocumentChunk> allChunks = [];
-
-foreach (string filePath in textFiles)
+foreach (string filePath in Directory.GetFiles(dataPath, "*.txt").Order(StringComparer.Ordinal))
 {
-    string fileName = Path.GetFileName(filePath);
     string content = await File.ReadAllTextAsync(filePath, cts.Token);
-
-    // Split by double newline (paragraph boundary)
-    string[] paragraphs = content.Split(
-        ["\r\n\r\n", "\n\n"],
-        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    Console.WriteLine($"  {fileName}: {paragraphs.Length} chunks");
-
-    for (int i = 0; i < paragraphs.Length; i++)
-    {
-        if (paragraphs[i].Length < 20) continue; // Skip very short paragraphs
-
-        allChunks.Add(new DocumentChunk
-        {
-            Id = $"{fileName}-{i}",
-            Content = paragraphs[i],
-            SourceFile = fileName,
-            ChunkIndex = i
-        });
-    }
+    DocumentChunk[] fileChunks = [.. Pipeline.Chunk(Path.GetFileName(filePath), content)];
+    Console.WriteLine($"  {Path.GetFileName(filePath)}: {fileChunks.Length} chunks");
+    allChunks.AddRange(fileChunks);
 }
 
-Console.WriteLine($"\nTotal chunks: {allChunks.Count}\n");
+InMemoryCollection<string, DocumentChunk> collection = new("documents");
+await collection.EnsureCollectionExistsAsync(cts.Token);
+await Pipeline.IngestAsync(embeddingGenerator, collection, allChunks, cts.Token);
+Console.WriteLine($"Stored {allChunks.Count} chunks.");
+Console.WriteLine();
 
-// ---------------------------------------------------------------
-// Step 5: EMBED — Generate embeddings for all chunks
-// ---------------------------------------------------------------
-Console.WriteLine("Generating embeddings for all chunks...");
-
-// Batch embedding generation for efficiency
-string[] texts = allChunks.Select(c => c.Content).ToArray();
-GeneratedEmbeddings<Embedding<float>> embeddings = await embeddingGenerator.GenerateAsync(
-    texts,
-    cancellationToken: cts.Token);
-
-for (int i = 0; i < allChunks.Count; i++)
-{
-    allChunks[i].Embedding = DocumentChunk.CheckDimensions(embeddings[i].Vector);
-}
-
-Console.WriteLine($"Generated {embeddings.Count} embeddings.\n");
-
-// ---------------------------------------------------------------
-// Step 6: STORE — Upsert chunks into the vector store
-// ---------------------------------------------------------------
-Console.WriteLine("Storing chunks in vector store...");
-
-foreach (DocumentChunk chunk in allChunks)
-{
-    await collection.UpsertAsync(chunk, cts.Token);
-}
-
-Console.WriteLine($"Stored {allChunks.Count} chunks.\n");
-
-// ---------------------------------------------------------------
-// Step 7: RETRIEVE — Search by query
-// ---------------------------------------------------------------
+// Step 4: retrieve.
 string[] queries =
 [
     "What are the company values?",
@@ -156,40 +90,22 @@ string[] queries =
     "Tell me about the engineering team structure."
 ];
 
-Console.WriteLine(new string('=', 60));
-Console.WriteLine("RETRIEVAL RESULTS");
-Console.WriteLine(new string('=', 60));
-
 foreach (string query in queries)
 {
-    Console.WriteLine($"\nQuery: \"{query}\"");
-    Console.WriteLine(new string('-', 40));
-
-    // Generate embedding for the query
-    Embedding<float> queryEmbedding = await embeddingGenerator.GenerateAsync(
-        query,
-        cancellationToken: cts.Token);
-
-    // Search the vector store
-    var results = collection.SearchAsync(
-        queryEmbedding.Vector,
-        top: 3,
-        cancellationToken: cts.Token);
-
+    Console.WriteLine($"Query: \"{query}\"");
     int rank = 1;
-    await foreach (VectorSearchResult<DocumentChunk> result in results)
+    foreach (VectorSearchResult<DocumentChunk> result in
+             await Pipeline.SearchAsync(embeddingGenerator, collection, query, top: 3, cts.Token))
     {
-        string preview = result.Record.Content.Length > 120
-            ? string.Concat(result.Record.Content.AsSpan(0, 120), "...")
+        string preview = result.Record.Content.Length > 80
+            ? string.Concat(result.Record.Content.AsSpan(0, 80), "...")
             : result.Record.Content;
-
-        Console.WriteLine($"  #{rank} (score: {result.Score:F4}) [{result.Record.SourceFile}]");
-        Console.WriteLine($"     {preview}\n");
-        rank++;
+        Console.WriteLine($"  #{rank++} {result.Score:F4} [{result.Record.Id}] {preview}");
     }
+    Console.WriteLine();
 }
 
-Console.WriteLine("=== RAG Pipeline demo complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
 // Helper: Create sample data files

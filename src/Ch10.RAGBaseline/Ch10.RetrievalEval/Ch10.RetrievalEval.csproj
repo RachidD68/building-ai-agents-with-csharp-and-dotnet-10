@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Retrieval evaluation: HitRate@K, Recall@K and a threshold sweep on an
+       annotated set over the FAQ agent's handbook. Reuses Ch10.FaqAgent's
+       chunker and dimension check, and its docs/ folder. GA packages only. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Ch10.FaqAgent/Ch10.FaqAgent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="eval-set.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

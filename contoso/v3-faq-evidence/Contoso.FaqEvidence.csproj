@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contoso snapshot v3, "FAQ with evidence": the v2 expense assistant gains a
+       handbook desk. A policy question is answered from retrieved handbook
+       evidence, with citations checked against what was retrieved, or the desk
+       abstains. Every reply keeps its evidence record. A console app; the next
+       chapter adds who may see which document, freshness and the evidence store. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
+    <PackageReference Include="OllamaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GA-only provider switch: Ollama by default. -->
+    <ProjectReference Include="../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- v2: the same identity directory (PermissionDirectory, Caller) and the reimbursement desk. -->
+    <ProjectReference Include="../v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
+    <!-- The RAG baseline chapter's retrieval, used as it is: chunker, dimension check,
+         FaqSearchService, evidence format, and the handbook in docs/. -->
+    <ProjectReference Include="../../src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -59,10 +59,10 @@
   </Folder>
   <Folder Name="/src/Ch10.RAGBaseline/">
     <Project Path="src/Ch10.RAGBaseline/Ch10.EmbeddingsDemo/Ch10.EmbeddingsDemo.csproj" />
-    <Project Path="src/Ch10.RAGBaseline/Ch10.FaqAgent.CustomProvider/Ch10.FaqAgent.CustomProvider.csproj" />
     <Project Path="src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj" />
     <Project Path="src/Ch10.RAGBaseline/Ch10.HostedFilesRag/Ch10.HostedFilesRag.csproj" />
     <Project Path="src/Ch10.RAGBaseline/Ch10.RagPipeline/Ch10.RagPipeline.csproj" />
+    <Project Path="src/Ch10.RAGBaseline/Ch10.RetrievalEval/Ch10.RetrievalEval.csproj" />
   </Folder>
   <Folder Name="/src/Ch11.RAGPermissions/">
     <Project Path="src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/Ch11.AuthorizedSearch.csproj" />
@@ -234,6 +234,9 @@
   </Folder>
   <Folder Name="/contoso/v2-authorized-reimbursement/">
     <Project Path="contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
+  </Folder>
+  <Folder Name="/contoso/v3-faq-evidence/">
+    <Project Path="contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj" />
   </Folder>
   <Folder Name="/contoso/v4-receipts/">
     <Project Path="contoso/v4-receipts/Contoso.Receipts.csproj" />

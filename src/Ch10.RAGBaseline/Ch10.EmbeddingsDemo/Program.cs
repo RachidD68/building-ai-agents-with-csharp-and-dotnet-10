@@ -1,13 +1,16 @@
 ﻿// ============================================================================
-// Introduction to RAG (Embeddings Demo)
+// Embeddings demo
 // Generates embeddings for sample sentences and displays a cosine similarity
 // matrix, showing that semantically similar sentences score higher.
 //
 // Key concepts:
 //   - IEmbeddingGenerator<string, Embedding<float>> abstraction
-//   - Generating embeddings via Azure OpenAI / OpenAI
+//   - Embeddings from Ollama (nomic-embed-text, the default), OpenAI or Azure OpenAI
 //   - Cosine similarity calculation
 //   - Visualizing semantic relationships in the console
+//
+//   dotnet run                  against the configured embedding model
+//   dotnet run -- --self-test   cosine similarity on fixed vectors; RESULT n/n
 // ============================================================================
 
 using System.Numerics.Tensors;
@@ -17,6 +20,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+if (args.Contains("--self-test")) return Ch10.EmbeddingsDemo.SelfTest.Run();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
@@ -138,6 +143,7 @@ Console.WriteLine("Notice: Semantically similar sentences (same topic) have high
 Console.WriteLine("even though they use different words. This is the power of embeddings.");
 
 Console.WriteLine("\n=== Embeddings Demo complete! ===");
+return 0;
 
 // Truncates a sentence at a word boundary (max 15 chars) to make a compact
 // matrix row label, e.g. "Cats are small, carnivorous..." -> "Cats are small...".
