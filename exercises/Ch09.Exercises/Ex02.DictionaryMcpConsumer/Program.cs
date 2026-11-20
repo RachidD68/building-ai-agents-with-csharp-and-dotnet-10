@@ -38,10 +38,11 @@ IClientTransport transport = http >= 0
     })
     : new StdioClientTransport(new StdioClientTransportOptions
     {
-        Command = "dotnet",
-        Arguments = ["run", "--project", Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "Ex02.DictionaryMcpServer")), "--no-build"],
-        Name = "DictionaryServer"
+        Command = "dotnet",   // the built server dll of the same configuration
+        Arguments = [Path.Combine(AppContext.BaseDirectory.Replace("Ex02.DictionaryMcpConsumer", "Ex02.DictionaryMcpServer"),
+            "Ex02.DictionaryMcpServer.dll")],
+        Name = "DictionaryServer",
+        StandardErrorLines = _ => { },
     });
 
 await using McpClient mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);

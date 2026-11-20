@@ -31,15 +31,17 @@ Console.WriteLine("=== Exercise: Time MCP Consumer ===\n");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-string serverProjectPath = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Ex01.TimeMcpServer"));
-Console.WriteLine($"Launching MCP server from: {serverProjectPath}");
+// The built server dll of the same configuration (bin/<Configuration>/net10.0).
+string liveServerDll = Path.Combine(
+    AppContext.BaseDirectory.Replace("Ex01.TimeMcpConsumer", "Ex01.TimeMcpServer"), "Ex01.TimeMcpServer.dll");
+Console.WriteLine($"Launching MCP server: {Path.GetFileName(liveServerDll)}");
 
 await using McpClient mcpClient = await McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
 {
     Command = "dotnet",
-    Arguments = ["run", "--project", serverProjectPath, "--no-build"],
-    Name = "TimeServer"
+    Arguments = [liveServerDll],
+    Name = "TimeServer",
+    StandardErrorLines = _ => { },
 }), cancellationToken: cts.Token);
 
 IList<McpClientTool> tools = await mcpClient.ListToolsAsync(cancellationToken: cts.Token);

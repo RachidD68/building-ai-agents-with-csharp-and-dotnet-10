@@ -56,15 +56,18 @@ if (httpIndex >= 0 && httpIndex + 1 < args.Length)
 else
 {
     // The StdioClientTransport launches the MCP server as a child process.
-    // The server's stdin/stdout become the communication channel.
-    string serverProjectPath = Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Ch09.McpServer"));
-    Console.WriteLine($"Launching MCP server from: {serverProjectPath}");
+    // The server's stdin/stdout become the communication channel. Start the
+    // built dll of the same configuration (bin/<Configuration>/net10.0):
+    // "dotnet run" would pick Debug and add its own console output.
+    string serverDll = Path.Combine(
+        AppContext.BaseDirectory.Replace("Ch09.McpConsumer", "Ch09.McpServer"), "Ch09.McpServer.dll");
+    Console.WriteLine($"Launching MCP server: {Path.GetFileName(serverDll)}");
     transport = new StdioClientTransport(new StdioClientTransportOptions
     {
         Command = "dotnet",
-        Arguments = ["run", "--project", serverProjectPath, "--no-build"],
-        Name = "ContosoProductServer"
+        Arguments = [serverDll],
+        Name = "ContosoProductServer",
+        StandardErrorLines = _ => { },   // the server's logs stay out of the conversation
     });
 }
 

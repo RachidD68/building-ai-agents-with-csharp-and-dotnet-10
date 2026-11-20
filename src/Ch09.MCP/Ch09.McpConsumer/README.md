@@ -10,7 +10,7 @@ dotnet run --project src/Ch09.MCP/Ch09.McpConsumer -- --http http://localhost:50
 dotnet run --project src/Ch09.MCP/Ch09.McpConsumer -- --self-test                     # offline, RESULT n/n
 ```
 
-Build the solution (or at least `Ch09.McpServer`) first: the stdio mode starts the server with `--no-build`, and the self-test starts its built `Ch09.McpServer.dll`.
+Build the solution (or at least `Ch09.McpServer`, in the same configuration) first: the stdio mode and the self-test both start the built `Ch09.McpServer.dll` from `bin/<Configuration>/net10.0`.
 
 The self-test runs the real stdio server as a child process and replaces the LLM with a scripted model. It checks discovery, the tools offered to the model, that a tool result reaches the model, that a tool the server never offered is not invoked, and that the server's logs arrive on stderr.
 

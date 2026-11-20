@@ -24,7 +24,7 @@ Build a tiny MCP server in C# with **one** tool: `GetCurrentTime(string timezone
 ## Running
 
 ```bash
-# First build the server (the consumer starts it with --no-build)
+# First build the server (the consumer starts its built dll, same configuration)
 dotnet build exercises/Ch09.Exercises/Ex01.TimeMcpServer
 
 # Then run the consumer (it launches the server automatically)
