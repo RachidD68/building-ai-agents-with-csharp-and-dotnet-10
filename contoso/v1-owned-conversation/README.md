@@ -31,6 +31,6 @@ The database lives in a temporary folder that is deleted at the end. Against a r
 
 ## Earlier and later snapshots
 
-`v0-agent-fake-model` is not in the repository yet. When it lands, v1 should take its agent construction and fake-model test setup instead of defining `ScriptedExpenseModel` and the agent options here.
+This snapshot stands alone. It does not reference `v0-agent-fake-model`: it defines its own scripted model (`ScriptedExpenseModel`) and agent options here, and composes `Ch06.SessionOwnership` for the conversation.
 
-What `v2-authorized-reimbursement` should take from this snapshot: the conversation key built from the authenticated caller (`ConversationKeys.For`, whose `TenantId` and `SubjectId` match the `Caller` record of the authorized-actions chapter), `SqliteSessionStore` with its schema version and concurrency token, and the forget path. v2 is self-contained today and does not keep a conversation.
+`v2-authorized-reimbursement` keeps this snapshot's tenant and employees (contoso, E-1001, E-2002) and its rule that identity comes from authentication, never from the payload. It is self-contained: it does not reference this project and does not keep a conversation.

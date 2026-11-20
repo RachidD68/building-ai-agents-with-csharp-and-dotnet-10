@@ -38,4 +38,4 @@ Simulated effects only: the payment provider is a fake with its own journal file
 
 ## Earlier snapshots
 
-This snapshot is self-contained. The earlier snapshots (`v0-agent-fake-model`, `v1-owned-conversation`) are not in the repository yet. When they exist, v2 should take from them: the agent and fake-model test setup (v0), the owned conversation and session store (v1), and the typed `ExpenseClaim` with domain validation from the typed-responses chapter, which v2 defines here in its smallest form.
+This snapshot is self-contained and does not reference `v0-agent-fake-model` or `v1-owned-conversation`. It keeps v1's tenant and employees (contoso, E-1001, E-2002) and its rule that identity comes from authentication, never from the payload. It builds its own claims store rather than v1's session store, and it defines the minimal `ExpenseClaim` it needs instead of the typed-responses chapter's full version.
