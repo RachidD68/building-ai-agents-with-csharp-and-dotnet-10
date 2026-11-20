@@ -98,9 +98,9 @@ internal static class BudgetSuite
         (long[] none, var noneCalls, int noneStored) = results[Strategies.Unbounded.Name];
         Expect("the usage the fake reported reaches AgentResponse.Usage.InputTokenCount",
             none.SequenceEqual(noneCalls.Select(c => c.InputTokens)));
-        Expect($"no reduction: input tokens rise on every turn ({none[0]} -> {none[^1]})",
+        Expect($"DEFECT REPRODUCED: no reduction: input tokens rise on every turn ({none[0]} -> {none[^1]})",
             none.Zip(none.Skip(1)).All(p => p.Second > p.First));
-        Expect("no reduction: the 20th call costs more than 10x the first", none[^1] > 10 * none[0]);
+        Expect("DEFECT REPRODUCED: no reduction: the 20th call costs more than 10x the first", none[^1] > 10 * none[0]);
         Expect($"no reduction: all 40 messages stored ({noneStored})", noneStored == 40);
 
         foreach (Strategy s in (Strategy[])[Strategies.MessageCounting, Strategies.Compaction, Strategies.LastTurns])

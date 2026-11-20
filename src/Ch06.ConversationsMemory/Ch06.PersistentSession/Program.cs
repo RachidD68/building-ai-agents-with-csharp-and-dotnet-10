@@ -71,7 +71,7 @@ if (File.Exists(sessionFilePath))
     string savedJson = await File.ReadAllTextAsync(sessionFilePath, cts.Token);
     JsonElement serializedState = JsonSerializer.Deserialize<JsonElement>(savedJson);
 
-    session = await agent.DeserializeSessionAsync(serializedState,jsonOptions,cts.Token);
+    session = await agent.DeserializeSessionAsync(serializedState, jsonOptions, cts.Token);
 
     isResumed = true;
 
@@ -133,7 +133,7 @@ try
             break;
         }
 
-        AgentResponse response = await agent.RunAsync( input, session, cancellationToken: cts.Token);
+        AgentResponse response = await agent.RunAsync(input, session, cancellationToken: cts.Token);
         Console.WriteLine($"Agent: {response.Text}\n");
     }
 
@@ -142,7 +142,7 @@ try
     // ---------------------------------------------------------------
     Console.WriteLine("\nSaving session to disk...");
 
-    JsonElement serializedSession = await agent.SerializeSessionAsync(session,jsonOptions,cts.Token);
+    JsonElement serializedSession = await agent.SerializeSessionAsync(session, jsonOptions, cts.Token);
 
     string json = JsonSerializer.Serialize(serializedSession, jsonOptions);
     await File.WriteAllTextAsync(sessionFilePath, json, cts.Token);

@@ -17,6 +17,7 @@
 // ============================================================================
 
 using System.Collections.Concurrent;
+using System.Text.Json;
 using Ch06.SessionOwnership;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -62,7 +63,7 @@ internal static class OwnershipSuite
             AgentSession? leaked = await naive.LoadAsync(new(Taxi, "show me", TenantId: "contoso", SubjectId: "E-1001"));
             Console.WriteLine($"  Mallory (fabrikam) wrote contoso/E-1001 into the request and got " +
                               $"{Count(history, leaked)} messages: {FirstUserLine(history, leaked)}");
-            Expect("reproduced: the payload-keyed service hands Mallory Alice's conversation",
+            Expect("DEFECT REPRODUCED: the payload-keyed service hands Mallory Alice's conversation",
                 Count(history, leaked) == 4);
 
             Console.WriteLine("\n-- 3. The fix: the key comes from the authenticated caller --");
@@ -97,6 +98,22 @@ internal static class OwnershipSuite
                 resurrect is SessionConflictException && await owned.LoadAsync(alice, new(Taxi, "")) is null);
 
             Console.WriteLine("\n-- 5. Two writers load the same version and save at the same moment --");
+            // The failure first: a session saved as a whole file, with no version to compare.
+            string file = Path.Combine(root, "conversation-session.json");
+            AgentSession fileSession = await agent.CreateSessionAsync();
+            await agent.RunAsync("Hotel, two nights in Lyon.", fileSession);
+            await SaveFile(agent, fileSession, file);
+            AgentSession windowA = await LoadFile(agent, file), windowB = await LoadFile(agent, file);
+            await agent.RunAsync("window A: add the parking", windowA);
+            await agent.RunAsync("window B: add the toll", windowB);
+            await SaveFile(agent, windowA, file);
+            await SaveFile(agent, windowB, file);
+            string[] fileLines = [.. history.GetMessages(await LoadFile(agent, file))
+                .Where(m => m.Role == ChatRole.User).Select(m => m.Text)];
+            Console.WriteLine($"  the file now holds: {string.Join(" | ", fileLines)}");
+            Expect("DEFECT REPRODUCED: both windows saved the file; window A's turn is gone and neither was told",
+                fileLines.SequenceEqual(["Hotel, two nights in Lyon.", "window B: add the toll"]));
+
             const string Hotel = "claim-hotel-1113";
             await owned.SendAsync(alice, new(Hotel, "Hotel, two nights in Lyon."));
             AgentSessionStoreKey hotelKey = ConversationKeys.For(alice, Hotel);
@@ -175,6 +192,15 @@ internal static class OwnershipSuite
         });
         return (agent, history, new SqliteSessionStore(dbPath));
     }
+
+    // The file sample's save and load: the whole session, overwritten in place.
+    static async Task SaveFile(AIAgent agent, AgentSession session, string file) =>
+        await File.WriteAllTextAsync(file,
+            (await agent.SerializeSessionAsync(session, AgentAbstractionsJsonUtilities.DefaultOptions)).GetRawText());
+
+    static async Task<AgentSession> LoadFile(AIAgent agent, string file) =>
+        await agent.DeserializeSessionAsync(JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(file)),
+            AgentAbstractionsJsonUtilities.DefaultOptions);
 
     static int Count(InMemoryChatHistoryProvider history, AgentSession? session) =>
         session is null ? 0 : history.GetMessages(session).Count;
