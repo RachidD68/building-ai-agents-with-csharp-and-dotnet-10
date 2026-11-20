@@ -17,6 +17,7 @@
 using Ch11.AuthorizedSearch;
 using Ch11.VersionedIngestion;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.AI;
 
 bool selfTest = args.Contains("--self-test");
 Console.WriteLine(selfTest
@@ -40,6 +41,7 @@ internal static class Suite
     static readonly HashingEmbedder ModelA = new(seed: 0);
     static readonly HashingEmbedder ModelB = new(seed: 7);
     static readonly DateTimeOffset Now = new(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+    static readonly DateOnly Today = DateOnly.FromDateTime(Now.UtcDateTime);
     static int s_passed, s_total;
 
     public static async Task<int> RunAsync(string root)
@@ -55,7 +57,7 @@ internal static class Suite
         IngestResult v1 = store.Validate(d1.Id);
         IngestResult i1 = await store.IndexAsync(d1.Id, ModelA, ModelA.ModelId);
         bool searchableBefore = Search(store, "contoso", "taxi receipt").Any(h => h.EvidenceId.StartsWith("contoso-taxi", StringComparison.Ordinal));
-        ChangeNotice a1 = store.Activate(d1.Id);
+        ChangeNotice a1 = store.Activate(d1.Id, Today);
         Expect($"v1: {d1.State} -> {v1.State} -> {i1.State} (searchable: {searchableBefore}) -> {State(store, "contoso-taxi", 1)}",
             d1.Created && v1.State == VersionState.Validated && i1.State == VersionState.Indexed && !searchableBefore
             && a1.Activated == 1 && State(store, "contoso-taxi", 1) == VersionState.Active);
@@ -73,6 +75,10 @@ internal static class Suite
         Expect($"the management draft is indexed, not activated: {State(store, "contoso-taxi", 3)}, never in search",
             State(store, "contoso-taxi", 3) == VersionState.Indexed
             && Search(store, "contoso", "draft manager approval taxi", 10).All(h => h.Version != 3));
+        ChangeNotice early = store.Activate(dd.Id, new DateOnly(2026, 11, 20));
+        Expect($"activating it on 20 November, before its effective date 2027-01-01 -> {early.Error}; it stays {State(store, "contoso-taxi", 3)}, v2 stays {State(store, "contoso-taxi", 2)}",
+            early.Error == "not_yet_effective" && State(store, "contoso-taxi", 3) == VersionState.Indexed
+            && State(store, "contoso-taxi", 2) == VersionState.Active);
 
         // ---- Idempotence and conflicts -----------------------------------------------
         Console.WriteLine("\n-- Re-ingestion, conflicts and concurrency --");
@@ -95,7 +101,7 @@ internal static class Suite
 
         PolicyDocument fab1 = corpus["fabrikam-taxi@v1"], fab2 = corpus["fabrikam-taxi@v2"];
         long f1 = await PrepareAsync(store, fab1), f2 = await PrepareAsync(store, fab2);
-        Task<ChangeNotice> t1 = Task.Run(() => store.Activate(f1)), t2 = Task.Run(() => store.Activate(f2));
+        Task<ChangeNotice> t1 = Task.Run(() => store.Activate(f1, Today)), t2 = Task.Run(() => store.Activate(f2, Today));
         await Task.WhenAll(t1, t2);
         Expect($"v1 and v2 activated at the same time: v2 {State(store, "fabrikam-taxi", 2)}, v1 {State(store, "fabrikam-taxi", 1)}" +
                $" ({t1.Result.Error ?? "activated"} / {t2.Result.Error ?? "activated"})",
@@ -109,8 +115,8 @@ internal static class Suite
 
         IngestResult bad = store.Discover(hotel with { Tenant = "northwind", DocId = "stray" });
         IngestResult badValidated = store.Validate(bad.Id);
-        Expect($"unknown tenant -> {badValidated.Error}; it stays {badValidated.State}, activation -> {store.Activate(bad.Id).Error}",
-            badValidated is { Error: "unknown_tenant", State: VersionState.Discovered } && store.Activate(bad.Id).Error == "not_indexed");
+        Expect($"unknown tenant -> {badValidated.Error}; it stays {badValidated.State}, activation -> {store.Activate(bad.Id, Today).Error}",
+            badValidated is { Error: "unknown_tenant", State: VersionState.Discovered } && store.Activate(bad.Id, Today).Error == "not_indexed");
 
         // ---- Atomic activation ---------------------------------------------------
         Console.WriteLine("\n-- The activation boundary --");
@@ -129,12 +135,12 @@ internal static class Suite
         await IngestAsync(atomicStore, taxi1);
         long m2 = await PrepareAsync(atomicStore, taxi2);
         atomicStore.BeforeActivationCommit = step => throw new InvalidOperationException($"simulated crash before committing {step}");
-        try { atomicStore.Activate(m2); } catch (InvalidOperationException) { }
+        try { atomicStore.Activate(m2, Today); } catch (InvalidOperationException) { }
         atomicStore.BeforeActivationCommit = null;
         Expect($"one transaction, same crash: v1 {State(atomicStore, "contoso-taxi", 1)}, v2 {State(atomicStore, "contoso-taxi", 2)}; search still answers from v1",
             State(atomicStore, "contoso-taxi", 1) == VersionState.Active && State(atomicStore, "contoso-taxi", 2) == VersionState.Indexed
             && Search(atomicStore, "contoso", "taxi receipt").Any(h => h.EvidenceId.StartsWith("contoso-taxi@v1", StringComparison.Ordinal)));
-        ChangeNotice retry = atomicStore.Activate(m2);
+        ChangeNotice retry = atomicStore.Activate(m2, Today);
         Expect($"the retry after restart activates v2 (retires v{retry.Retired})", retry is { Retired: 1, Activated: 2 });
 
         // ---- Effective dates -----------------------------------------------------
@@ -161,6 +167,16 @@ internal static class Suite
             && store.ApplicableOn("contoso", "contoso-relocation", new DateOnly(2026, 11, 20)).Warning == "deleted");
         Expect($"the same bytes ingested again -> {store.Discover(relocation).Error}: a retry does not resurrect it",
             store.Discover(relocation).Error == "deleted");
+
+        // A delete that lands while the chunks are being embedded, outside the write lock.
+        PolicyDocument receipt = corpus["contoso-lost-receipt@v1"];
+        IngestResult r1 = store.Discover(receipt);
+        store.Validate(r1.Id);
+        var deleting = new DeleteWhileEmbedding(ModelA, () => store.Delete("contoso", "contoso-lost-receipt", Now));
+        IngestResult racedIndex = await store.IndexAsync(r1.Id, deleting, ModelA.ModelId);
+        long receiptChunks = store.Count("SELECT COUNT(*) FROM chunks c JOIN versions v ON v.id = c.version_id WHERE v.doc_id = 'contoso-lost-receipt'");
+        Expect($"delete during indexing: index -> {racedIndex.Error}, state {State(store, "contoso-lost-receipt", 1)}, chunks left {receiptChunks}",
+            racedIndex.Error == "deleted" && State(store, "contoso-lost-receipt", 1) == VersionState.Deleted && receiptChunks == 0);
 
         // ---- Embedding migration -------------------------------------------------
         Console.WriteLine("\n-- A new embedding model is a new index version --");
@@ -192,7 +208,7 @@ internal static class Suite
     static async Task<ChangeNotice> IngestAsync(IngestionStore store, PolicyDocument doc)
     {
         long id = await PrepareAsync(store, doc);
-        return store.Activate(id);
+        return store.Activate(id, Today);
     }
 
     static async Task<long> PrepareAsync(IngestionStore store, PolicyDocument doc)
@@ -240,4 +256,19 @@ internal static class Suite
         if (ok) s_passed++;
         Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
+}
+
+/// <summary>Test double: deletes the document while its chunks are being embedded.</summary>
+internal sealed class DeleteWhileEmbedding(HashingEmbedder inner, Action delete) : IEmbeddingGenerator<string, Embedding<float>>
+{
+    public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(IEnumerable<string> values,
+        EmbeddingGenerationOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        GeneratedEmbeddings<Embedding<float>> result = await inner.GenerateAsync(values, options, cancellationToken);
+        delete();
+        return result;
+    }
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+    public void Dispose() { }
 }

@@ -14,7 +14,8 @@ public enum SourceState { Active, Superseded, Draft, Revoked }
 /// </summary>
 public sealed record CallerContext(string Tenant, string Subject, AccessLevel Level)
 {
-    public bool IsComplete => Tenant.Length > 0 && Subject.Length > 0;
+    public bool IsComplete =>
+        !string.IsNullOrWhiteSpace(Tenant) && !string.IsNullOrWhiteSpace(Subject) && Enum.IsDefined(Level);
 }
 
 /// <summary>One version of one policy document, with its access metadata.</summary>

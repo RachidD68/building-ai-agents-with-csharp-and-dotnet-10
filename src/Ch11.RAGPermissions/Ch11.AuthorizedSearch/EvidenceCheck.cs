@@ -20,12 +20,14 @@ public sealed record CheckedAnswer(
 /// The deterministic half of grounding: every cited id must be one the ledger of
 /// this request holds. Whether the passage supports the claim is a separate,
 /// semantic check (the evaluation chapter); this one only proves where text came from.
+/// Every id-shaped token counts, bracketed or not, in a list or in parentheses, in any
+/// case: a planted id must not get past the check by changing its punctuation.
 /// </summary>
 public static partial class EvidenceCheck
 {
     public static CheckedAnswer Check(string answer, EvidenceLedger ledger)
     {
-        string[] cited = [.. CitationPattern().Matches(answer).Select(m => m.Groups[1].Value).Distinct()];
+        string[] cited = [.. IdToken().Matches(answer).Select(m => m.Value.ToLowerInvariant()).Distinct()];
         string[] rejected = [.. cited.Where(id => !ledger.WasIssued(id))];
 
         string? abstention =
@@ -36,6 +38,6 @@ public static partial class EvidenceCheck
         return new CheckedAnswer(answer, cited, rejected, abstention);
     }
 
-    [GeneratedRegex(@"\[([a-z0-9-]+@v\d+#\d+)\]")]
-    private static partial Regex CitationPattern();
+    [GeneratedRegex(@"[a-z0-9-]+@v\d+#\d+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex IdToken();
 }

@@ -140,8 +140,8 @@ internal static class Suite
         bool naiveStored = await RaceAsync(tokenBeforeRetrieval: false);
         Expect($"DEFECT REPRODUCED: token read at write time; the answer built from the revoked hotel policy is stored ({naiveStored})",
             naiveStored && cache.TryGet(hotelKey, (_, _) => true).Hit);
-        Expect($"... and the delivery check still refuses it: {cache.TryGet(hotelKey, source.Readable).Reason}",
-            cache.TryGet(hotelKey, source.Readable).Reason is "dependency_not_readable" or "miss");
+        string deliveryReason = cache.TryGet(hotelKey, source.Readable).Reason;     // a refusal also removes the entry
+        Expect($"... and the delivery check still refuses it: {deliveryReason}", deliveryReason == "dependency_not_readable");
         source.Restore("contoso", "contoso-hotel");
         await source.RestoreIndexAsync("contoso", "contoso-hotel");
         bool fixedStored = await RaceAsync(tokenBeforeRetrieval: true);

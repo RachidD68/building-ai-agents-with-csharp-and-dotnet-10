@@ -41,8 +41,13 @@ public sealed class PolicyFaq
     public IngestionStore Store { get; }
     public ScopedCache Cache { get; }
 
-    /// <summary>Ingests one source version; activates it when the source says it is in force.</summary>
-    public async Task<ChangeNotice?> PublishAsync(PolicyDocument doc, CancellationToken ct = default)
+    /// <summary>
+    /// Ingests one source version; activates it when the source says it is in force and its
+    /// effective date has come. The vector index mirrors the store in separate steps, so for a
+    /// moment both versions are Active there; a production system flips both in one step, or
+    /// filters on the store's active version.
+    /// </summary>
+    public async Task<ChangeNotice?> PublishAsync(PolicyDocument doc, DateOnly today, CancellationToken ct = default)
     {
         IngestResult found = Store.Discover(doc);
         if (found.Error is not null) return new ChangeNotice(doc.Tenant, doc.DocId, null, null, found.Error);
@@ -53,7 +58,12 @@ public sealed class PolicyFaq
             await _search.IndexAsync([doc with { State = SourceState.Draft }], ct);     // indexed, never searchable
             return null;
         }
-        ChangeNotice notice = Store.Activate(found.Id);
+        ChangeNotice notice = Store.Activate(found.Id, today);
+        if (notice.Error == "not_yet_effective")
+        {
+            await _search.IndexAsync([doc with { State = SourceState.Draft }], ct);     // waits for its date
+            return notice;
+        }
         if (notice.Activated is int activated)
         {
             await _search.IndexAsync([doc], ct);

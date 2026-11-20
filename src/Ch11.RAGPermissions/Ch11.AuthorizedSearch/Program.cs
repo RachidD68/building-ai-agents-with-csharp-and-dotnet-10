@@ -148,6 +148,24 @@ internal static class SelfTest
         await faq.RunAsync("Can I expense a taxi at night?");
         Expect("with a ContextFormatter, the injected context is the formatter's text alone",
             model.LastEvidenceMessage?.StartsWith("Evidence supplied for this question", StringComparison.Ordinal) == true);
+
+        // Filter before top K, or after? With top 1, a post-filter would return nothing.
+        const string TopQuery = "Can I expense a taxi ride on a business trip?";
+        string unfilteredTop = "";
+        bool frankMayRead = true;
+        ReadOnlyMemory<float> topVector = new HashingEmbedder().Embed(TopQuery);
+        await foreach (VectorSearchResult<PolicyChunk> hit in search.Store.SearchAsync(topVector, 1))
+        {
+            unfilteredTop = hit.Record.EvidenceId;
+            frankMayRead = hit.Record.Tenant == Callers.Frank.Tenant && hit.Record.Access <= (int)Callers.Frank.Level
+                           && hit.Record.State == nameof(SourceState.Active);
+        }
+        var topOne = new AuthorizedSearchService(new HashingEmbedder(), search.Store, top: 1);
+        IReadOnlyList<EvidenceRecord> frankTop = await topOne.SearchAsync(Callers.Frank, TopQuery);
+        Expect($"the in-memory filter runs before the top K: top 1 unfiltered {unfilteredTop} (not Frank's to read), " +
+               $"top 1 for Frank {string.Join(", ", frankTop.Select(e => e.EvidenceId))}",
+            unfilteredTop.Length > 0 && !frankMayRead
+            && frankTop.Count == 1 && frankTop[0].Tenant == "fabrikam" && frankTop[0].Access <= Callers.Frank.Level);
     }
 
     // ---- First attempts that fail ---------------------------------------------
@@ -327,6 +345,28 @@ internal static class SelfTest
         CheckedAnswer old = EvidenceCheck.Check("Only when no public transport runs [contoso-taxi@v1#0].", ledger);
         Expect($"a citation of the superseded version, never supplied -> {old.Abstention}",
             old.Abstention == AbstentionReason.CitationNotSupplied);
+
+        // The planted id in other punctuation: parentheses, a list, another case, a space.
+        string[] disguised =
+        [
+            "Yes [contoso-taxi@v2#0] (source: contoso-exec-travel@v1#0)",
+            "[contoso-taxi@v2#0] [contoso-taxi@v2#0, contoso-exec-travel@v1#0]",
+            "[contoso-taxi@v2#0][Contoso-Exec-Travel@v1#0]",
+            "[contoso-exec-travel@v1#0 ] [contoso-taxi@v2#0]",
+        ];
+        var bracketOnly = new System.Text.RegularExpressions.Regex(@"\[([a-z0-9-]+@v\d+#\d+)\]");
+        int slipped = disguised.Count(a => bracketOnly.Matches(a).All(m => ledger.WasIssued(m.Groups[1].Value)));
+        Expect($"DEFECT REPRODUCED: a check that reads only [id] accepts {slipped} of {disguised.Length} answers that plant contoso-exec-travel@v1#0",
+            ledger.WasIssued("contoso-taxi@v2#0") && slipped == disguised.Length);
+        int caught = disguised.Count(a => EvidenceCheck.Check(a, ledger) is
+            { Abstention: AbstentionReason.CitationNotSupplied } c && c.Rejected.Contains("contoso-exec-travel@v1#0"));
+        Expect($"every id-shaped token is checked: {caught} of {disguised.Length} -> citation_not_supplied", caught == disguised.Length);
+
+        // The check proves provenance only: a caller who may read the planted target receives it.
+        CheckedAnswer xavier = await Ask(Callers.Xavier, "Which taxi suppliers are in the annex, and who may book business class on flights?");
+        Expect($"LIMIT: Xavier (restricted) was given {string.Join(", ", xavier.Cited)}, so the planted citation is accepted " +
+               $"({(xavier.Accepted ? "accepted" : xavier.Abstention)}); the action boundary must hold",
+            xavier.Accepted && xavier.Cited.Contains("contoso-exec-travel@v1#0") && xavier.Text.StartsWith("As instructed", StringComparison.Ordinal));
 
         CheckedAnswer anonymous = await Ask(Callers.Alice with { Subject = "" }, "Can I expense a taxi ride?");
         Expect($"a caller with no subject gets no evidence -> {anonymous.Abstention}",

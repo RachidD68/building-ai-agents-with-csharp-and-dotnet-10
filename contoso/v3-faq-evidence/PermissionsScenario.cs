@@ -78,7 +78,7 @@ internal static class PermissionsScenario
         PolicyDocument monday = corpus.Single(d => d is { DocId: "contoso-taxi", Version: 2 });
         foreach (PolicyDocument doc in corpus.Where(d => d.State != SourceState.Revoked && d != monday))
         {
-            await faq.PublishAsync(doc.State == SourceState.Superseded ? doc with { State = SourceState.Active } : doc);
+            await faq.PublishAsync(doc.State == SourceState.Superseded ? doc with { State = SourceState.Active } : doc, Today(clock));
         }
         const string Taxi = "Can I expense a taxi ride home from a business trip, with the receipt?";
 
@@ -90,7 +90,7 @@ internal static class PermissionsScenario
 
         Console.WriteLine("\n-- 2. Monday: the new taxi policy is published --");
         clock.Advance(TimeSpan.FromDays(3));
-        ChangeNotice? notice = await faq.PublishAsync(monday);
+        ChangeNotice? notice = await faq.PublishAsync(monday, Today(clock));
         Console.WriteLine($"  publish contoso-taxi v2: retires v{notice?.Retired}, activates v{notice?.Activated}");
         FaqAnswer mondayAnswer = await Show(faq, Alice, Taxi);
         Expect("Friday's answer is not served; the new answer cites taxi v2",
@@ -160,6 +160,8 @@ internal static class PermissionsScenario
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
     }
+
+    static DateOnly Today(TimeProvider clock) => DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
 
     static async Task<FaqAnswer> Show(PolicyFaq faq, CallerContext caller, string question, DateOnly? tripDate = null)
     {

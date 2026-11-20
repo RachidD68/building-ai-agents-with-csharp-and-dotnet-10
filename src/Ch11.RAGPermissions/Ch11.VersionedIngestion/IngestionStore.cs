@@ -133,6 +133,11 @@ public sealed class IngestionStore
         GeneratedEmbeddings<Embedding<float>> vectors = await embedder.GenerateAsync(paragraphs, cancellationToken: ct);
 
         using SqliteTransaction tx = db.BeginTransaction(deferred: false);
+        // Embedding ran outside the lock: a delete may have landed meanwhile. Re-read under it.
+        string tenant = (string)Scalar(db, tx, "SELECT tenant FROM versions WHERE id = $id", ("$id", id))!;
+        if (ReadVersion(db, id, tx).State == VersionState.Deleted
+            || Scalar(db, tx, "SELECT 1 FROM tombstones WHERE tenant = $t AND doc_id = $d", ("$t", tenant), ("$d", docId)) is not null)
+            return new IngestResult(id, VersionState.Deleted, false, "deleted");      // disposing rolls back
         for (int i = 0; i < paragraphs.Length; i++)
         {
             Execute(db, tx, "INSERT OR REPLACE INTO chunks VALUES($i, $v, $c, $e, $t, $vec)",
@@ -145,7 +150,7 @@ public sealed class IngestionStore
     }
 
     // ---- active / superseded: one transaction ----------------------------------
-    public ChangeNotice Activate(long id)
+    public ChangeNotice Activate(long id, DateOnly today)
     {
         using SqliteConnection db = Open();
         using SqliteTransaction tx = db.BeginTransaction(deferred: false);   // BEGIN IMMEDIATE: one writer
@@ -153,6 +158,9 @@ public sealed class IngestionStore
         string tenant = (string)Scalar(db, tx, "SELECT tenant FROM versions WHERE id = $id", ("$id", id))!;
         if (state == VersionState.Active) return new ChangeNotice(tenant, docId, null, null, "already_active");
         if (state != VersionState.Indexed) return new ChangeNotice(tenant, docId, null, null, "not_indexed");
+        string effective = (string)Scalar(db, tx, "SELECT effective_from FROM versions WHERE id = $id", ("$id", id))!;
+        if (DateOnly.ParseExact(effective, "yyyy-MM-dd", CultureInfo.InvariantCulture) > today)
+            return new ChangeNotice(tenant, docId, null, null, "not_yet_effective");      // stays Indexed
         object? active = Scalar(db, tx, "SELECT version FROM versions WHERE tenant = $t AND doc_id = $d AND state = 'Active'",
             ("$t", tenant), ("$d", docId));
         int? retired = active is null ? null : Convert.ToInt32(active, CultureInfo.InvariantCulture);
@@ -187,7 +195,10 @@ public sealed class IngestionStore
         return new ChangeNotice(tenant, docId, active is null ? null : Convert.ToInt32(active, CultureInfo.InvariantCulture), null);
     }
 
-    /// <summary>Applicability is the effective date, not the activation: the latest version in force on that day.</summary>
+    /// <summary>
+    /// Applicability is the effective date, not the activation: the latest version in force on that day.
+    /// Activate refuses a version before its effective date, so no Active or Superseded row lies in the future.
+    /// </summary>
     public Applicable ApplicableOn(string tenant, string docId, DateOnly day)
     {
         using SqliteConnection db = Open();
@@ -257,6 +268,10 @@ public sealed class IngestionStore
         (int index, string model) = CurrentIndex(db);
         if (model != queryModel)
             throw new IndexMismatchException($"the current index {index} holds {model} vectors; the query was embedded with {queryModel}");
+        long dimensions = Convert.ToInt64(Scalar(db, null, "SELECT dimensions FROM indexes WHERE index_version = $i", ("$i", index))!,
+            CultureInfo.InvariantCulture);
+        if (query.Length != dimensions)        // the label is the caller's word; the length is checked too
+            throw new IndexMismatchException($"the current index {index} holds {dimensions}-float vectors; the query has {query.Length}");
         using SqliteCommand cmd = Command(db, null, """
             SELECT c.evidence_id, v.version, c.text, c.vector FROM chunks c JOIN versions v ON v.id = c.version_id
             WHERE c.index_version = $i AND v.tenant = $t AND v.state = 'Active'
