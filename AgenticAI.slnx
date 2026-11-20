@@ -98,6 +98,11 @@
     <Project Path="src/Ch14.Workflows/Ch14.SubWorkflow/Ch14.SubWorkflow.csproj" />
     <Project Path="src/Ch14.Workflows/Ch14.WorkflowTests/Ch14.WorkflowTests.csproj" />
   </Folder>
+  <Folder Name="/src/Ch15.DurableExecution/">
+    <Project Path="src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj" />
+    <Project Path="src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj" />
+    <Project Path="src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj" />
+  </Folder>
   <Folder Name="/src/Ch16.SkillsHarnesses/">
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.AgentSkills/Ch16.AgentSkills.csproj" />
     <Project Path="src/Ch16.SkillsHarnesses/Ch16.CodingAgent/Ch16.CodingAgent.csproj" />
@@ -242,5 +247,8 @@
   </Folder>
   <Folder Name="/contoso/v4-receipts/">
     <Project Path="contoso/v4-receipts/Contoso.Receipts.csproj" />
+  </Folder>
+  <Folder Name="/contoso/v5-durable-resume/">
+    <Project Path="contoso/v5-durable-resume/Contoso.DurableResume.csproj" />
   </Folder>
 </Solution>

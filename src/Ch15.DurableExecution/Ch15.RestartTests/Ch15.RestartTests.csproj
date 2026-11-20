@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Restart tests: start real worker processes, kill them at each failure
+       window, start new ones, and count effects in the simulated provider's
+       journal. A console harness with no package dependency: it runs the BUILT
+       Ch15.ExternalEffects, Ch15.DurableReview and Contoso v5 assemblies of the
+       same configuration, so build the solution first. Offline. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+</Project>

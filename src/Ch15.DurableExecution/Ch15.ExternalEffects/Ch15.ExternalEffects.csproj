@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A workflow step that pays: the windows between the provider's journal,
+       the business record and the next checkpoint, a lease with a fencing
+       token, and reconciliation driven from the restored workflow. The
+       simulated provider and the reconciler are Ch08.UncertainOutcome's,
+       used as they are. No model. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="OpenTelemetry.Api" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Ch08.AuthorizedActions/Ch08.UncertainOutcome/Ch08.UncertainOutcome.csproj" />
+  </ItemGroup>
+
+</Project>

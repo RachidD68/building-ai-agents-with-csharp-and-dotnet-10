@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contoso snapshot v5, "Durable resume": the v4 receipt claim waits for a
+       reviewer in a workflow whose checkpoint is on disk. prepare, review and
+       resume are separate processes; a resume checks the graph version and
+       revalidates the decision, then pays once through the v2 desk under a
+       fenced lease. Simulated effects only; no preview package. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="OpenTelemetry.Api" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The previous snapshot, used as it is: ReceiptIntake, and through it the v2 desk and the Ch08 projects. -->
+    <ProjectReference Include="../v4-receipts/Contoso.Receipts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The durable-execution chapter's building blocks, compiled in as linked files
+         (not references to those console apps). -->
+    <Compile Include="../../src/Ch15.DurableExecution/Ch15.DurableReview/GraphVersion.cs" Link="Durable/GraphVersion.cs" />
+    <Compile Include="../../src/Ch15.DurableExecution/Ch15.ExternalEffects/LeaseStore.cs" Link="Durable/LeaseStore.cs" />
+    <Compile Include="../../src/Ch15.DurableExecution/Ch15.ExternalEffects/StepHooks.cs" Link="Durable/StepHooks.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../assets/receipts/*.png" LinkBase="assets/receipts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
