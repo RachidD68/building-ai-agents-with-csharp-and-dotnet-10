@@ -1,0 +1,28 @@
+# code 15c76fe | SDK 11.0.100 | Windows 11 | no provider (offline self-test)
+$ dotnet run -- --self-test
+
+=== First LLM call: configuration self-test (no model is called) ===
+
+-- Wrong root: AzureOpenAI:Endpoint outside LlmProvider --
+  PASS  DEFECT REPRODUCED: a root-level AzureOpenAI:Endpoint is ignored -> MISSING
+  PASS  fixed under LlmProvider: -> set
+
+-- Missing key: openai without an ApiKey --
+  PASS  the report marks LlmProvider:OpenAI:ApiKey MISSING
+  PASS  AddLlmChatClient fails at registration, before any call, and names the setting
+  PASS  with the key set, registration succeeds
+
+-- Order of sources: a later source wins --
+  PASS  the environment variable beats the earlier source
+  PASS  --config-check names the winning source: environment variables
+  PASS  --config-check prints no value, from either source
+
+-- Defaults and fallbacks --
+  PASS  no Provider anywhere -> ollama, from the built-in default
+  PASS  anthropic: ANTHROPIC_API_KEY counts as the key
+
+-- User secrets load only in Development --
+  PASS  Development -> user secrets are a configuration source
+  PASS  Production  -> user secrets are not loaded
+
+RESULT 12/12
