@@ -1,6 +1,6 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
 # Ch18.AguiServer --self-test
-# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# code: CodeSample 1f86fce, Release build on Windows (-warnaserror, clean worktree, locked restore)
 # platform: Windows 11, dotnet Ch18.AguiServer.dll --self-test, exit 0
 
 === Ch18.AguiServer (self-test, offline, AG-UI 1.5.0-preview) ===
@@ -10,13 +10,17 @@
   PASS  guarded: bob on alice's thread id: 404
   PASS  fabrikam/E-1001 (same subject, other tenant) on it: 403, refused before the thread is looked up
 
+-- 1b. The guard reads the thread id the way MAF does
+  PASS  DEFECT REPRODUCED: a case-sensitive guard checks 'threadId' (bob's t-bob-1), MAF reads the later 'ThreadId' (t-alice): 200, "I see 2 user message(s); the first: 'My hotel receipt: 412 EUR, room 18'."
+  PASS  guarded: a second 'ThreadId' / 'THREADID' naming alice's thread: 400 / 400; a lone 'ThreadId': 400; alice's thread still holds only her messages: "I see 2 user message(s); the first: 'My hotel receipt: 412 EUR, room 18'."
+
 -- 2. Selection only after authorization (rights loaded per request)
   PASS  no token 401; bob on the review agent 403; rita on the employee agent 403; rita on the review agent 200
 
 -- 3. AG-UI carries the response; the status stream carries the operation
      AG-UI event types: RUN_STARTED, TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END, TOOL_CALL_RESULT, TEXT_MESSAGE_START, TEXT_MESSAGE_CONTENT, TEXT_MESSAGE_END, RUN_FINISHED
   PASS  RUN_STARTED ... RUN_FINISHED with the client's run id
-  PASS  the reply streams the tool's result: "The application says: claim 8cffd141-8c49-46ad-815e-d1d575cf2e2b for 120 EUR: waiting for a finance reviewer."
+  PASS  the reply streams the tool's result: "The application says: claim b6eccd18-cbcf-4241-9770-b330dd0ca051 for 120 EUR: waiting for a finance reviewer."
   PASS  after RUN_FINISHED the operation is AwaitingApproval (amount_above_review_limit): not done
   PASS  bob reads alice's thread status: 404
 
@@ -34,4 +38,4 @@
 -- 6. A reviewer revoked mid-review
   PASS  after the revocation: review agent 403, decision POST 403 reviewer_not_authorized
 
-RESULT 16/16
+RESULT 18/18

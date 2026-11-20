@@ -1,6 +1,6 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
 # Contoso.ApiUi --self-test
-# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# code: CodeSample 1f86fce, Release build on Windows (-warnaserror, clean worktree, locked restore)
 # platform: Windows 11, dotnet Contoso.ApiUi.dll --self-test, exit 0
 
 === Contoso v6: the API and the interface over v5 (self-test, offline) ===
@@ -19,7 +19,7 @@
   PASS  alice approves her own claim: 403 separation_of_duties
   PASS  bob sends {"reviewer":"rita"} in the body: 404 (he cannot see it; the field is never read)
   PASS  fabrikam/rita (same subject as the reviewer, other tenant): 404
-  PASS  rita approves twice at once (Task.Run): 200 rita and 409 already_decided
+  PASS  rita approves twice at once (Task.Run): 409 already_decided and 200 rita
 
 -- 4. v5 resume (child process) pays once; the API reports it
   PASS  resume exits 0, [DELIVERED]
@@ -35,7 +35,7 @@
   PASS  alice approves her own claim: 403 separation_of_duties
   PASS  an older account version: 409 stale_version
   PASS  a digest of other arguments: 409 digest_mismatch
-  PASS  rita double-clicks approve (Task.Run): 200 approved (replayed) / 200 approved
+  PASS  rita double-clicks approve (Task.Run): 200 approved / 200 approved (replayed)
   PASS  alice resumes from cursor 2: Running (approved_awaiting_payment), not done
   PASS  v5 resume pays ([DELIVERED]); alice's stream: Completed (paid), done True
   PASS  rita's lost response, retried after payment: 200 approved (replayed); payments in the journal: 2

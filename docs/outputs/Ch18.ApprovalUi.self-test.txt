@@ -1,12 +1,12 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
 # Ch18.ApprovalUi --self-test
-# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# code: CodeSample 1f86fce, Release build on Windows (-warnaserror, clean worktree, locked restore)
 # platform: Windows 11, dotnet Ch18.ApprovalUi.dll --self-test, exit 0
 
 === Ch18.ApprovalUi (self-test, offline) ===
 
 -- 1. Who sees the review screen
-  PASS  rita (finance reviewer): version 1, 120 EUR, digest C319879C...
+  PASS  rita (finance reviewer): version 1, 120 EUR, digest D4FA7463...
   PASS  bob (no reviewer role): not found
   PASS  fabrikam/rita (same subject, other tenant): not found
 

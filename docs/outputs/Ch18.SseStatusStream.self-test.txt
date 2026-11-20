@@ -1,6 +1,6 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
 # Ch18.SseStatusStream --self-test
-# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# code: CodeSample 1f86fce, Release build on Windows (-warnaserror, clean worktree, locked restore)
 # platform: Windows 11, dotnet Ch18.SseStatusStream.dll --self-test, exit 0
 
 === Ch18.SseStatusStream (self-test, offline) ===
@@ -18,15 +18,17 @@
   PASS  an overlapping replay (from cursor 2) is discarded: 6 events, text unchanged
   PASS  DEFECT REPRODUCED: snapshot, then a replay from 0 doubles the text (62 chars for 31)
 
--- 3. A cursor older than the retained window gets a snapshot
+-- 3. A cursor the log cannot replay gets a snapshot
   PASS  cursor 3, window of 32: the first event is a snapshot at cursor 81
   PASS  the snapshot carries the whole text (80 words)
   PASS  a hole in the cursors (3 missing) sets NeedsResync instead of applying past it
+  PASS  after a restart (new epoch, log at cursor 2) the client sends cursor 40: a snapshot at 2, then cursor 3, Completed, done True
 
 -- 4. An older run's outcome does not end the newer run
   PASS  DEFECT REPRODUCED: the naive UI shows Completed for the retry
   PASS  the view stays on run B, Running, not done (discarded 1 event of run A)
   PASS  the server's stream ended on run B's Failed, not on run A's Completed
+  PASS  a replay from 0 across two runs: 5 of 5 events, the first run's Completed does not end it; the view is on the second run, Running
 
 -- 5. A slow client: the queue is bounded
   PASS  1000 events, queue bound 8: peak 8, then the client is dropped
@@ -38,12 +40,14 @@
   PASS  after the click: 'cancel requested', not done
   PASS  DEFECT REPRODUCED: the naive UI shows Cancelled; the payment committed
   PASS  the view shows Completed (committed_before_cancel)
+  PASS  a terminal state is final: a later Running for the same run is refused; the snapshot stays Completed
   PASS  a provider timeout after the request: OutcomeUnknown, still not done
+  PASS  a snapshot of a newer run clears the older run's 'cancel requested' (before: True, after: False)
 
 -- 7. Concurrent writers, one order
-  PASS  4 writers on Task.Run, 1000 deltas: cursors 2..1001, each once
+  PASS  4 writers on Task.Run behind a barrier, 1000 deltas: the subscriber saw cursors 2..1001, each once, in order
 
 -- 8. The host decides who reads
   PASS  a conversation the caller may not read: 404 on events and snapshot (same as no such id)
 
-RESULT 25/25
+RESULT 29/29
