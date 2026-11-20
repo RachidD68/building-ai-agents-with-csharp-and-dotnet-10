@@ -1,4 +1,4 @@
-# code 15c76fe | SDK 11.0.100 | Windows 11 | no provider (offline self-test)
+# code 1a3df2c | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === First LLM call: configuration self-test (no model is called) ===
@@ -24,5 +24,11 @@ $ dotnet run -- --self-test
 -- User secrets load only in Development --
   PASS  Development -> user secrets are a configuration source
   PASS  Production  -> user secrets are not loaded
+  PASS  Development -> the host adds environment variables after user secrets
+  PASS  --environment Development -> the report says Development and user secrets loaded
 
-RESULT 12/12
+-- A setting written after --config-check --
+  PASS  DEFECT REPRODUCED: the setting is read as the flag's value -> not from the command line
+  PASS  fixed by dropping the flag from the command line -> openai (from command line)
+
+RESULT 16/16
