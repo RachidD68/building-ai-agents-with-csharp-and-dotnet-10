@@ -18,33 +18,68 @@ public static class LlmConfigCheck
     /// </summary>
     public static void RunIfRequested(IConfiguration configuration)
     {
-        if (!Environment.GetCommandLineArgs().Contains("--config-check", StringComparer.OrdinalIgnoreCase))
+        if (!Environment.GetCommandLineArgs().Contains(Flag, StringComparer.OrdinalIgnoreCase))
         {
             return;
         }
 
-        Console.WriteLine(Report(configuration));
+        // The environment the host already used to choose its sources.
+        string? hostEnvironment = configuration[EnvironmentKey];
+        DropFlagFromCommandLine(configuration);
+        Console.WriteLine(Report(configuration, hostEnvironment));
         Environment.Exit(0);
     }
 
+    const string Flag = "--config-check";
+    const string EnvironmentKey = "environment";   // set by DOTNET_ENVIRONMENT or --environment
+
+    /// <summary>
+    /// The command-line provider reads a bare <c>--config-check</c> as a key and takes
+    /// the next argument as its value, so a setting written after the flag would vanish
+    /// from the report. This removes the flag from every command-line source and reloads.
+    /// </summary>
+    public static void DropFlagFromCommandLine(IConfiguration configuration)
+    {
+        if (configuration is not IConfigurationBuilder builder)
+        {
+            return;
+        }
+
+        for (int i = 0; i < builder.Sources.Count; i++)
+        {
+            IConfigurationSource source = builder.Sources[i];
+            if (source.GetType().GetProperty("Args") is { CanWrite: true } argsProperty
+                && argsProperty.GetValue(source) is IEnumerable<string> sourceArgs
+                && sourceArgs.Contains(Flag, StringComparer.OrdinalIgnoreCase))
+            {
+                argsProperty.SetValue(source, sourceArgs
+                    .Where(a => !a.Equals(Flag, StringComparison.OrdinalIgnoreCase)).ToArray());
+                builder.Sources[i] = source;   // a ConfigurationManager rebuilds its providers
+            }
+        }
+    }
+
     /// <summary>Builds the report: names and sources only, never values.</summary>
-    public static string Report(IConfiguration configuration)
+    public static string Report(IConfiguration configuration) =>
+        Report(configuration, configuration[EnvironmentKey]);
+
+    static string Report(IConfiguration configuration, string? hostEnvironment)
     {
         LlmSettings settings = new();
         configuration.GetSection("LlmProvider").Bind(settings);
         string provider = settings.Provider.ToLowerInvariant();
 
-        string environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            ?? "Production (not set)";
-
         List<string> lines =
         [
             "=== LLM configuration check (no model is called) ===",
-            $"Environment  : {environment}",
+            $"Environment  : {hostEnvironment ?? "Production (not set)"}",
             $"Provider     : {settings.Provider}   (from {SourceOf(configuration, "LlmProvider:Provider") ?? "the built-in default"})",
-            $"User secrets : {(UserSecretsLoaded(configuration) ? "loaded" : "not loaded — they load only when the environment is Development")}",
+            $"User secrets : {(UserSecretsLoaded(configuration) ? "loaded" : "not loaded - they load only when the environment is Development")}",
         ];
+        if (!string.Equals(configuration[EnvironmentKey], hostEnvironment, StringComparison.OrdinalIgnoreCase))
+        {
+            lines.Add("Note         : --environment came after --config-check, too late for the host; put --config-check last");
+        }
 
         (string Key, bool Required, string Hint)[] keys = provider switch
         {
@@ -86,7 +121,7 @@ public static class LlmConfigCheck
             }
 
             string state = source is not null ? "set" : required ? "MISSING" : "not set";
-            lines.Add($"  {key,-38} {state,-8} {(source is not null ? $"(from {source})" : $"— {hint}")}");
+            lines.Add($"  {key,-38} {state,-8} {(source is not null ? $"(from {source})" : $"- {hint}")}");
         }
 
         lines.Add("Set a value with user secrets, e.g.: dotnet user-secrets set \"LlmProvider:Provider\" \"openai\"");

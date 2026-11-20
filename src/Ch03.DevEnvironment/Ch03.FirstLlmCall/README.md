@@ -18,7 +18,7 @@ Your first real conversation with an AI model. This project connects to an LLM p
 | **Azure OpenAI** | Pay-as-you-go | Enterprise, managed deployments |
 
 > **Azure OpenAI** comes from `AgenticAI.Common.Azure`, which this project references: `AddAzureOpenAIProvider()`
-> plugs the `azure` arm into `AddLlmChatClient`. The other samples reference only the GA core, so add the
+> plugs the `azure` arm into `AddLlmChatClient`. The other samples in this chapter reference only the GA core, so add the
 > same reference and line to run one of them on Azure OpenAI.
 
 > **Anthropic (Claude)** is also wired up, but it returns an `AIAgent` (not an `IChatClient`), so it
@@ -100,7 +100,9 @@ dotnet run                     # one call to the configured provider
 
 1. `--self-test` checks the configuration rules over in-memory configurations: a key outside the
    `LlmProvider` root is ignored, a missing key fails at registration, a later source (an
-   environment variable) beats an earlier one, and user secrets load only in `Development`.
+   environment variable) beats an earlier one, user secrets load only in `Development` (checked
+   against an empty scratch folder, never your real secrets file), and a setting written after
+   `--config-check` still reaches the report.
 2. `--config-check` prints the provider and each setting's name and source, then exits.
 3. A plain run creates the `IChatClient` through `AddLlmChatClient` and sends one prompt.
    Streaming is the next chapter's subject.

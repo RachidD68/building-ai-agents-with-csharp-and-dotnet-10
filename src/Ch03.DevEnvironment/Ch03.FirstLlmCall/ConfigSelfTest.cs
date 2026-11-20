@@ -8,8 +8,9 @@ namespace Ch03.FirstLlmCall;
 
 /// <summary>
 /// The configuration rules of this chapter, checked over in-memory
-/// configurations: no model, no network, no file outside the build output.
-/// Every case that shows a failure first reproduces it, then shows the fix.
+/// configurations and host builders: no model, no network, and an empty scratch
+/// folder in place of your user-secrets store. The wrong-root and flag-order cases
+/// reproduce the defect first, then show the fix; the others check a rule.
 /// </summary>
 internal static class ConfigSelfTest
 {
@@ -79,8 +80,26 @@ internal static class ConfigSelfTest
             Line(anthropic, "LlmProvider:Anthropic:ApiKey").Contains("(from ANTHROPIC_API_KEY)"));
 
         Console.WriteLine("\n-- User secrets load only in Development --");
-        Expect("Development -> user secrets are a configuration source", HasUserSecrets("Development"));
-        Expect("Production  -> user secrets are not loaded", !HasUserSecrets("Production"));
+        Expect("Development -> user secrets are a configuration source",
+            AskHost(["--environment", "Development"], c => SecretsIndex(c) >= 0));
+        Expect("Production  -> user secrets are not loaded",
+            AskHost(["--environment", "Production"], c => SecretsIndex(c) < 0));
+        Expect("Development -> the host adds environment variables after user secrets",
+            AskHost(["--environment", "Development"], c => SecretsIndex(c) is >= 0 and int s && LastIndexOf(c, "EnvironmentVariables") > s));
+        Expect("--environment Development -> the report says Development and user secrets loaded",
+            AskHost(["--environment", "Development"], c => LlmConfigCheck.Report(c) is string r
+                && Line(r, "Environment  :").Contains("Development") && Line(r, "User secrets :").Contains(": loaded")));
+
+        Console.WriteLine("\n-- A setting written after --config-check --");
+        Expect("DEFECT REPRODUCED: the setting is read as the flag's value -> not from the command line",
+            AskHost(["--config-check", "--LlmProvider:Provider=openai"],
+                c => !Line(LlmConfigCheck.Report(c), "Provider     :").Contains("(from command line)")));
+        Expect("fixed by dropping the flag from the command line -> openai (from command line)",
+            AskHost(["--config-check", "--LlmProvider:Provider=openai"], c =>
+            {
+                LlmConfigCheck.DropFlagFromCommandLine(c);
+                return Line(LlmConfigCheck.Report(c), "Provider     :").Contains("openai   (from command line)");
+            }));
 
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
@@ -108,18 +127,43 @@ internal static class ConfigSelfTest
         }
     }
 
-    // The host builder decides; the test only asks it which sources it added.
-    static bool HasUserSecrets(string environment)
+    // The host builder decides; the test asks it which sources it added. User secrets
+    // point at an empty scratch folder, so your real secrets file is never read.
+    static bool AskHost(string[] args, Func<IConfigurationRoot, bool> check)
     {
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        string scratch = Directory.CreateTempSubdirectory("ch03-selftest-").FullName;
+        string? appData = Environment.GetEnvironmentVariable("APPDATA");
+        string? home = Environment.GetEnvironmentVariable("HOME");
+        Environment.SetEnvironmentVariable("APPDATA", scratch);
+        Environment.SetEnvironmentVariable("HOME", scratch);
+        try
         {
-            EnvironmentName = environment,
-            ApplicationName = typeof(ConfigSelfTest).Assembly.GetName().Name,
-            Args = [],
-        });
-        return ((IConfigurationRoot)builder.Configuration).Providers
-            .Any(p => p.ToString()?.Contains("secrets.json", StringComparison.OrdinalIgnoreCase) == true);
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+            {
+                Args = args,
+                ApplicationName = typeof(ConfigSelfTest).Assembly.GetName().Name,
+                ContentRootPath = AppContext.BaseDirectory,
+            });
+            using ConfigurationManager configuration = builder.Configuration;
+            return check(configuration);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"        host builder failed: {ex.GetType().Name}");
+            return false;
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("APPDATA", appData);
+            Environment.SetEnvironmentVariable("HOME", home);
+            Directory.Delete(scratch, recursive: true);
+        }
     }
+
+    static int SecretsIndex(IConfigurationRoot configuration) => LastIndexOf(configuration, "secrets.json");
+
+    static int LastIndexOf(IConfigurationRoot configuration, string providerText) =>
+        configuration.Providers.Select((p, i) => p.ToString()?.Contains(providerText, StringComparison.OrdinalIgnoreCase) == true ? i : -1).Max();
 
     static void Expect(string name, bool ok)
     {
