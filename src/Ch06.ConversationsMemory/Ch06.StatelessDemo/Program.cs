@@ -44,7 +44,7 @@ try
     // from a blank slate.
     AgentSession session1 = await agent.CreateSessionAsync(cts.Token);
 
-    string message1 = "My name is Rachid. I live in Seattle and I love C# programming.";
+    string message1 = "My name is Rachid. I work on the Contoso expense app and I love C# programming.";
     Console.WriteLine($"You: {message1}");
 
     AgentResponse response1 = await agent.RunAsync(
@@ -59,7 +59,7 @@ try
     // ---------------------------------------------------------------
     AgentSession session2 = await agent.CreateSessionAsync(cts.Token);
 
-    string message2 = "What's my name? Where do I live? What programming language do I love?";
+    string message2 = "What's my name? What do I work on? What programming language do I love?";
     Console.WriteLine($"You: {message2}");
 
     AgentResponse response2 = await agent.RunAsync(
@@ -76,7 +76,7 @@ try
     Console.WriteLine("WHAT HAPPENED?");
     Console.WriteLine(new string('=', 60));
     Console.WriteLine("""
-        The agent could not recall your name, location, or favourite language
+        The agent could not recall your name, project, or favourite language
         because each call used a separate session with no history provider.
 
         LLMs are inherently stateless — they don't remember previous requests.

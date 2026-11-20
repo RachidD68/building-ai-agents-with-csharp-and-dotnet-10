@@ -60,7 +60,7 @@ try
     // ---------------------------------------------------------------
     // Turn 1: Introduce ourselves
     // ---------------------------------------------------------------
-    string message1 = "My name is Rachid. I live in Seattle and I love C# programming.";
+    string message1 = "My name is Rachid. I work on the Contoso expense app and I love C# programming.";
     Console.WriteLine($"You: {message1}");
 
     AgentResponse response1 = await agent.RunAsync(
@@ -73,7 +73,7 @@ try
     // ---------------------------------------------------------------
     // Turn 2: Ask the agent to recall — it should remember!
     // ---------------------------------------------------------------
-    string message2 = "What's my name? Where do I live? What programming language do I love?";
+    string message2 = "What's my name? What do I work on? What programming language do I love?";
     Console.WriteLine($"You: {message2}");
 
     AgentResponse response2 = await agent.RunAsync(

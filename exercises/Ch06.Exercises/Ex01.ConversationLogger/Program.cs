@@ -72,10 +72,10 @@ try
     Console.WriteLine($"Session {sessionId} created. Every turn is logged as it happens.\n");
 
     await RunLoggedTurnAsync(session, sessionId,
-        "My name is Rachid. I live in Seattle and I love C# programming.");
+        "My name is Rachid. I work on the Contoso expense app and I love C# programming.");
 
     await RunLoggedTurnAsync(session, sessionId,
-        "What's my name? Where do I live? What programming language do I love?");
+        "What's my name? What do I work on? What programming language do I love?");
 
     await RunLoggedTurnAsync(session, sessionId,
         "Based on what you know about me, suggest a weekend project.");
