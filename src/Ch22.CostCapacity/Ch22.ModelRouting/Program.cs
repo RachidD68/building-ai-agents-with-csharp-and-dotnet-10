@@ -1,7 +1,7 @@
 // ============================================================================
 // Routing and failover, judged on accepted tasks
 // ----------------------------------------------------------------------------
-// Every candidate runs the same held-out tasks and gets the same report:
+// Every candidate runs the same fixed task set and gets the same report:
 // accepted, attempts (failed ones included), cost per accepted task from the
 // artificial price table, p95, and for the router its misroutes against each
 // task's true difficulty. A candidate is adopted only if it beats the

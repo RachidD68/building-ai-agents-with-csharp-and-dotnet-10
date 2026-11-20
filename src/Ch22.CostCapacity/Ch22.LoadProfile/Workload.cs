@@ -28,7 +28,8 @@ public sealed record Workload(
         if (string.IsNullOrWhiteSpace(w.Version)) throw new InvalidDataException($"{path}: no version.");
         if (w.Tasks is not { Count: > 0 } || w.Steps is not { Count: > 0 } || w.RequestsPerStep < 1)
             throw new InvalidDataException($"{w.Version}: tasks, steps and requestsPerStep are required.");
-        if (w.Service is not { Slots: > 0, QueueCapacity: >= 0 }) throw new InvalidDataException($"{w.Version}: bad service shape.");
+        if (w.Service is not { Slots: > 0, QueueCapacity: >= 0, BusyRetryAfterMs: >= 0 }) throw new InvalidDataException($"{w.Version}: bad service shape.");
+        if (w.TimeoutMs <= 0 || w.ToolDelayMs < 0) throw new InvalidDataException($"{w.Version}: timeoutMs must be > 0 and toolDelayMs >= 0.");
         return w;
     }
 }

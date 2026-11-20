@@ -12,12 +12,12 @@ public sealed class BudgetLedger(decimal limit)
 {
     readonly Lock _gate = new();
     readonly Dictionary<Guid, decimal> _open = [];
-    decimal _spent, _reserved;
+    decimal _spent, _reserved, _overrun;
 
     public decimal Limit => limit;
     public decimal Spent { get { lock (_gate) return _spent; } }
     public decimal Reserved { get { lock (_gate) return _reserved; } }
-    public decimal Overrun { get; private set; }
+    public decimal Overrun { get { lock (_gate) return _overrun; } }
 
     public Guid? TryReserve(decimal worstCase)
     {
@@ -36,13 +36,14 @@ public sealed class BudgetLedger(decimal limit)
     /// too (the money is spent) and recorded as an overrun of the estimate.</summary>
     public void Reconcile(Guid reservation, decimal actual)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(actual);   // a negative cost would credit the budget
         lock (_gate)
         {
             if (!_open.Remove(reservation, out decimal held))
                 throw new InvalidOperationException("Unknown or already reconciled reservation.");
             _reserved -= held;
             _spent += actual;
-            if (actual > held) Overrun += actual - held;
+            if (actual > held) _overrun += actual - held;
         }
     }
 }

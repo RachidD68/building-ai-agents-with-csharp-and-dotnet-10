@@ -32,13 +32,14 @@ public static class CostCalculator
         int unmeasured = 0;
         foreach (CallRecord call in log.Calls)
         {
+            ModelRate rate = prices.RateFor(call.Model);   // an unpriced model is refused even when its usage is missing
             if (call.Usage is not { InputTokenCount: { } input, OutputTokenCount: { } output } usage)
             {
                 unmeasured++;
             }
             else
             {
-                model += TokenCost(prices.RateFor(call.Model), input, output, usage);
+                model += TokenCost(rate, input, output, usage);
             }
             foreach (string tool in call.Tools ?? [])
                 tools += prices.Tools.TryGetValue(tool, out decimal fee) ? fee

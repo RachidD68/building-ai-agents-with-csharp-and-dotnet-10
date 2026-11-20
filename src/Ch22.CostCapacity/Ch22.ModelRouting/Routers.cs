@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Polly;
 using Polly.Retry;
@@ -16,22 +17,32 @@ public sealed class DifficultyRouterChatClient(IChatClient capable, IChatClient 
     public List<(string Prompt, bool RoutedHard)> Decisions { get; } = [];
 
     public override Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RoutesHard(messages) ? base.GetResponseAsync(messages, options, cancellationToken)
+                             : cheap.GetResponseAsync(messages, options, cancellationToken);
+
+    // Without this override DelegatingChatClient would send every streaming call to the capable tier, unrecorded.
+    public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+        RoutesHard(messages) ? base.GetStreamingResponseAsync(messages, options, cancellationToken)
+                             : cheap.GetStreamingResponseAsync(messages, options, cancellationToken);
+
+    bool RoutesHard(IEnumerable<ChatMessage> messages)
     {
         string prompt = messages.Last(m => m.Role == ChatRole.User).Text;
         bool hard = looksHard(prompt);
         lock (Decisions) Decisions.Add((prompt, hard));
-        return hard ? base.GetResponseAsync(messages, options, cancellationToken)
-                    : cheap.GetResponseAsync(messages, options, cancellationToken);
+        return hard;
     }
 }
 
 /// <summary>
 /// GA ordered failover, written by hand: the primary is the inner client; when
 /// it fails, the fallback answers. A cancellation by the caller is not a
-/// failure and is never failed over. Non-streaming only, so no partial output
-/// can be exposed before the switch. The experimental OrderedFailoverChatClient
-/// (MEAI001) has the same contract and also handles streaming.
+/// failure and is never failed over. Streaming fails over only until the first
+/// update has reached the caller; after that a failure propagates, so no second
+/// generation is spliced onto a partial answer. That is the contract of the
+/// experimental OrderedFailoverChatClient (MEAI001), for both calls.
 /// </summary>
 public sealed class GaFailoverChatClient(IChatClient primary, IChatClient fallback) : DelegatingChatClient(primary)
 {
@@ -46,6 +57,38 @@ public sealed class GaFailoverChatClient(IChatClient primary, IChatClient fallba
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return await fallback.GetResponseAsync(history, options, cancellationToken);
+        }
+    }
+
+    public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        List<ChatMessage> history = [.. messages];
+        IAsyncEnumerator<ChatResponseUpdate>? first = null;
+        bool hasUpdate = false, failOver = false;
+        try
+        {
+            first = base.GetStreamingResponseAsync(history, options, cancellationToken).GetAsyncEnumerator(cancellationToken);
+            hasUpdate = await first.MoveNextAsync();   // nothing has reached the caller yet
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            failOver = true;
+        }
+        if (failOver)
+        {
+            if (first is not null) await first.DisposeAsync();
+            await foreach (ChatResponseUpdate update in fallback.GetStreamingResponseAsync(history, options, cancellationToken))
+                yield return update;
+            yield break;
+        }
+        await using (first!)
+        {
+            while (hasUpdate)
+            {
+                yield return first!.Current;
+                hasUpdate = await first.MoveNextAsync();   // output is exposed: a failure from here on propagates
+            }
         }
     }
 }

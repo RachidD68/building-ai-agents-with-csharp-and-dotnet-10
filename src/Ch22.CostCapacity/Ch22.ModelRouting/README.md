@@ -1,11 +1,11 @@
 # Ch22.ModelRouting
 
-Routing and failover, judged on **accepted tasks**. Every candidate runs the same held-out tasks (`data/tasks.heldout.json`) and gets the same report: accepted, attempts (failed ones included), cost per accepted task from the artificial price table, p95, and for the router its misroutes against each task's true difficulty.
+Routing and failover, judged on **accepted tasks**. Every candidate runs the same fixed task set (`data/tasks.shared.json`, written with the router, so not held out) and gets the same report: accepted, attempts (failed ones included), cost per accepted task from the artificial price table, p95, and for the router its misroutes against each task's true difficulty.
 
 | Candidate | Status |
 |---|---|
 | `OrderedFailoverChatClient` | **Experimental** (`MEAI001`) in Microsoft.Extensions.AI 10.11.0. Suppressed at each call site only. |
-| `GaFailoverChatClient` | GA alternative, written on `DelegatingChatClient`. Non-streaming only. |
+| `GaFailoverChatClient` | GA alternative, written on `DelegatingChatClient`. Streaming fails over only before the first update; after it, a failure propagates. |
 | `DifficultyRouterChatClient` | GA, on `DelegatingChatClient`; records every decision. |
 
 Adoption rule (`CandidateReport.VerdictAgainst`): no fewer accepted tasks, a lower cost per accepted task, and a p95 no more than 10% higher, on the same tasks. A failover is judged against the same provider trouble without it.

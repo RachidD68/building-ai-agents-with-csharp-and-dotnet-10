@@ -13,6 +13,7 @@ public sealed class AdmissionGate(int slots, int queueCapacity)
     int _inFlight;
 
     public int MaxQueueDepth { get; private set; }
+    public int InFlight { get { lock (_lock) return _inFlight; } }
 
     public Task<Lease?> TryEnterAsync(CancellationToken ct)
     {
@@ -27,12 +28,16 @@ public sealed class AdmissionGate(int slots, int queueCapacity)
             TaskCompletionSource<Lease> waiter = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _waiting.Enqueue(waiter);
             MaxQueueDepth = Math.Max(MaxQueueDepth, _waiting.Count);
-            ct.Register(() => waiter.TrySetCanceled(ct));
-            return WaitAsync(waiter);
+            CancellationTokenRegistration registration = ct.Register(() => waiter.TrySetCanceled(ct));
+            return WaitAsync(waiter, registration);
         }
     }
 
-    static async Task<Lease?> WaitAsync(TaskCompletionSource<Lease> waiter) => await waiter.Task;
+    // Dispose the registration once the wait ends: in a long-running service, a token outlives many waits.
+    static async Task<Lease?> WaitAsync(TaskCompletionSource<Lease> waiter, CancellationTokenRegistration registration)
+    {
+        using (registration) return await waiter.Task;
+    }
 
     void Release()
     {

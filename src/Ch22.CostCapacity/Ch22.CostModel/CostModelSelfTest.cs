@@ -18,12 +18,16 @@ internal static class CostModelSelfTest
 
         Console.WriteLine("\n-- Price table as data --");
         Expect("a table without a currency is refused", Throws(() => PriceTable.Parse(TableJson(currency: null))));
+        Expect("a currency that isn't three capital letters ('123') and a negative rate are refused",
+            Throws(() => PriceTable.Parse(TableJson(currency: "123"))) && Throws(() => PriceTable.Parse(TableJson(input: -1))));
         Expect("a table without an effective date is refused", Throws(() => PriceTable.Parse(TableJson(date: null))));
         Expect("a table in another unit is refused", Throws(() => PriceTable.Parse(TableJson(unit: "per-token"))));
         Expect("usage dated before the table takes effect is refused",
             Throws(() => CostCalculator.Compute(a, quiet with { Date = new DateOnly(2026, 10, 31) })));
         Expect("an unknown model is refused, not priced at zero",
             Throws(() => CostCalculator.Compute(a, Log(Call("model-unknown", 100, 10)))));
+        Expect("an unknown model is refused even when its call reported no usage",
+            Throws(() => CostCalculator.Compute(a, Log(new CallRecord("t1", "model-unknown", 1, Usage: null)))));
         Expect("the same usage on table B gives another total (the formula holds no price)",
             CostCalculator.Compute(a, quiet).Total != CostCalculator.Compute(b, quiet).Total);
 
@@ -70,6 +74,8 @@ internal static class CostModelSelfTest
         ledger.Reconcile(r, 0.04m);
         Expect("a cost above its reservation is booked and recorded as an overrun", ledger is { Spent: 0.29m, Overrun: 0.01m });
         Expect("a reservation cannot be reconciled twice", Throws(() => ledger.Reconcile(r, 0.01m)));
+        Expect("a negative measured cost is refused: it would credit the budget",
+            Throws(() => ledger.Reconcile(ledger.TryReserve(0m)!.Value, -1m)) && ledger.Spent == 0.29m);
 
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
@@ -111,17 +117,19 @@ internal static class CostModelSelfTest
 
     static UsageLog Log(CallRecord call) => new("test", new DateOnly(2026, 11, 12), [call], [new("t1", "accepted")]);
 
-    static string TableJson(string? currency = "XTS", string? date = "2026-11-01", string unit = PriceTable.PerMillionTokens) =>
+    static string TableJson(string? currency = "XTS", string? date = "2026-11-01", string unit = PriceTable.PerMillionTokens,
+        int input = 1) =>
         $$"""
         { "id": "t", {{(currency is null ? "" : $"\"currency\": \"{currency}\",")}}
           {{(date is null ? "" : $"\"effectiveDate\": \"{date}\",")}} "unit": "{{unit}}",
-          "models": { "m": { "input": 1, "cachedInput": 1, "output": 1 } } }
+          "models": { "m": { "input": {{input}}, "cachedInput": 1, "output": 1 } } }
         """;
 
     static bool Throws(Action action)
     {
         try { action(); return false; }
-        catch (Exception ex) when (ex is InvalidDataException or KeyNotFoundException or InvalidOperationException) { return true; }
+        catch (Exception ex) when (ex is InvalidDataException or KeyNotFoundException or InvalidOperationException
+                                          or ArgumentOutOfRangeException) { return true; }
     }
 
     static void Expect(string name, bool ok)

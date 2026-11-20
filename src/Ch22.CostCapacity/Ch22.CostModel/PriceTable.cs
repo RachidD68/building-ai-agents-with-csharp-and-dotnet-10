@@ -27,10 +27,14 @@ public sealed record PriceTable(
         PriceTable table = JsonSerializer.Deserialize<PriceTable>(json, s_json)
             ?? throw new InvalidDataException("Empty price table.");
         if (string.IsNullOrWhiteSpace(table.Id)) throw new InvalidDataException("Price table has no id.");
-        if (table.Currency is not { Length: 3 }) throw new InvalidDataException($"{table.Id}: currency must be an ISO 4217 code.");
+        if (table.Currency is not { Length: 3 } c || !c.All(char.IsAsciiLetterUpper))
+            throw new InvalidDataException($"{table.Id}: currency must be an ISO 4217 code (three capital letters).");
         if (table.EffectiveDate == default) throw new InvalidDataException($"{table.Id}: no effective date.");
         if (table.Unit != PerMillionTokens) throw new InvalidDataException($"{table.Id}: unit '{table.Unit}' is not '{PerMillionTokens}'.");
         if (table.Models is null || table.Models.Count == 0) throw new InvalidDataException($"{table.Id}: no model rates.");
+        if (table.Models.Values.Any(r => r is null || r.Input < 0 || r.CachedInput < 0 || r.Output < 0 || r.ReasoningOutput < 0)
+            || (table.Tools?.Values.Any(v => v < 0) ?? false) || (table.RuntimePerHour?.Values.Any(v => v < 0) ?? false))
+            throw new InvalidDataException($"{table.Id}: a negative rate would pay you for the work.");
         return table with { Tools = table.Tools ?? new Dictionary<string, decimal>(),
                             RuntimePerHour = table.RuntimePerHour ?? new Dictionary<string, decimal>() };
     }

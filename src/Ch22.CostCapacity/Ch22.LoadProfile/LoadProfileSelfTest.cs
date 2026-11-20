@@ -117,16 +117,25 @@ internal static class LoadProfileSelfTest
         Workload fast = offline with { TimeoutMs = 50, ToolDelayMs = 0 };
         ScriptedModel deaf = new(TimeProvider.System, TimeSpan.FromMilliseconds(300), TimeSpan.Zero, ignoreCancellation: true);
         Stopwatch sw = Stopwatch.StartNew();
-        TaskTiming late = await new LoadRunner(deaf, fast, TimeProvider.System, _ => Task.CompletedTask).RunOneAsync(fast.Tasks[0], default);
-        Console.WriteLine($"    connector that ignores the token: {late.Outcome} after {sw.ElapsedMilliseconds} ms (timeout 50 ms)");
+        LoadRunner deafRunner = new(deaf, fast, TimeProvider.System, _ => Task.CompletedTask);
+        Task<TaskTiming> lateRun = deafRunner.RunOneAsync(fast.Tasks[0], default);
+        await Task.Delay(150);                                  // three timeouts later
+        int heldAt150 = deafRunner.Gate.InFlight;
+        TaskTiming late = await lateRun;
+        Console.WriteLine($"    connector that ignores the token: {late.Outcome} after {late.Total.TotalMilliseconds:F0} ms (timeout 50 ms), slots in use at 150 ms: {heldAt150}");
         Expect("DEFECT REPRODUCED  a connector that ignores cancellation holds the slot past the 50 ms timeout, and the work is done",
-            sw.ElapsedMilliseconds >= 250 && deaf.Completed == 1);
+            heldAt150 == 1 && sw.ElapsedMilliseconds >= 250 && deaf.Completed == 1);
+        Expect("the late answer is recorded as a Timeout, not Accepted, so the error rate sees it", late.Outcome == Outcome.Timeout);
 
         ScriptedModel honest = new(TimeProvider.System, TimeSpan.FromMilliseconds(300), TimeSpan.Zero);
-        sw.Restart();
-        TaskTiming cut = await new LoadRunner(honest, fast, TimeProvider.System, _ => Task.CompletedTask).RunOneAsync(fast.Tasks[0], default);
-        Console.WriteLine($"    connector that honours it: {cut.Outcome} after {sw.ElapsedMilliseconds} ms");
-        Expect("a connector that honours the token: Timeout, slot freed, no completed work", cut.Outcome == Outcome.Timeout && honest.Completed == 0);
+        LoadRunner honestRunner = new(honest, fast, TimeProvider.System, _ => Task.CompletedTask);
+        Task<TaskTiming> cutRun = honestRunner.RunOneAsync(fast.Tasks[0], default);
+        await Task.Delay(150);
+        int freedAt150 = honestRunner.Gate.InFlight;
+        TaskTiming cut = await cutRun;
+        Console.WriteLine($"    connector that honours it: {cut.Outcome} after {cut.Total.TotalMilliseconds:F0} ms, slots in use at 150 ms: {freedAt150}");
+        Expect("a connector that honours the token: Timeout, slot freed, no completed work",
+            cut.Outcome == Outcome.Timeout && freedAt150 == 0 && honest.Completed == 0);
 
         Expect("an empty sample has no percentile (null, not 0)", Percentile.NearestRank([], 0.95) is null);
         string unversioned = Path.Combine(Path.GetTempPath(), $"workload-{Guid.NewGuid():N}.json");

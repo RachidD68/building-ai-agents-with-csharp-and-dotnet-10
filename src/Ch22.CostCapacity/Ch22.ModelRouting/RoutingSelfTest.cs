@@ -101,6 +101,27 @@ internal static class RoutingSelfTest
         Expect("MEAI001: once streamed output is exposed, a failure propagates; no second generation is spliced in",
             streamThrew && midStream.Calls == 1 && second.Calls == 0);
 #pragma warning restore MEAI001
+
+        // The streaming path of the GA clients: DelegatingChatClient would pass it straight to the inner client.
+        string failedOver = await StreamText(new GaFailoverChatClient(Down(), Up()), prompt);
+        Expect("GA: streaming, a failure before any output fails over to the fallback", failedOver == "APPROVE");
+        FailsMidStream gaMid = new(), gaSecond = new();
+        bool gaThrew = await Throws<HttpRequestException>(() => StreamText(new GaFailoverChatClient(gaMid, gaSecond), prompt));
+        Expect("GA: once streamed output is exposed, a failure propagates; no second generation is spliced in",
+            gaThrew && gaMid.Calls == 1 && gaSecond.Calls == 0);
+        FailsMidStream capable = new();
+        DifficultyRouterChatClient router = new(capable, s.Small, _ => false);
+        string routed = await StreamText(router, prompt);
+        Expect("router: a streaming call it calls easy goes to the cheap tier, and the decision is recorded",
+            routed == "APPROVE" && capable.Calls == 0 && router.Decisions.Count == 1);
+    }
+
+    static async Task<string> StreamText(IChatClient client, string prompt)
+    {
+        System.Text.StringBuilder text = new();
+        await foreach (ChatResponseUpdate update in client.GetStreamingResponseAsync([new(ChatRole.User, prompt)]))
+            text.Append(update.Text);
+        return text.ToString();
     }
 
     static string Name(IChatClient c) => c is GaFailoverChatClient ? "GA" : "MEAI001";

@@ -8,7 +8,7 @@ namespace Ch22.ModelRouting;
 /// <summary>
 /// The offline comparison: a capable, slower model with reasoning tokens, a
 /// cheap fast one that only solves the easy tasks, and the candidates built
-/// from them. Every candidate runs the same held-out tasks and is priced from
+/// from them. Every candidate runs the same fixed task set and is priced from
 /// the same artificial table.
 /// </summary>
 public sealed class OfflineScenario
@@ -26,7 +26,7 @@ public sealed class OfflineScenario
     public OfflineScenario()
     {
         string data = Path.Combine(AppContext.BaseDirectory, "data");
-        Tasks = JsonSerializer.Deserialize<List<RoutedTask>>(File.ReadAllText(Path.Combine(data, "tasks.heldout.json")),
+        Tasks = JsonSerializer.Deserialize<List<RoutedTask>>(File.ReadAllText(Path.Combine(data, "tasks.shared.json")),
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         Prices = PriceTable.Load(Path.Combine(data, "prices.artificial-a.json"));
         Dictionary<string, RoutedTask> byPrompt = Tasks.ToDictionary(t => t.Prompt);

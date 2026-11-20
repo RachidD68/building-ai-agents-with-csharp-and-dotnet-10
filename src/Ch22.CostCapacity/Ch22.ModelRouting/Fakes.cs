@@ -41,8 +41,13 @@ public sealed class TierModel(ManualClock clock, int latencyMs, UsageDetails usa
         });
     }
 
-    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
-        ChatOptions? options = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    /// <summary>The same script as a stream: a failure surfaces before the first update.</summary>
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ChatResponse response = await GetResponseAsync(messages, options, cancellationToken);
+        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates()) yield return update;
+    }
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
     public void Dispose() { }
 }

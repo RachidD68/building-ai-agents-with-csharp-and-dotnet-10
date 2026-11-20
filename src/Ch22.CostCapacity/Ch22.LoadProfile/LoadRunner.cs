@@ -37,6 +37,8 @@ public sealed class LoadRunner(IChatClient model, Workload workload, TimeProvide
         TaskTiming Done(Outcome outcome, string? error = null)
         {
             long end = clock.GetTimestamp();
+            if (outcome is Outcome.Accepted or Outcome.Rejected && deadline.IsCancellationRequested && !ct.IsCancellationRequested)
+                outcome = Outcome.Timeout;   // an answer that arrived after the deadline is late, whatever it says
             return new(task.Id, outcome, clock.GetElapsedTime(arrived, admitted), clock.GetElapsedTime(admitted, toolDone),
                 first is { } f ? clock.GetElapsedTime(toolDone, f) : null,
                 first is { } g ? clock.GetElapsedTime(g, end) : null, clock.GetElapsedTime(arrived, end), usage, error);
