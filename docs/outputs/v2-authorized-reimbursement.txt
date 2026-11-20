@@ -1,4 +1,4 @@
-# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 8c7e3f1 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run
 
 === Contoso: authorized reimbursement ===

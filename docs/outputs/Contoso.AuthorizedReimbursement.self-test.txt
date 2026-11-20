@@ -1,4 +1,4 @@
-# code 13cb18c | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 8c7e3f1 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Contoso: authorized reimbursement (self-test) ===
@@ -67,4 +67,15 @@ Simulated payments in the provider journal: 2
 -- 10. A fabrikam claim reuses the id of Bob's lunch claim --
    claim 8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f: Delivered (low_value_policy) payment PAY-04B7BBAA8ACC
   PASS  paid by its own payment: a third effect, a payment id unlike Bob's
-RESULT 25/25
+
+-- 11. Claims of one employee meet; an account disappears --
+   train Delivered (low_value_policy), then Rita approves the taxi: Delivered (exact_proposal_approved)
+  PASS  another claim paid first: the review covers the current version, both paid once
+   approved, then the account moved: AwaitingReview (account_changed) -> second review Delivered (exact_proposal_approved)
+  PASS  an approval for an older version is asked for again (account_changed), then paid once
+   six parallel claims: 6 Delivered (low_value_policy)
+  PASS  six parallel low-value claims of one employee: all six paid, balance 189, version 9
+   no account: taxi Rejected (resource_scope), Bob's lunch OutcomeUnknown -> Reconciled, edited review Rejected (resource_scope)
+  PASS  a stranded approval without an account is rejected (resource_scope); the restart still reconciles
+  PASS  a review of a claim without an account: rejected (resource_scope), nothing committed
+RESULT 30/30
