@@ -16,7 +16,7 @@ Build a **Minimal API** with full CRUD endpoints for a `TodoItem` record. Regist
 
 ## Hints
 
-- The Minimal API companion project (`src/AppA.CSharpEssentials/AppA.MinimalApi`) has four of the five shapes you need. Start there, add the Update and Delete endpoints.
+- The Minimal API companion project (`src/AppA.CSharpEssentials/AppA.MinimalApi`) shows the GET-by-key, POST-body and `IResult` shapes. Start there, and add the PUT and DELETE endpoints.
 - Think carefully about what a POST should return when the resource doesn't exist yet — it *creates* the resource, so there is nothing to 404: return `Results.Created` with a Location header.
 - The middleware is one `app.Use(...)` with a `Stopwatch` around `await next(context)`. Log method, path, status code, and elapsed milliseconds as structured fields, not interpolated strings.
 - Register the store with `AddSingleton` and make it thread-safe (`Lock`) — one instance serves every concurrent request.
