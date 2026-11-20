@@ -1,5 +1,6 @@
 # code a199e94 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
 # note: printed in the book as a failure: step 1 is "Answered" with a citation, but the cited excerpt expense-policy-8 lists ride-sharing as reimbursable and the answer says it is not mentioned
+# note: this run is the handbook desk alone, at a199e94; on main, v3's dotnet run continues with the permissions scenario (PolicyFaq) that the RAG-with-permissions chapter adds, published as Contoso.FaqEvidence.policy.txt
 $ dotnet run
 
 === Contoso: FAQ with evidence ===

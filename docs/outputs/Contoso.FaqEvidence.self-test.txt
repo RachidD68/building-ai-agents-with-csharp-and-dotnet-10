@@ -1,4 +1,5 @@
-# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run differs only in the order of two evidence chunks tied at 1.00)
+# code ffe9eae | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# note: the first block (RESULT 11/11) is the grounded RAG baseline's handbook desk; the second block is the permissions scenario (PolicyFaq) that the RAG-with-permissions chapter adds to the same project
 $ dotnet run -- --self-test
 
 === Contoso: FAQ with evidence (self-test) ===
@@ -6,7 +7,7 @@ $ dotnet run -- --self-test
 -- 1. Alice asks before she files her taxi claim --
   E-1001 (contoso): Are ride-sharing costs reimbursable on business travel?
   -> Answered: Per the handbook: [expense-policy]
-     evidence [expense-policy-6 1.00, expense-policy-8 1.00] cited [expense-policy]
+     evidence [expense-policy-8 1.00, expense-policy-6 1.00] cited [expense-policy]
   PASS  answered, citing the expense policy that was retrieved
 
 -- 2. Bob asks about something the handbook does not cover --
@@ -33,8 +34,75 @@ $ dotnet run -- --self-test
 -- 5. 6 questions at the same moment on one desk --
   PASS  all 6 searches were in flight at the same time
   PASS  each reply holds only its own evidence and citation (6/6)
+  PASS  detector: 2 questions asked one after the other are not reported as in flight together
 
 -- 6. The evidence log --
   PASS  one record per question, each with its own id (9 records)
 
-RESULT 10/10
+RESULT 11/11
+
+=== Policies with permissions, freshness and evidence ===
+
+-- 1. Friday: Alice asks about a late taxi; Bob asks the same --
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v1#0, contoso-supplier-annex@v1#0
+    Yes, under the policy [contoso-taxi@v1#0].
+  E-2002 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    cache | evidence: -
+    Yes, under the policy [contoso-taxi@v1#0].
+  PASS  Alice's answer cites the policy in force on Friday (taxi v1)
+  PASS  Bob, same organization and level, gets it from the cache
+
+-- 2. Monday: the new taxi policy is published --
+  publish contoso-taxi v2: retires v1, activates v2
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0
+    Yes, under the policy [contoso-taxi@v2#0].
+  PASS  Friday's answer is not served; the new answer cites taxi v2
+
+-- 3. Frank, at Fabrikam, asks the same question; so does Maria, a Contoso manager --
+  F-1 (fabrikam, Staff): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: fabrikam-taxi@v2#0, fabrikam-supplier-annex@v1#0
+    Yes, under the policy [fabrikam-taxi@v2#0].
+  M-3003 (contoso, Manager): Can I expense a taxi ride home from a business trip, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0
+    Yes, under the policy [contoso-taxi@v2#0].
+  PASS  Frank gets Fabrikam evidence only, not Contoso's cached answer
+  PASS  the management draft is indexed but never supplied, even to a manager
+
+-- 4. Alice asks about a taxi she took on 10 November --
+  E-1001 (contoso, Staff): Can I expense a taxi ride home from a business trip on 10 November, with the receipt?
+    fresh | evidence: contoso-taxi@v2#0, contoso-supplier-annex@v1#0
+    Yes, under the policy [contoso-taxi@v2#0].
+    warning: contoso-taxi: on 2026-11-10 version 1 applied, not the cited version 2
+  PASS  the current policy is not presented as the one that applied: a warning names version 1
+
+-- 5. Alice asks about the supplier annex, whose text gives orders --
+  E-1001 (contoso, Staff): Which taxi suppliers are listed in Annex C?
+    fresh | evidence: contoso-supplier-annex@v1#0 | withheld: citation_not_supplied
+    I can't give a checked answer to this one. Please ask the travel desk.
+  PASS  an answer citing an id this request never received is withheld (citation_not_supplied), and not cached
+  Alice files a claim with the annex's note pasted in: Rejected (resource_scope)
+  PASS  the same words in a claim cannot redirect a reimbursement: v2's policy denies it, nothing committed
+
+-- 6. The hotel policy is withdrawn while answers about it are cached --
+  E-1001 (contoso, Staff): How much can I spend on a hotel night?
+    fresh | evidence: contoso-hotel@v1#0
+    Yes, under the policy [contoso-hotel@v1#0].
+  F-1 (fabrikam, Staff): How much can I spend on a hotel night?
+    fresh | evidence: fabrikam-hotel@v1#0
+    Yes, under the policy [fabrikam-hotel@v1#0].
+  withdraw contoso-hotel (25 minutes of TTL left)
+  E-1001 (contoso, Staff): How much can I spend on a hotel night?
+    fresh | evidence: - | withheld: no_authorized_evidence
+    I can't find a policy you have access to that answers this. Please ask the travel desk.
+  F-1 (fabrikam, Staff): How much can I spend on a hotel night?
+    cache | evidence: -
+    Yes, under the policy [fabrikam-hotel@v1#0].
+  PASS  Alice's cached hotel answer is gone; nothing from the withdrawn policy is supplied
+  PASS  Frank's Fabrikam hotel answer still comes from the cache
+
+-- 7. Thirty concurrent questions from both organizations --
+  PASS  no answer or evidence crosses an organization
+
+RESULT 11/11

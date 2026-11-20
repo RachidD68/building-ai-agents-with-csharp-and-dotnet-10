@@ -1,4 +1,4 @@
-# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code ffe9eae | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === Contoso FAQ agent: self-test (fake model, keyword embeddings) ===
@@ -41,5 +41,6 @@ $ dotnet run -- --self-test
   PASS  Custom: each call saw only its own chunks (8/8)
   PASS  TextSearch: all 8 searches were in flight at the same time
   PASS  TextSearch: each call saw only its own chunks (8/8)
+  PASS  detector: 2 searches run one after the other are not reported as in flight together
 
-RESULT 20/20
+RESULT 21/21
