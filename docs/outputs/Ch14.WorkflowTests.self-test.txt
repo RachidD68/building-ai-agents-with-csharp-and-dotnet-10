@@ -1,0 +1,45 @@
+# code 2ffd837 | SDK 11.0.100 | Windows 11 | none (scripted models)
+$ dotnet run -- --self-test
+
+=== Workflow Tests (offline) ===
+
+-- Sentiment router: one case per branch
+  PASS  positive routes to thank-you
+  PASS  negative routes to escalation
+  PASS  neutral routes to acknowledgement
+
+-- Claim review: every branch
+  PASS  approve -> approved, one review request
+  PASS  both checks ran in parallel and met at the barrier
+  PASS  revise then approve -> approved, revision 1 rewritten by the agent
+  PASS  reject -> rejected, distinct from revise
+  PASS  uncovered category -> switch default -> returned, nobody asked
+  PASS  empty line -> no reply sent, run PendingRequests, no outcome
+  PASS  end of input -> no reply sent, run PendingRequests, no outcome
+  PASS  unknown word "approved" -> no reply sent, run PendingRequests, no outcome
+  PASS  always revise, cap 2 -> not-approved after 3 requests (cap is not success)
+  PASS  typed port refuses a string reply; the run stays pending
+
+-- Where it fails, reproduced
+  DEFECT REPRODUCED  (a) v1 rule: empty line, typo, "reject" and end of input all became approve
+  PASS  (a) fixed: empty, typo and end of input are no decision; "reject" is Reject
+  PASS  (b) the same reply sent twice: MAF reports no pending request for that id
+  DEFECT REPRODUCED  (c) one graph with a stateful executor, run twice: run 2 sees run 1's state
+  PASS  (c) fixed: a fresh graph per run gives the same output twice
+  PASS  (c) fixed: IResettableExecutor resets between runs of one graph
+  PASS  (c) a second, concurrent run of one graph is refused (Task.Run while run 1 is paused)
+  DEFECT REPRODUCED  (d) no cap, a reviewer who always says revise: 10 rounds, still no outcome
+
+-- Declarative workflow (YAML)
+  PASS  YAML builds an ordinary Workflow; each declared action raises its events
+  PASS  the declared expression routes a long claim to review
+  DEFECT REPRODUCED  reuse one built declarative workflow: Global.Runs carries into run 2 (Declarative 1.20.0)
+  PASS  fixed: build per run -> identical output twice
+  PASS  restore: a fresh build resumed from the checkpoint after set_route finishes the run
+  PASS  MaximumExpressionLength 10: the declared expression is refused, nothing is sent
+        refused with: InvalidOperationException: Errors: Error 0-57: Expression can't be more than 10 characters. The expression is 57 characters.
+  DEFECT REPRODUCED  DefaultHttpRequestHandler on a default HttpClient follows a 302 to another host
+  PASS  allow-list handler: the redirect is not followed, the HTTP step fails
+  PASS  allow-list handler: a host not on the list is refused before any connection
+
+RESULT 30/30

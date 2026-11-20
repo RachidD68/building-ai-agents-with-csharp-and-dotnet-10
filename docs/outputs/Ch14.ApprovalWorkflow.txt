@@ -1,0 +1,28 @@
+# code 2ffd837 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run   (stdin: revise / Say why the hotel cost more than the lodging limit. / approve)
+
+=== Approval Workflow: Contoso claim review ===
+
+[CLAIM] CLM-1042: lodging, 340.00, receipt: True
+
+============================================================
+REVIEW REQUIRED (revision 0)
+  policy   FAIL  over the 300 limit
+  receipt  pass  receipt present or not required
+
+Claim CLM-1042: lodging, $340.00. The claim exceeded the 300 limit, but the receipt was present and receipt not required is considered pass. Reviewer note: This claim would require further review and approval.
+
+Enter 'approve', 'revise' or 'reject':
+> Note for the writer:   Decision sent: Revise
+
+============================================================
+REVIEW REQUIRED (revision 1)
+  policy   FAIL  over the 300 limit
+  receipt  pass  receipt present or not required
+
+Claim CLM-1042: lodging, 340.00. A claim for two hotel nights at the partner summit due to venue hotel availability. The hotel cost exceeded the 300 limit, but a receipt was provided.
+
+Enter 'approve', 'revise' or 'reject':
+>   Decision sent: Approve
+
+OUTCOME CLM-1042: approved. Claim CLM-1042: lodging, 340.00. A claim for two hotel nights at the partner summit due to venue hotel availability. The hotel cost exceeded the 300 limit, but a receipt was provided.
