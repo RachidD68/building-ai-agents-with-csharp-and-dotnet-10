@@ -1,0 +1,54 @@
+# code 1e910d2 | SDK 11.0.100 | Windows 11 (Linux aspnet:10.0-noble: identical once span/trace ids are masked)
+$ dotnet run -- --self-test
+
+=== OpenTelemetry agent: self-test (offline) ===
+
+-- Spans emitted by one agent run (scripted model, one tool call) --
+    contoso.request  [Contoso.Assistant]  op=-
+      invoke_agent ContosoAssistant(contoso-assistant)  [Experimental.Microsoft.Agents.AI]  op=invoke_agent
+        chat scripted-model  [Experimental.Microsoft.Extensions.AI]  op=chat
+        execute_tool get_reimbursement_limit  [Experimental.Microsoft.Agents.AI]  op=execute_tool
+        chat scripted-model  [Experimental.Microsoft.Extensions.AI]  op=chat
+  PASS  one invoke_agent span named "invoke_agent ContosoAssistant(<gen_ai.agent.id>)" with gen_ai.agent.name
+  PASS  one chat span per model call (2 calls, 2 chat spans), each with token usage
+  PASS  one execute_tool span named "execute_tool get_reimbursement_limit" with gen_ai.tool.name
+  PASS  one trace: chat and execute_tool spans sit under invoke_agent, which sits under contoso.request
+    attributes as emitted (union over the run):
+      chat: gen_ai.operation.name, gen_ai.provider.name, gen_ai.request.model, gen_ai.response.finish_reasons, gen_ai.response.model, gen_ai.tool.definitions, gen_ai.usage.input_tokens, gen_ai.usage.output_tokens
+      execute_tool: gen_ai.operation.name, gen_ai.tool.call.id, gen_ai.tool.description, gen_ai.tool.name, gen_ai.tool.type
+      invoke_agent: gen_ai.agent.id, gen_ai.agent.name, gen_ai.operation.name, gen_ai.provider.name, gen_ai.request.model, gen_ai.response.finish_reasons, gen_ai.response.model, gen_ai.usage.input_tokens, gen_ai.usage.output_tokens
+      contoso.request: contoso.conversation_id
+    metrics as emitted: contoso.assistant.duration, contoso.assistant.requests, contoso.assistant.tool_calls, gen_ai.client.operation.duration, gen_ai.client.token.usage
+    gen_ai.client.token.usage tags: gen_ai.operation.name, gen_ai.provider.name, gen_ai.request.model, gen_ai.response.model, gen_ai.token.type
+
+-- Which sources the tracer provider must subscribe to --
+    sources seen by a listen-to-everything listener: Contoso.Assistant, Experimental.Microsoft.Agents.AI, Experimental.Microsoft.Extensions.AI, Microsoft.Agents.AI.Workflows
+  PASS  DEFECT REPRODUCED: subscribed to the app's own source only, 1 of 9 spans reach the exporter
+  PASS  fixed: the four sources in ContosoTelemetry.Sources cover every source that emitted
+  PASS  the MAF agent and workflow sources are the ones ContosoTelemetry names (no sourceName passed)
+
+-- Sensitive data in telemetry --
+  PASS  sensitive data off (as shipped): the seeded confidential text appears nowhere in spans, metrics or logs
+  PASS  DEFECT REPRODUCED: EnableSensitiveData = true puts the prompt into telemetry (3 exported values carry it)
+  PASS  code that never sets the property, OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT unset: nothing leaks (0 values)
+  PASS  DEFECT REPRODUCED: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true and the same code: the prompt leaks (3 values)
+  PASS  fixed: EnableSensitiveData = false set in code wins over OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true (0 values)
+
+-- Cardinality: metric series and span names --
+  PASS  DEFECT REPRODUCED: no agent Id, three agent instances give 3 different invoke_agent span names
+  PASS  fixed: Id = "contoso-assistant" gives 1 span name for the three instances
+  PASS  DEFECT REPRODUCED: tenant and conversation ids as tags, 50 requests make 50 series
+  PASS  fixed: one bounded tag (contoso.outcome), 50 requests make 4 series, an unlisted value counted as "other"
+
+-- Workflow spans (WithOpenTelemetry) --
+    workflow.build  [gen_ai.workflow.name, workflow.definition, workflow.id]
+    invoke_workflow ContosoClaimTriage  [gen_ai.operation.name, gen_ai.workflow.name, session.id, workflow.id]
+  PASS  an invoke_workflow span carries gen_ai.workflow.name = ContosoClaimTriage (output: meals)
+  PASS  DEFECT REPRODUCED: a dashboard filtering on the old key workflow.name matches 0 spans
+
+-- Retry owners (fake provider, no network) --
+  PASS  DEFECT REPRODUCED: three owners against a provider stuck at 429: 48 HTTP attempts for one question, while the trace shows 3 chat spans
+  PASS  fixed, one owner (HTTP pipeline), 429 then 200: 2 attempts, 1 chat span, one answer
+  PASS  fixed, one owner, provider stuck at 429: 4 attempts, then one failed chat span
+
+RESULT 21/21

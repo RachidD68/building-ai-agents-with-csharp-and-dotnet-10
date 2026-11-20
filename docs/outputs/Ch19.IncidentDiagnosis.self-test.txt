@@ -1,0 +1,26 @@
+# code 1e910d2 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
+$ dotnet run -- --self-test
+
+=== Incident diagnosis: self-test (offline) ===
+
+-- One request per fault, captured to a file, diagnosed from the file --
+    None            answer: "The limit is 120 CAD per person."
+  PASS  None: diagnosed as none (contoso.answer.check: contoso.answer.reason=matches_tool)
+    EmptyRetrieval  answer: "The limit is 75 CAD per day."
+  PASS  EmptyRetrieval: diagnosed as retrieval (contoso.retrieval: contoso.retrieval.hits=0)
+    ToolException   answer: "The limit is 75 CAD per day."
+  PASS  ToolException: diagnosed as tool (execute_tool get_reimbursement_limit: error.type=System.TimeoutException)
+    WrongValue      answer: "The limit is 150 CAD."
+  PASS  WrongValue: diagnosed as model (contoso.answer.check: contoso.answer.reason=amount_mismatch)
+
+-- The same faults with framework spans only (no step spans) --
+    EmptyRetrieval  -> undetermined (no step span tells the steps apart)
+    ToolException   -> tool (execute_tool get_reimbursement_limit: error.type=System.TimeoutException)
+    WrongValue      -> undetermined (no step span tells the steps apart)
+  PASS  DEFECT REPRODUCED: framework spans alone leave 2 of 3 faults undetermined (EmptyRetrieval, WrongValue): both look like a successful run
+
+-- Confidential text in what was exported --
+  PASS  DEFECT REPRODUCED: without the redactor, execute_tool get_reimbursement_limit exports the exception message as its status description ("limits service did not answer"), sensitive data off
+  PASS  none of the 6 seeded strings appears in 475 exported values (spans, metric tags, logs) over 7 runs
+
+RESULT 7/7
