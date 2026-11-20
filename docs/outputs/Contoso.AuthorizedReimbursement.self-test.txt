@@ -1,4 +1,4 @@
-# code 533cd7a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 0e08540 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
 === Contoso: authorized reimbursement (self-test) ===
@@ -12,6 +12,12 @@ $ dotnet run -- --self-test
    claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: AwaitingReview (separation_of_duties)
   PASS  refused: separation of duties, still awaiting review
   PASS  the refused edit stored nothing: the amount of record is unchanged
+  PASS  Bob, no reviewer role, edits to 50.00: reviewer_not_authorized, nothing stored, the claim still waits
+  PASS  Bob edits to 0: reviewer_not_authorized, nothing stored, the claim still waits
+  PASS  Bob edits to 9999: reviewer_not_authorized, nothing stored, the claim still waits
+  PASS  Alice edits her own claim to 49.99: separation_of_duties, nothing stored, the claim still waits
+  PASS  Rita edits to 9999: invalid_amount, nothing stored, the claim still waits
+  PASS  Mallory, a fabrikam reviewer, approves: unknown_claim, nothing stored, the claim still waits
 
 -- 3. Rita edits the amount to 60.00 and approves, twice at once; the provider's response is lost --
    claim 4b9e2c1d-7a3f-4e8b-9c6d-1f2a3b4c5d6e: OutcomeUnknown (exact_proposal_approved)
@@ -43,4 +49,10 @@ $ dotnet run -- --self-test
   PASS  the commit reloads Bob's rights: denied (missing_permission), nothing paid
 
 Simulated payments in the provider journal: 2
-RESULT 12/12
+
+-- 9. The process crashes after Rita's review, then after the commit, and restarts --
+   after_review: AwaitingReview (approval_missing) -> after restart Delivered (exact_proposal_approved)
+  PASS  crash after_review: the restart finishes the claim, one operation, one payment
+   after_commit: AwaitingReview (approval_missing) -> after restart Delivered (committed_before_restart)
+  PASS  crash after_commit: the restart finishes the claim, one operation, one payment
+RESULT 20/20

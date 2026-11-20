@@ -1,4 +1,4 @@
-# code 533cd7a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code 0e08540 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
   PASS  ls                                 -> allowed
@@ -10,14 +10,20 @@ $ dotnet run -- --self-test
   PASS  dotnet --version                   -> allowed
   PASS  cat C:\Windows\win.ini             -> refused: 'C:\Windows\win.ini' is outside the scratch folder.
   PASS  cat /etc/passwd                    -> refused: '/etc/passwd' is outside the scratch folder.
-  PASS  cat ..\..\secrets.txt              -> refused: '..\..\secrets.txt' is outside the scratch folder.
-  PASS  cat ../../secrets.txt              -> refused: '../../secrets.txt' is outside the scratch folder.
-  PASS  cat ../outside.txt                 -> refused: '../outside.txt' is outside the scratch folder.
+  PASS  cat ..\..\secrets.txt              -> refused: '..\..\secrets.txt' contains '..', which can lead outside the scratch folder.
+  PASS  cat ../../secrets.txt              -> refused: '../../secrets.txt' contains '..', which can lead outside the scratch folder.
+  PASS  cat ../outside.txt                 -> refused: '../outside.txt' contains '..', which can lead outside the scratch folder.
   PASS  cat \\server\share\file            -> refused: '\\server\share\file' is outside the scratch folder.
   PASS  cat //server/share/file            -> refused: '//server/share/file' is outside the scratch folder.
   PASS  cat D:file.txt                     -> refused: 'D:file.txt' is outside the scratch folder.
-  PASS  cat ../SCRATCH/README.md           -> allowed: Windows paths ignore case, so this is the scratch folder itself
+  PASS  cat notes/../README.md             -> refused: 'notes/../README.md' contains '..', which can lead outside the scratch folder.
+  PASS  cat ../SCRATCH/README.md           -> refused: '../SCRATCH/README.md' contains '..', which can lead outside the scratch folder.
   PASS  cat --file=../x                    -> refused: argument '--file=../x' contains a shell metacharacter or control character.
+  PASS  cat --number                       -> refused: flag '--number' is not allowed.
+  PASS  ls -R                              -> refused: flag '-R' is not allowed: it can recurse or follow links.
+  PASS  ls -RL                             -> refused: flag '-RL' is not allowed: it can recurse or follow links.
+  PASS  dir -L                             -> refused: flag '-L' is not allowed: it can recurse or follow links.
+  PASS  ls --deref                         -> refused: flag '--deref' is not allowed.
   PASS  dotnet run                         -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  dotnet exec a.dll                  -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  dotnet --version extra             -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
@@ -40,6 +46,8 @@ $ dotnet run -- --self-test
   PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'dotnet run'; this policy refuses it
   PASS  DEFECT REPRODUCED: the first-edition allow-list accepts 'find . -exec rm {} ;'; this policy refuses it
   PASS  cat link-out/secrets.txt           -> refused: 'link-out/secrets.txt' goes through a link, which can lead outside the scratch folder.
+  PASS  cat link-out/../secrets.txt        -> refused: 'link-out/../secrets.txt' contains '..', which can lead outside the scratch folder.
+  PASS  ls -l link-out                     -> refused: 'link-out' goes through a link, which can lead outside the scratch folder.
   PASS  notes.txt asks for 'dotnet run'; the follow-up call -> refused: dotnet is allowed only with --version, --info, --list-sdks or --list-runtimes.
   PASS  missing program -> Error: program 'shelltool-no-such-program' was not found on this machine.
   PASS  Windows: dir -> cmd.exe [/d, /c, dir]
@@ -47,5 +55,5 @@ $ dotnet run -- --self-test
   PASS  Windows: ls -la -> ls [-la]
   PASS  Linux: dir -l -> dir [-l]
   PASS  type README.md -> exit 0: hello from the scratch folder
-RESULT 46/46
+RESULT 54/54
 
