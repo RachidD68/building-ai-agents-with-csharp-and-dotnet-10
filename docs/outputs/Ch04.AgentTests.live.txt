@@ -1,0 +1,23 @@
+# code 1ee46f2-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --live
+
+=== The first agent's first test (live) ===
+
+-- RunAsync --
+   Completed (finish: stop): Yes, a claim of 42.00 EUR or less is approved automatically. Since 42 EUR is within the automatic approval limit, this claim would be approved without needing to be reviewed.
+  PASS  the policy instructions reached the provider call
+  PASS  the run is Completed with some text
+
+-- RunStreamingAsync --
+   Completed (finish: stop): A claim of 180.00 EUR or more waits for a finance reviewer. The reviewer cannot be the employee who filed the claim, so the employee's manager or another designated finance reviewer will review it.
+  PASS  the streamed run is Completed with some text
+
+-- a 12-token ceiling for one call --
+   Truncated (finish: length): I don't know. However, according to our expense policy
+  PASS  the provider reports Length and the run is Truncated
+
+-- cancelled after the first piece of text --
+   Cancelled (finish: none): Here
+  PASS  the run is Cancelled and its partial text is not an answer
+
+RESULT 5/5

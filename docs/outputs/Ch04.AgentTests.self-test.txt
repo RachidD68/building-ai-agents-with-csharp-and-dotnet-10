@@ -1,0 +1,44 @@
+# code 1ee46f2-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run -- --self-test
+
+=== The first agent's first test (self-test) ===
+
+-- what reaches the model --
+  PASS  the policy instructions reach the model
+  PASS  the question is the last message, sent once
+  PASS  the reply comes back as the response text
+   with a session the model got 3 messages, without one 1
+  PASS  with a session, the second run carries the first exchange
+  PASS  without a session, a run sends no history
+   per call: temperature 0, max tokens 300; next call: temperature 0.7, max tokens 300
+  PASS  a per-call option wins for that call and the agent's other defaults stay
+  PASS  the next call is back to the agent's defaults
+  PASS  AsAIAgent sends the same instructions
+
+-- streamed runs end in exactly one state --
+   Completed finish=stop   text="Claims up to 50.00 EUR are approved automatically."
+  PASS  a full stream is Completed and keeps every chunk
+   Truncated finish=length text="Claims up to 50.00 EUR "
+  PASS  finish reason Length is Truncated, not a success
+   buffer-only reader returned "Claims up to " and no status
+  PASS  DEFECT REPRODUCED: a buffer-only reader returns the partial text of a cancelled run as its answer
+   Cancelled finish=none   text="Claims up to "
+  PASS  cancelled mid-stream is Cancelled; the partial text is kept, not called a success
+  PASS  the caller's token reached the model call and stopped it
+   Completed finish=none   text="Claims up to "
+  PASS  DEFECT REPRODUCED: judged by the stream alone, a quietly ended cancelled run looks Completed
+   Cancelled finish=none   text="Claims up to "
+  PASS  with the caller's token, the same quiet end is Cancelled
+  PASS  a quiet end after the time budget ran out is Failed
+   Failed    finish=none   text="Claims up to " error=HttpRequestException
+  PASS  an error mid-stream is Failed and keeps the exception as thrown
+   Failed    finish=none   text="Claims up to " error=TaskCanceledException
+  PASS  a time budget that runs out is Failed, not Cancelled: the caller did not cancel
+
+-- non-streamed runs --
+  PASS  RunAsync lets the provider's exception through unchanged
+  PASS  a cancelled RunAsync is Cancelled and the model call saw the token
+   Truncated finish=length text="Claims up to 50.00"
+  PASS  AgentResponse.FinishReason carries Length through, so RunAsync is Truncated too
+
+RESULT 21/21

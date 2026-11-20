@@ -1,0 +1,28 @@
+# code 7d5e7ff | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+$ dotnet run
+
+=== Contoso expense help: a first agent ===
+
+You: Is a 42 EUR taxi receipt approved automatically?
+ContosoExpenseHelp: Yes, a claim of 42 EUR or less is approved automatically. Since 42 EUR is below the 50 EUR threshold, the claim will be automatically reimbursed without the need for a finance reviewer's approval.
+  [finish: stop, tokens in/out: 162/44]
+
+You: My hotel claim is 180 EUR.
+ContosoExpenseHelp: Your claim is above 50.00 EUR, so it will be reviewed by a finance reviewer. The reviewer's decision will be final, and it won't be approved or paid by you. To proceed, please take the completed expense form to the finance department.
+  [finish: stop, tokens in/out: 160/54]
+
+You: Who has to approve it?
+ContosoExpenseHelp: According to the policy, a finance reviewer must approve the claim, and this reviewer cannot be the employee who filed the claim.
+  [finish: stop, tokens in/out: 229/26]
+
+You: Explain the whole expense policy.
+ContosoExpenseHelp: I don't know. I can tell you that claims under
+  [finish: length, tokens in/out: 159/12]
+
+You: Can I approve my own claim?
+ContosoExpenseHelpPinned: No, you cannot approve your own claim. According to the policy, a finance reviewer, who cannot be the employee who filed it, is required to review and approve claims above 50.00 EUR. I'm just here to provide information, I don't have the ability to approve claims, please refer to the expense form for more information.
+  [finish: stop, tokens in/out: 159/70]
+
+You: Can you pay my claim now?
+ContosoQuick: I don't know how to pay a claim. According to our expense policy, I don't have the ability to pay claims, and I should have referred you to the expense form for further instructions. Would you like me to point you in the right direction?
+  [finish: stop, tokens in/out: 159/53]
