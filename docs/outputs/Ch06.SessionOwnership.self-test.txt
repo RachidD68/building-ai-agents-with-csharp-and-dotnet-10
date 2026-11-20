@@ -1,0 +1,39 @@
+# code 633cc62 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Session ownership: self-test ===
+
+-- 1. Alice's conversation survives a restart --
+  PASS  after the restart Alice's session has 4 messages
+
+-- 2. The failure: tenant and subject taken from the payload --
+  Mallory (fabrikam) wrote contoso/E-1001 into the request and got 4 messages: "Taxi from the airport on 12 November, 64.80 EUR."
+  PASS  DEFECT REPRODUCED: the payload-keyed service hands Mallory Alice's conversation
+
+-- 3. The fix: the key comes from the authenticated caller --
+  PASS  Mallory's forged request finds nothing (payload tenant and subject ignored)
+  PASS  Bob, same tenant, same conversation id, finds nothing
+  PASS  Bob and the neighbour tenant's E-1001 got their own rows; Alice's is unchanged
+
+-- 4. Forget: owner only, and repeatable --
+  PASS  Mallory's delete reached only her own (empty) partition: Alice's row is still there
+  PASS  Alice deletes twice: both calls succeed
+  PASS  after a restart Alice's conversation is gone
+  PASS  Bob's and the neighbour tenant's rows survive (2 rows)
+  PASS  a tab opened before the delete cannot save it back -> SessionConflictException
+
+-- 5. Two writers load the same version and save at the same moment --
+  the file now holds: Hotel, two nights in Lyon. | window B: add the toll
+  PASS  DEFECT REPRODUCED: both windows saved the file; window A's turn is gone and neither was told
+  10 rounds: 10 with one save and one conflict; both saves in flight together in 10; 22 messages stored
+  PASS  the two saves were in flight together in at least one round
+  PASS  every round: exactly one save succeeded and the other got SessionConflictException
+  PASS  the stored history holds the first turn and every winner's turn, in order
+  PASS  no loser's turn was merged in silently: each loser was told
+
+-- 6. Schema version and key shape --
+  PASS  a row written by schema 2 is refused -> UnsupportedSessionSchemaException
+  PASS  a key with no tenant or subject partition is refused
+  PASS  a key with an extra partition is refused
+
+RESULT 18/18
