@@ -121,8 +121,8 @@ public sealed class ReimbursementDesk
     public async Task<ClaimStatus> SubmitAsync(Caller employee, ExpenseClaim claim, CancellationToken ct)
     {
         // Intake claims the submission id first: a double click is answered
-        // from the stored state, without a second model call. Only a claim whose
-        // proposal failed (proposal_failed) is taken again, by one caller.
+        // from the stored state, without a second model call. Only a claim that
+        // never reached the store (proposal_failed, stale_version) is taken again, by one caller.
         if (!ClaimIntake(employee, claim.SubmissionId)) return Status(employee.TenantId, claim.SubmissionId);
         CrashPoint?.Invoke("after_intake");
 
@@ -153,6 +153,7 @@ public sealed class ReimbursementDesk
     private async Task<ClaimStatus> DecideAsync(Caller employee, EmployeeAccount account,
         ReimbursementProposal proposal, CancellationToken ct)
     {
+        proposal = Rebase(employee, proposal, account.Version);     // a restart may decide a proposal built earlier
         PolicyResult policy = ReimbursementPolicy.Evaluate(employee, account, proposal, approval: null, _clock());
         return policy.Decision switch
         {
@@ -182,14 +183,16 @@ public sealed class ReimbursementDesk
         if (refused is not null)
             return Status(tenant, operationId) with { Reason = refused };    // nothing stored: still waiting
 
-        if (editedAmount is { } amount) proposal = proposal with { Amount = amount };   // not stored yet
+        // The review covers the account as it is now: another claim may have been paid since the proposal.
+        if (Store.LoadAccount(tenant, requester.SubjectId) is not { } account)
+            return Finish(requester, operationId, ClaimState.Rejected, "resource_scope");
+        proposal = proposal with { Amount = editedAmount ?? proposal.Amount, ExpectedVersion = account.Version };
         var approval = new ApprovalRecord(ReimbursementPolicy.Digest(tenant, requester.SubjectId, proposal),
             tenant, requester.SubjectId, reviewer.SubjectId, Roles.FinanceReviewer,
             ReimbursementPolicy.Version, _clock().AddHours(24), approve);
         // An edited amount must pass the policy before it is stored.
-        if (editedAmount is not null && ReimbursementPolicy.Evaluate(requester,
-                Store.LoadAccount(tenant, requester.SubjectId)!, proposal, approval with { Approved = true },
-                _clock()) is { Decision: Decision.Deny } edit)
+        if (editedAmount is not null && ReimbursementPolicy.Evaluate(requester, account, proposal,
+                approval with { Approved = true }, _clock()) is { Decision: Decision.Deny } edit)
             return Status(tenant, operationId) with { Reason = edit.Reason };  // nothing stored: still waiting
 
         // One decision per claim: the first valid review claims the approval row
@@ -223,30 +226,46 @@ public sealed class ReimbursementDesk
     /// operation is finished now (an approval goes through CommitAsync, which
     /// runs the policy again); a Submitted claim with a proposal is decided
     /// now, and one without becomes proposal_failed, which a resubmit retries.
+    /// Each claim is repaired on its own: one that fails is logged and left
+    /// for the next restart, and the outbox and the unknown payments still run.
     /// </summary>
     private async Task RepairClaimsAsync(CancellationToken ct)
     {
         foreach ((string tenant, Guid op, string requesterId, bool submitted, bool committed, bool? approved)
                  in StrandedClaims())
         {
-            if (LoadProposal(tenant, op) is not { } pending)
+            try
             {
-                if (submitted)
-                    Finish(_directory.Authenticate(tenant, requesterId), op, ClaimState.Rejected, "proposal_failed");
-                continue;
+                await RepairClaimAsync(tenant, op, requesterId, submitted, committed, approved, ct);
             }
-            (Caller requester, ReimbursementProposal proposal) = pending;
-            if (committed)
-                Finish(requester, op, ClaimState.Committed, "committed_before_restart");
-            else if (approved == false)
-                Finish(requester, op, ClaimState.Rejected, "approval_rejected");
-            else if (LoadApproval(tenant, op) is { } approval)
-                await CommitAsync(requester, proposal, approval, ct);
-            else if (submitted && Store.LoadAccount(tenant, requester.SubjectId) is { } account)
-                await DecideAsync(requester, account, proposal, ct);
-            else if (submitted)
-                Finish(requester, op, ClaimState.Rejected, "resource_scope");
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                Console.Error.WriteLine($"repair of claim {tenant}/{op} failed, left for the next restart: " +
+                                        $"{ex.GetType().Name}: {ex.Message}");
+            }
         }
+    }
+
+    private async Task RepairClaimAsync(string tenant, Guid op, string requesterId, bool submitted,
+        bool committed, bool? approved, CancellationToken ct)
+    {
+        if (LoadProposal(tenant, op) is not { } pending)
+        {
+            if (submitted)
+                Finish(_directory.Authenticate(tenant, requesterId), op, ClaimState.Rejected, "proposal_failed");
+            return;
+        }
+        (Caller requester, ReimbursementProposal proposal) = pending;
+        if (committed)
+            Finish(requester, op, ClaimState.Committed, "committed_before_restart");
+        else if (approved == false)
+            Finish(requester, op, ClaimState.Rejected, "approval_rejected");
+        else if (LoadApproval(tenant, op) is { } approval)
+            await CommitAsync(requester, proposal, approval, ct);
+        else if (submitted && Store.LoadAccount(tenant, requester.SubjectId) is { } account)
+            await DecideAsync(requester, account, proposal, ct);
+        else if (submitted)
+            Finish(requester, op, ClaimState.Rejected, "resource_scope");
     }
 
     private List<(string Tenant, Guid OperationId, string Requester, bool Submitted, bool Committed, bool? Approved)>
@@ -352,20 +371,81 @@ public sealed class ReimbursementDesk
             !_directory.Authenticate(approval.TenantId, approval.ReviewerId).Permissions.Contains(approval.ReviewerRole))
             return Finish(requester, proposal.OperationId, ClaimState.Rejected, "reviewer_not_authorized");
 
-        // The policy again, against the account as it is now, then one transaction.
-        EmployeeAccount account = Store.LoadAccount(requester.TenantId, requester.SubjectId)!;
-        PolicyResult policy = ReimbursementPolicy.Evaluate(requester, account, proposal, approval, _clock());
-        if (policy.Decision != Decision.Allow)
-            return Finish(requester, proposal.OperationId, ClaimState.Rejected, policy.Reason);
+        for (int attempt = 1; ; attempt++)
+        {
+            // The policy again, against the account as it is now, then one transaction.
+            if (Store.LoadAccount(requester.TenantId, requester.SubjectId) is not { } account)
+                return Finish(requester, proposal.OperationId, ClaimState.Rejected, "resource_scope");
+            if (account.Version != proposal.ExpectedVersion)
+            {
+                // Another claim of this employee committed first. The approval covered the
+                // old version, so a reviewed claim goes back to the reviewer; a low-value
+                // claim is rebuilt on the current version and the policy decides again.
+                if (approval is not null) return ReviewAgain(requester, proposal.OperationId, account.Version);
+                proposal = Rebase(requester, proposal, account.Version);
+            }
+            PolicyResult policy = ReimbursementPolicy.Evaluate(requester, account, proposal, approval, _clock());
+            if (policy.Decision != Decision.Allow)
+                return Finish(requester, proposal.OperationId, ClaimState.Rejected, policy.Reason);
 
-        CommitResult commit = Store.Submit(requester.TenantId, requester.SubjectId, proposal, _clock());
-        CrashPoint?.Invoke("after_commit");
-        if (commit.Status is CommitStatus.Committed or CommitStatus.Replayed)
-            Finish(requester, proposal.OperationId, ClaimState.Committed, policy.Reason);
-        else
-            return Finish(requester, proposal.OperationId, ClaimState.Rejected, commit.Status.ToString());
+            CommitResult commit = Store.Submit(requester.TenantId, requester.SubjectId, proposal, _clock());
+            CrashPoint?.Invoke("after_commit");
+            if (commit.Status is CommitStatus.Committed or CommitStatus.Replayed)
+            {
+                Finish(requester, proposal.OperationId, ClaimState.Committed, policy.Reason);
+                break;
+            }
+            // Lost a race to another commit between the check and the transaction: look again.
+            if (commit.Status == CommitStatus.StaleVersion && attempt < MaxCommitAttempts) continue;
+            return Finish(requester, proposal.OperationId, ClaimState.Rejected, ReasonCode(commit.Status));
+        }
         await DispatchAsync(ct);
         return Status(requester.TenantId, proposal.OperationId);
+    }
+
+    private const int MaxCommitAttempts = 10;
+
+    /// <summary>The store's refusals as the reason codes the rest of the desk uses.</summary>
+    private static string ReasonCode(CommitStatus status) => status switch
+    {
+        CommitStatus.StaleVersion => "stale_version",
+        CommitStatus.InsufficientBalance => "insufficient_balance",
+        CommitStatus.Conflict => "operation_conflict",
+        CommitStatus.UnknownAccount => "unknown_account",
+        _ => "commit_refused",
+    };
+
+    /// <summary>Rebuilds a stored proposal on the account's current version (nothing else changes).</summary>
+    private ReimbursementProposal Rebase(Caller requester, ReimbursementProposal p, long version)
+    {
+        if (p.ExpectedVersion == version) return p;
+        Execute("""
+            UPDATE claims SET expected_version = $version
+            WHERE tenant = $tenant AND operation_id = $op AND state IN ('Submitted', 'AwaitingReview')
+            """, ("$version", version), ("$tenant", requester.TenantId), ("$op", p.OperationId.ToString("D")));
+        return p with { ExpectedVersion = version };
+    }
+
+    /// <summary>
+    /// The account moved after the review: the claim waits for a reviewer again
+    /// (account_changed), on the current version. The old decision is removed in
+    /// the same transaction, so the next valid review can claim the row.
+    /// </summary>
+    private ClaimStatus ReviewAgain(Caller requester, Guid operationId, long version)
+    {
+        using (SqliteConnection db = Open())
+        using (SqliteTransaction tx = db.BeginTransaction(deferred: false))
+        {
+            (string, object)[] key = [("$tenant", requester.TenantId), ("$op", operationId.ToString("D"))];
+            int moved = Execute(db, tx, """
+                UPDATE claims SET expected_version = $version, reason = 'account_changed'
+                WHERE tenant = $tenant AND operation_id = $op AND state = 'AwaitingReview'
+                """, [("$version", version), .. key]);
+            if (moved == 1)
+                Execute(db, tx, "DELETE FROM approvals WHERE tenant = $tenant AND operation_id = $op", key);
+            tx.Commit();
+        }
+        return Status(requester.TenantId, operationId);
     }
 
     /// <summary>Hands each outbox row to the delivery worker. A row is marked only after the worker recorded its state.</summary>
@@ -383,7 +463,8 @@ public sealed class ReimbursementDesk
         INSERT INTO claims (tenant, operation_id, requester, state, reason)
         VALUES ($tenant, $op, $requester, 'Submitted', 'received')
         ON CONFLICT (tenant, operation_id) DO UPDATE SET state = 'Submitted', reason = 'received'
-        WHERE claims.state = 'Rejected' AND claims.reason = 'proposal_failed' AND claims.requester = excluded.requester
+        WHERE claims.state = 'Rejected' AND claims.reason IN ('proposal_failed', 'stale_version')
+          AND claims.requester = excluded.requester
         """, ("$tenant", employee.TenantId), ("$op", operationId.ToString("D")), ("$requester", employee.SubjectId)) == 1;
 
     private void SaveProposal(Caller requester, ReimbursementProposal p, string explanation) => Execute("""
@@ -432,10 +513,10 @@ public sealed class ReimbursementDesk
             return false;
         }
         Execute(db, tx, """
-            UPDATE claims SET amount = $amount, explanation = COALESCE($note, explanation)
+            UPDATE claims SET amount = $amount, expected_version = $version, explanation = COALESCE($note, explanation)
             WHERE tenant = $tenant AND operation_id = $op
-            """, ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)), ("$note", (object?)editNote ?? DBNull.Value),
-            ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")));
+            """, ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)), ("$version", p.ExpectedVersion),
+            ("$note", (object?)editNote ?? DBNull.Value), ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")));
         tx.Commit();
         CrashPoint?.Invoke("after_review");
         return true;

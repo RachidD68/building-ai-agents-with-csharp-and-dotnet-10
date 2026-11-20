@@ -15,8 +15,9 @@
 // is revoked while a claim waits. One reimbursement, one simulated payment,
 // one operation id. The self-test adds reviews that must be refused at any
 // amount (no role, own claim, another tenant), a crash between each pair of
-// steps, a model outage, a reviewer role revoked before the commit, and a
-// second tenant that reuses an operation id.
+// steps, a model outage, a reviewer role revoked before the commit, a second
+// tenant that reuses an operation id, claims of one employee that commit in
+// between each other, and an account deleted under a stranded approval.
 //
 //   dotnet run                    against the configured model (Ollama llama3.2)
 //   dotnet run -- --self-test     a scripted model, no network; RESULT n/n
@@ -317,11 +318,101 @@ internal static class Scenario
             fabrikam.State == ClaimState.Delivered && fabrikam.Detail is not null &&
             fabrikam.Detail != restarted.Status(Tenant, lunch.SubmissionId).Detail && Effects(journal) == 3);
 
+        // Every commit moves the account version, so one employee's claims meet each other.
+        Console.WriteLine("\n-- 11. Claims of one employee meet; an account disappears --");
+        directory.Grant(Tenant, "E-2002", Permissions.SubmitReimbursement);
+        var train = new ExpenseClaim(Guid.Parse("2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b"), "E-1001",
+            "Train to the Fabrikam office on 12 November: 22.40 EUR.");
+        {
+            // The taxi waits for Rita while Alice's train ticket is paid (version 7 -> 8).
+            (ReimbursementDesk d, string log) = Fresh("paid_first", null);
+            await d.SubmitAsync(alice, taxi, ct);
+            ClaimStatus paid = await d.SubmitAsync(alice, train, ct);
+            ClaimStatus reviewed = await d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
+            Console.WriteLine($"   train {paid.State} ({paid.Reason}), then Rita approves the taxi: {reviewed.State} ({reviewed.Reason})");
+            Expect("another claim paid first: the review covers the current version, both paid once",
+                paid.State == ClaimState.Delivered && reviewed is { State: ClaimState.Delivered, Reason: "exact_proposal_approved" } &&
+                d.Store.LoadAccount(Tenant, "E-1001") is { ReimbursableBalance: 412.80m, Version: 9 } && Effects(log) == 2);
+        }
+        {
+            // Rita's approval is stored, the process dies, and the train commits before the restart.
+            (ReimbursementDesk d, string log) = Fresh("moved_after_review", "after_review");
+            await d.SubmitAsync(alice, taxi, ct);
+            await Survive(() => d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            await d.SubmitAsync(alice, train, ct);
+            ReimbursementDesk repaired = Restart("moved_after_review");
+            await repaired.ResumeAsync(ct);
+            ClaimStatus waiting = repaired.Status(Tenant, taxi.SubmissionId);
+            ClaimStatus second = await repaired.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
+            Console.WriteLine($"   approved, then the account moved: {waiting.State} ({waiting.Reason}) -> second review {second.State} ({second.Reason})");
+            Expect("an approval for an older version is asked for again (account_changed), then paid once",
+                waiting is { State: ClaimState.AwaitingReview, Reason: "account_changed" } &&
+                second.State == ClaimState.Delivered && repaired.Store.Count("operations") == 2 && Effects(log) == 2);
+        }
+        {
+            // Six low-value claims by Bob at once: every commit but one finds a newer version.
+            (ReimbursementDesk d, string log) = Fresh("parallel", null);
+            d.Store.SeedAccount(new EmployeeAccount(Tenant, "E-2002", "EUR", 300m, 3));
+            ClaimStatus[] six = await Task.WhenAll(Enumerable.Range(1, 6).Select(i => Task.Run(() => d.SubmitAsync(bob,
+                new ExpenseClaim(Guid.NewGuid(), "E-2002", $"Team lunch number {i} with a customer: 18.50 EUR."), ct))));
+            Console.WriteLine($"   six parallel claims: {string.Join(", ", six.GroupBy(s => $"{s.State} ({s.Reason})").Select(g => $"{g.Count()} {g.Key}"))}");
+            Expect("six parallel low-value claims of one employee: all six paid, balance 189, version 9",
+                six.All(s => s.State == ClaimState.Delivered) &&
+                d.Store.LoadAccount(Tenant, "E-2002") is { ReimbursableBalance: 189m, Version: 9 } && Effects(log) == 6);
+        }
+        {
+            // Bob's payment response is lost; Alice's approved taxi is stranded; her account row is deleted.
+            string db = Path.Combine(root, "missing_account.db"), log = Path.Combine(root, "missing_account-provider.db");
+            var d = new ReimbursementDesk(model, db, new FakePaymentProvider(log, ProviderFault.AcceptThenTimeout), directory)
+            {
+                CrashPoint = step => { if (step == "after_review") throw new SimulatedCrash(step); },
+            };
+            d.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
+            d.Store.SeedAccount(new EmployeeAccount(Tenant, "E-2002", "EUR", 300m, 3));
+            ClaimStatus unknown = await d.SubmitAsync(bob, lunch, ct);
+            var secondTaxi = taxi with { SubmissionId = Guid.Parse("3f4a5b6c-7d8e-4f9a-8b0c-2d3e4f5a6b7c") };
+            await d.SubmitAsync(alice, taxi, ct);
+            await d.SubmitAsync(alice, secondTaxi, ct);
+            await Survive(() => d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            DeleteAccount(db, Tenant, "E-1001");
+            var restartedTwice = new List<ReimbursementDesk>();
+            for (int i = 0; i < 2; i++)
+            {
+                var r = new ReimbursementDesk(model, db, new FakePaymentProvider(log), directory);
+                await r.ResumeAsync(ct);
+                restartedTwice.Add(r);
+            }
+            ReimbursementDesk last = restartedTwice[^1];
+            ClaimStatus stranded = last.Status(Tenant, taxi.SubmissionId);
+            ClaimStatus reconciled = last.Status(Tenant, lunch.SubmissionId);
+            ClaimStatus edited = await last.ReviewAsync(rita, secondTaxi.SubmissionId, true, 55.00m, ct);
+            Console.WriteLine($"   no account: taxi {stranded.State} ({stranded.Reason}), Bob's lunch {unknown.State} -> {reconciled.State}, " +
+                              $"edited review {edited.State} ({edited.Reason})");
+            Expect("a stranded approval without an account is rejected (resource_scope); the restart still reconciles",
+                unknown.State == ClaimState.OutcomeUnknown &&
+                stranded is { State: ClaimState.Rejected, Reason: "resource_scope" } &&
+                reconciled.State == ClaimState.Reconciled && Effects(log) == 1);
+            Expect("a review of a claim without an account: rejected (resource_scope), nothing committed",
+                edited is { State: ClaimState.Rejected, Reason: "resource_scope" } && last.Store.Count("operations") == 1);
+        }
+
         Console.WriteLine($"RESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
     }
 
     static long Effects(string journal) => new FakePaymentProvider(journal).EffectCount();
+
+    /// <summary>An operator removes an account row while claims still point at it.</summary>
+    static void DeleteAccount(string db, string tenant, string employee)
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={db};Pooling=False");
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM accounts WHERE tenant = $tenant AND employee_id = $employee";
+        cmd.Parameters.AddWithValue("$tenant", tenant);
+        cmd.Parameters.AddWithValue("$employee", employee);
+        cmd.ExecuteNonQuery();
+    }
 
     static void Show(ClaimStatus s) =>
         Console.WriteLine($"   claim {s.OperationId}: {s.State} ({s.Reason}){(s.Detail is null ? "" : $" payment {s.Detail}")}");
@@ -372,6 +463,8 @@ internal sealed class ScriptedProposalClient : IChatClient
         {
             _ when claim.Contains("Fabrikam parking") =>
                 """{"employeeId":"F-1","amount":45.00,"currency":"EUR","explanation":"Station parking."}""",
+            _ when claim.Contains("Train") =>
+                """{"employeeId":"E-1001","amount":22.40,"currency":"EUR","explanation":"Train ticket."}""",
             _ when claim.Contains("Taxi") =>
                 """{"employeeId":"E-1001","amount":64.80,"currency":"EUR","explanation":"Airport taxi with a receipt."}""",
             _ when claim.Contains("lunch") =>
