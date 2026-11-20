@@ -4,13 +4,20 @@
 // Everything here is explained in full later: the host and DI in the development-environment chapter,
 // ChatClientAgent and sessions in the first-agent chapter. Run it once to see the shape of
 // what you'll be building throughout the book.
+//
+//   dotnet run                    against the configured model (Ollama llama3.2)
+//   dotnet run -- --offline       no model: a canned client stands in, labelled as such
+//   dotnet run -- --self-test     offline checks of the agent's shape; RESULT n/n
 // ============================================================================
 
+using Ch01.FirstGlimpse;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 // 1. Wire up an LLM chat client. The provider is chosen in appsettings.json /
 //    User Secrets and works across Azure OpenAI, OpenAI, or
@@ -19,7 +26,9 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
 
 using IHost host = builder.Build();
-IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
+IChatClient chatClient = args.Contains("--offline")
+    ? new OfflineChatClient()
+    : host.Services.GetRequiredService<IChatClient>();
 
 Console.WriteLine("=== Your First Glimpse of an Agent ===\n");
 
@@ -37,3 +46,4 @@ AgentResponse response = await agent.RunAsync(
     session);
 
 Console.WriteLine($"{agent.Name}: {response.Text}");
+return 0;

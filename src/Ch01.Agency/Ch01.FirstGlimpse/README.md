@@ -11,11 +11,18 @@ OpenAI, OpenAI, and Ollama without touching the code — see the development-env
 
 ## Run it
 
+From this project folder:
+
 ```
-dotnet run
+dotnet run                    # the configured model (default: local Ollama, llama3.2)
+dotnet run -- --offline       # no model yet: a canned client answers, labelled "[offline: ...]"
+dotnet run -- --self-test     # offline checks of the agent's shape; prints RESULT n/n
 ```
 
-from this project folder. The default configuration targets a local Ollama model
-(`llama3.2`); set a different provider in `appsettings.json` or User Secrets to use a
-cloud model. Output wording will vary every run — language-model responses are
-non-deterministic (this chapter explains why).
+With a real model, the output wording will vary every run — language-model responses
+are non-deterministic (the chapter explains why). The `--offline` answer is always the
+same canned sentence; it shows the shape of the code, not what a model would say.
+
+The self-test checks that one `RunAsync` makes one model call, that the persona travels
+with every call, that a session sends the earlier turns again, and that a new session
+starts empty. It checks the shape, not the quality of any answer.
