@@ -1,5 +1,5 @@
-# code ef87c19 | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 20/20 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
+# code 775fda5 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 23/23 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
 $ dotnet run -- --self-test
 === Evidence evaluation: self-test (hand-written answers, no model) ===
 
@@ -16,6 +16,9 @@ $ dotnet run -- --self-test
   "Not 15 days; employees get 20 days [pto-policy@v1#2]."
      Fact FAIL  Support pass  Citation pass  Abstention pass
   PASS  a contradiction that contains "15" fails Fact: negates the expected value: "Not 15 days"
+  "New employees don't get 15 days of PTO [pto-policy@v1#2]."
+     Fact FAIL  Support pass  Citation pass  Abstention pass
+  PASS  contracted negations ("don't", and "isn't" with a curly apostrophe) fail Fact: negates the expected value: "don't get 15 days"
   "Employees get 115 days of PTO [pto-policy@v1#2]."
      Fact FAIL  Support FAIL  Citation pass  Abstention pass
   PASS  "115 days" fails Fact and Support
@@ -33,6 +36,9 @@ $ dotnet run -- --self-test
   "Fabrikam employees get 20 PTO days."
      Abstention FAIL
   PASS  no authorized evidence, the answer states a number: Abstention fails
+  "I can't find a policy you have access to that answers this. Fabrikam employees get 20 PTO days."
+     Abstention FAIL
+  PASS  the refusal sentence followed by a number still fails Abstention: abstained, but still states a day count or cites evidence
   "I can't find a policy you have access to that answers this."
      Fact FAIL  Support FAIL  Citation FAIL  Abstention FAIL
   PASS  evidence issued, the answer abstains: Abstention and Fact fail
@@ -63,9 +69,10 @@ $ dotnet run -- --self-test
   SHIP: 18/20 items, 95 % interval 0.70-0.97, wins 2, losses 0
   PASS  C ships: 18/20, 95 % Wilson interval 0.70-0.97, no guarded loss
   PASS  a threshold changed after the run is refused: plan hash 10b4ef2fc649 is not the declared 173be1397209: thresholds moved after the run
+  PASS  B with its regressed item dropped and another listed twice is refused; relabelling its slice still blocks
 
 -- 6. Rule of three, under its assumption --
   0 failures in 10 items x 4 paraphrases: 3/40 = 0.075, 3/10 = 0.300
   PASS  paraphrases of one item are not independent trials: the bound is 0.30, not 0.075
 
-RESULT 20/20
+RESULT 23/23
