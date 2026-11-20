@@ -1,0 +1,51 @@
+# code 477fc07 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 12/12 on Linux (runtime:10.0-noble, --network none); the backup sha256, the RTO and op4's status in the two-reconciler check differ
+$ dotnet run -- --self-test
+=== Restore drill: self-test ===
+  09:00  op1 E-1001 30.00 EUR  provider fault None -> Delivered
+  09:05  op2 E-1002 45.00 EUR  provider fault None -> Delivered
+  09:10  op3 E-1001 25.00 EUR  provider fault AcceptThenTimeout -> OutcomeUnknown
+  09:12  op4 E-1002 15.00 EUR  provider fault LostRequest -> OutcomeUnknown
+  09:15  op5 E-1001 450.00 EUR, approved 50.00 -> Pending; workflow W-5 checkpointed
+  09:18  File.Copy of contoso.db returned: 45056 bytes
+  09:20  online backup contoso-20261120T0920.db: newest write 09:15, schema 3, sha256 96c86b74590d
+  09:25  op6 E-1002 20.00 EUR  provider fault None -> Delivered
+  09:30  op7 E-1001 35.00 EUR  provider fault AcceptThenTimeout -> OutcomeUnknown
+  09:35  INCIDENT: live store lost. Provider journal holds 5 payments.
+
+-- Restore --
+  binary 2.4.0 (schema 1-2, nomic-embed-text): refused: binary 2.4.0 reads schema 1-2; the backup is schema 3
+  binary 3.0.0 (schema 3-3, text-embedding-3-small): refused: index faq-2026-11-18 was built with nomic-embed-text; binary 3.0.0 embeds queries with text-embedding-3-small
+  binary 3.1.0 (schema 3-3, nomic-embed-text) onto the live path: refused: the target is the live store
+  binary 3.1.0 (schema 3-3, nomic-embed-text) into restore-c: integrity ok, schema 3, identity d4a2f9ef3ef87887, approvals=5 conversations=5 deliveries=5 store_identity=5 workflow_state=1
+
+-- Reconcile --
+  op5  Held       450.00 EUR claimed, 50.00 approved; needs a new approval
+  op3  Reconciled found PAY-58A9FC804E8F by reference
+  op4  Delivered  not found; sent again as PAY-D02A7221D0BE
+  op6  Reconciled from the provider statement (PAY-3FE7EDAACA03, 20.00 EUR)
+  op7  Reconciled from the provider statement (PAY-2C5B2F7965E1, 35.00 EUR)
+  uncertain (for a person):
+  op6  paid after the recovery point; approval and conversation records lost
+  op7  paid after the recovery point; approval and conversation records lost
+
+-- Measured --
+  RTO 0.212 s (lab target 60 s): incident declared -> restored, verified, reconciled, promoted
+  RPO 20 min (lab target 30 min): incident 09:35 - newest write in the backup 09:15
+  binary 3.1.0, schema 3, identity d4a2f9ef3ef87887, index faq-2026-11-18 (nomic-embed-text), SQLite 3.53.3, Microsoft.Data.Sqlite 10.0.13.0
+
+-- Checks --
+  PASS  DEFECT REPRODUCED: File.Copy of the live file 'succeeded' (45056 bytes, 5 tables) and holds 0 of 5 deliveries (the others were still in contoso.db-wal)
+  PASS  online backup: 5 deliveries, 5 approvals, 1 workflow run, schema 3
+  PASS  rollback binary 2.4.0 refused before any row is read (schema 3 > 2)
+  PASS  binary 3.0.0 refused: the index was built with another embedding model
+  PASS  restore over the live path refused
+  PASS  DEFECT REPRODUCED: read by the 2.x code, op5's approval says 5000.00 EUR (schema 3 stores 50.00 EUR as minor units); the 450.00 EUR claim would pass
+  PASS  3.1.0 holds op5: 450.00 claimed, 50.00 approved
+  PASS  every operation has a stated end: op1 Delivered, op2 Delivered, op3 Reconciled, op4 Delivered, op5 Pending, op6 Reconciled, op7 Reconciled
+  PASS  written after the backup (op6, op7) = paid at the provider, missing from the restore (op6, op7): both on the uncertainty list
+  PASS  payments at the provider: 5 before the incident, 6 after (op4 sent once, nothing paid twice)
+  PASS  RTO measured 0.212 s <= lab target 60 s; RPO 20 min <= 30 min
+  PASS  two reconcilers at once (Task.Run + Barrier): 6 payments, op4 Reconciled (nothing paid twice)
+
+RESULT 12/12

@@ -1,0 +1,44 @@
+# code 477fc07 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 22/22 on Linux (aspnet:10.0-noble, --network none); the output is identical
+$ dotnet run -- --self-test
+=== Kill switch: self-test ===
+
+-- Before the incident --
+  PASS  FAQ: [expense-policy#4] Claims above 25 EUR need a receipt.
+  PASS  tool: Tool said: Allow low_value_policy
+  PASS  HTTP POST /reimbursements: 200 Allow low_value_policy
+
+-- Preserve the facts, then withdraw --
+  PASS  a developer cannot pull the switch: Refused
+  PASS  two on-call operators withdraw at once (Task.Run + Barrier): Changed, AlreadyInState; one 'withdraw' audited
+  PASS  the snapshot taken first still reads reimburse=enabled, faq=enabled
+
+-- The same conversation while reimburse is withdrawn --
+  PASS  tool: Tool said: capability_withdrawn: 'reimburse' is paused (answers degraded after re-index). Nothing was submitted.
+  PASS  FAQ in the same session: [expense-policy#4] Claims above 25 EUR need a receipt. (the model still sees the first question)
+  PASS  HTTP POST /reimbursements: 503 capability_withdrawn; GET /faq: 200
+  PASS  a path that skips both guards meets the decision point: Deny tool_revoked
+  PASS  20 concurrent runs (Task.Run) after the withdrawal: 20 refused, balance 500
+  PASS  a call already past the tool check when the switch is pulled: Tool said: Deny tool_revoked
+  PASS  a tool nobody registered is refused (fail closed): capability_withdrawn: 'export_history' is paused (not registered). Nothing was submitted.
+
+-- Where it fails --
+  PASS  DEFECT REPRODUCED: a 'be careful' instruction as the switch; the model calls the tool anyway: Tool said: Allow low_value_policy, balance 470
+  PASS  DEFECT REPRODUCED: tool hidden from the model (shown: search_faq); it asks by name and the function runs: Tool said: Allow low_value_policy
+  PASS  fix: hidden AND guarded, the same request is refused: capability_withdrawn: 'reimburse' is paused (drill). Nothing was submitted.
+
+-- Re-enable after re-evaluation --
+  PASS  enable with no evaluation run: Refused
+  PASS  enable with eval-2026-11-20-r2: Changed
+  PASS  tool, same session as before: Tool said: Allow low_value_policy
+  PASS  HTTP POST /reimbursements: 200 Allow low_value_policy
+
+-- The record --
+  #1 10:00 reimburse withdraw refused by sam (developer) [INC-0412] not on call
+  #2 10:00 reimburse withdraw by ana (on call) [INC-0412] answers degraded after re-index
+  #3 10:40 reimburse enable refused by ana (on call) [INC-0412] no evaluation run
+  #4 10:40 reimburse enable by ana (on call) [INC-0412] cleared by eval-2026-11-20-r2
+  PASS  4 audited changes, refused attempts included; denials: tool 2, endpoint 1
+  PASS  operation records intact: 4 payments (agent 30, http 20, agent 10, http 15), balance 425
+
+RESULT 22/22
