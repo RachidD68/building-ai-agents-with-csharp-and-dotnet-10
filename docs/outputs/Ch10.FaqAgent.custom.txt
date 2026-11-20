@@ -1,0 +1,32 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
+$ dotnet run -- --provider custom
+
+=== Contoso FAQ agent (Custom) ===
+
+Indexed 60 chunks from 11 documents (768 dimensions).
+
+You: How many PTO days do new employees get?
+  search input: "How many PTO days do new employees get?"
+  retrieved: pto-policy-3 0.70, onboarding-3 0.65, sick-leave-2 0.64
+Agent: I don't have information about the number of PTO days new employees get in our knowledge base. However, I can tell you that PTO accrues monthly and up to 5 unused days can carry over to the next year.
+----------------------------------------
+You: What is the home office equipment stipend?
+  search input: "What is the home office equipment stipend?"
+  retrieved: remote-work-6 0.72, onboarding-6 0.72, benefits-8 0.63
+Agent: Contoso provides a $500 stipend for home office setup, including monitors, keyboards, and ergonomic equipment.
+----------------------------------------
+You: What about for contractors?
+  search input: "What about for contractors?"
+  retrieved: remote-work-2 0.57
+Agent: I don't have information about the home office equipment stipend for contractors in our knowledge base.
+----------------------------------------
+You: How much parental leave do birth parents get?
+  search input: "How much parental leave do birth parents get?"
+  retrieved: benefits-6 0.80
+Agent: Birth parents receive 16 weeks of fully paid leave.
+----------------------------------------
+You: What is the policy on cryptocurrency investments?
+  search input: "What is the policy on cryptocurrency investments?"
+  retrieved: (none above threshold)
+Agent: I don't have information about the policy on cryptocurrency investments in our knowledge base.
+----------------------------------------

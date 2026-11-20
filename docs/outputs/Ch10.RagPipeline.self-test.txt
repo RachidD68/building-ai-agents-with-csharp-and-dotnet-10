@@ -1,0 +1,29 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== RAG pipeline: self-test (fixed vectors) ===
+
+-- 1. Chunking --
+  chunks: values.txt-1, values.txt-3
+  PASS  paragraphs under 20 characters are skipped; ids keep the paragraph index
+
+-- 2. The failure: a model with another vector size, no check --
+  InMemoryCollection, schema 768, 1536-dimension vector: stored with 1536 dimensions
+  PASS  DEFECT REPRODUCED: the in-memory store accepts a vector that does not match its schema
+  a 768-dimension query against it: threw ArgumentException
+  PASS  the mismatch surfaces only at query time, after ingestion
+
+-- 3. The fix: the dimension check at startup --
+  The embedding model returned 1536 dimensions, but DocumentChunk declares 768.
+  PASS  a 1536-dimension model fails at startup, before any file is read
+  PASS  IngestAsync with the wrong model stores nothing (0 records)
+  PASS  a 768-dimension model passes the check
+
+-- 4. Retrieval with fixed vectors --
+  1.0000  benefits.txt-1
+  0.7071  benefits.txt-2
+  0.0000  values.txt-1
+  PASS  hits come back best first
+  PASS  scores are cosine similarities: 1.0000, 0.7071, 0.0000
+
+RESULT 8/8

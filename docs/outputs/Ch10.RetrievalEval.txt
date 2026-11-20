@@ -1,0 +1,43 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (nomic-embed-text)
+$ dotnet run
+
+=== Retrieval evaluation: nomic-embed-text, K = 3 ===
+60 chunks; 22 questions: 10 one-evidence, 7 multi-evidence, 5 no-answer
+
+Per question, top 3 without a threshold:
+  s01  hit 0 recall 0.00 pto-policy-3 0.70, onboarding-3 0.65, sick-leave-2 0.64
+  s02  hit 1 recall 1.00 pto-policy-3* 0.83, sick-leave-2 0.60, pto-policy-2 0.58
+  s03  hit 1 recall 1.00 remote-work-6* 0.72, onboarding-6 0.72, benefits-8 0.63
+  s04  hit 1 recall 1.00 benefits-6* 0.80, sick-leave-4 0.55, sick-leave-2 0.54
+  s05  hit 1 recall 1.00 expense-policy-6* 0.85, expense-policy-8 0.63, remote-work-4 0.55
+  s06  hit 1 recall 1.00 sick-leave-2* 0.83, sick-leave-8 0.64, sick-leave-10 0.62
+  s07  hit 1 recall 1.00 security-policy-10* 0.73, security-policy-4 0.57, expense-policy-12 0.55
+  s08  hit 1 recall 1.00 sick-leave-8* 0.78, sick-leave-4 0.76, sick-leave-6 0.71
+  s09  hit 1 recall 1.00 engineering-practices-4* 0.74, pto-policy-5 0.57, performance-reviews-6 0.56
+  s10  hit 1 recall 1.00 performance-reviews-2* 0.75, performance-reviews-0 0.69, performance-reviews-8 0.60
+  m01  hit 1 recall 0.67 expense-policy-12* 0.74, expense-policy-2* 0.63, expense-policy-4 0.63
+  m02  hit 1 recall 0.50 remote-work-6 0.71, expense-policy-2 0.69, benefits-10* 0.67
+  m03  hit 1 recall 1.00 remote-work-10* 0.71, security-policy-6* 0.64, onboarding-3 0.60
+  m04  hit 1 recall 0.33 remote-work-6* 0.76, pto-policy-2 0.71, expense-policy-2 0.70
+  m05  hit 1 recall 1.00 onboarding-8* 0.76, remote-work-2* 0.66, code-of-conduct-8 0.57
+  m06  hit 1 recall 1.00 code-of-conduct-6* 0.71, code-of-conduct-2 0.67, security-policy-8* 0.65
+  m07  hit 1 recall 1.00 benefits-8* 0.61, sick-leave-10* 0.58, onboarding-10 0.51
+  n01  no answer         expense-policy-0 0.54, benefits-4 0.48, company-values-6 0.47
+  n02  no answer         benefits-2 0.72, expense-policy-2 0.68, remote-work-6 0.68
+  n03  no answer         company-values-8 0.57, security-policy-2 0.55, onboarding-6 0.53
+  n04  no answer         remote-work-4 0.57, remote-work-2 0.55, remote-work-10 0.53
+  n05  no answer         benefits-10 0.62, benefits-8 0.59, expense-policy-10 0.58
+  (* = annotated as relevant)
+
+threshold  HitRate@3  Recall@3  no-answer abstained  answerable abstained  correct
+     0.40       0.94      0.85           0/5                    0/17     16/22
+     0.45       0.94      0.85           0/5                    0/17     16/22
+     0.50       0.94      0.85           0/5                    0/17     16/22
+     0.55       0.94      0.85           1/5                    0/17     17/22
+     0.60       0.94      0.82           3/5                    0/17     19/22
+     0.65       0.88      0.75           4/5                    1/17     19/22
+     0.70       0.82      0.66           4/5                    1/17     18/22
+     0.75       0.41      0.34           5/5                   10/17     12/22
+     0.80       0.18      0.18           5/5                   14/17      8/22
+
+Chosen threshold 0.60 (19/22 correct; tied range 0.60-0.65). It holds for this corpus, this model and this set only.

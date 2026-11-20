@@ -1,0 +1,33 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Retrieval evaluation: self-test (fixed 2-D vectors) ===
+
+-- 1. One relevant chunk against three (K = 3, no threshold) --
+  q1 relevant [pto-0]
+     top 3 [pto-0 1.00, sick-0 0.94, pto-1 0.17]  hit 1  recall 1.00
+  q2 relevant [leave-a, leave-b, leave-c]
+     top 3 [leave-a 1.00, pto-1 0.98, travel-0 0.98]  hit 1  recall 0.33
+  PASS  q1, one relevant chunk ranked first: HitRate@3 = Recall@3 = 1
+  PASS  q2, three relevant chunks, one in the top 3: hit = 1, Recall@3 = 0.33
+
+-- 2. The failure: "recall@K" counted as a hit (the first edition's definition) --
+  first-edition "recall@3" 1.00, Recall@3 0.78
+  PASS  DEFECT REPRODUCED: counting hits reports 1.00; the share of relevant chunks found is 0.78
+  PASS  that number is HitRate@3, so the report names it HitRate@3
+
+-- 3. Threshold sweep (K = 3) --
+  threshold  HitRate@3  Recall@3  no-answer abstained  answerable abstained
+       0.50       1.00      0.78           0/1                    0/3
+       0.55       1.00      0.78           0/1                    0/3
+       0.60       1.00      0.78           0/1                    0/3
+       0.65       1.00      0.78           1/1                    0/3
+       0.70       1.00      0.78           1/1                    0/3
+       0.75       0.67      0.44           1/1                    1/3
+       0.80       0.67      0.44           1/1                    1/3
+  PASS  at 0.55 the out-of-scope q3 still retrieves leave-c (score 0.64): no abstention
+  PASS  at 0.80 q3 abstains, but so does the answerable q4 (best score 0.71)
+  chosen 0.65: 4/4 correct; tied range 0.65-0.70
+  PASS  the sweep picks 0.65 (0.65-0.70 get all four right): a number from this set, not a rule
+
+RESULT 7/7

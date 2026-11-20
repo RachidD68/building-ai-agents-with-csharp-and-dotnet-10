@@ -1,0 +1,33 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2, nomic-embed-text)
+# note: printed in the book as a failure: the first answer (5 PTO days) is wrong; the handbook says 15, in a chunk retrieval missed
+$ dotnet run
+
+=== Contoso FAQ agent (TextSearch) ===
+
+Indexed 60 chunks from 11 documents (768 dimensions).
+
+You: How many PTO days do new employees get?
+  search input: "How many PTO days do new employees get?"
+  retrieved: pto-policy-3 0.70, onboarding-3 0.65, sick-leave-2 0.64
+Agent: New employees receive 5 PTO days initially.
+----------------------------------------
+You: What is the home office equipment stipend?
+  search input: "How many PTO days do new employees get? | What is the home office equipment stipend?"
+  retrieved: onboarding-6 0.70, pto-policy-3 0.68, remote-work-6 0.67
+Agent: Contoso provides a $500 stipend for home office setup, including monitors, keyboards, and ergonomic equipment. [remote-work]
+----------------------------------------
+You: What about for contractors?
+  search input: "How many PTO days do new employees get? | What is the home office equipment stipend? | What about for contractors?"
+  retrieved: onboarding-6 0.69, pto-policy-3 0.68, remote-work-6 0.66
+Agent: I don't have information about that in our knowledge base. Please contact HR.
+----------------------------------------
+You: How much parental leave do birth parents get?
+  search input: "How many PTO days do new employees get? | What is the home office equipment stipend? | What about for contractors? | How much parental leave do birth parents get?"
+  retrieved: pto-policy-3 0.67, onboarding-6 0.66, benefits-6 0.66
+Agent: Birth parents receive 16 weeks of fully paid leave. Non-birth parents receive 8 weeks. Adoption leave is 12 weeks. [benefits]
+----------------------------------------
+You: What is the policy on cryptocurrency investments?
+  search input: "How many PTO days do new employees get? | What is the home office equipment stipend? | What about for contractors? | How much parental leave do birth parents get? | What is the policy on cryptocurrency investments?"
+  retrieved: pto-policy-3 0.67, onboarding-6 0.65, benefits-6 0.64
+Agent: I don't have information about that in our knowledge base. Please contact HR.
+----------------------------------------

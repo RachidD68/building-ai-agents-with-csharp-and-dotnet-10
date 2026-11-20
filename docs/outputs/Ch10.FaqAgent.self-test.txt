@@ -1,0 +1,45 @@
+# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+$ dotnet run -- --self-test
+
+=== Contoso FAQ agent: self-test (fake model, keyword embeddings) ===
+
+-- 1. Ingest: the dimension check runs before any document --
+  PASS  a 1536-dimension model is refused at startup
+
+-- 2. TextSearchProvider, search before each call --
+  injected before the call: 1 message(s), role user
+  first line: ## Additional Context
+  PASS  the search input is the caller's question
+  PASS  the answer cites the retrieved source -> answer from [pto-policy]
+  PASS  the chunk text reached the model
+  follow-up search input: "How many PTO days do new employees get? | What is the remote work equipment stipend? | What about for contractors?"
+  PASS  RecentMessageMemoryLimit = 6: the search input holds the earlier user questions, not the answers
+  PASS  the follow-up retrieves the remote-work chunks -> answer from [pto-policy] [remote-work]
+  PASS  side effect: the earlier topic rides along into a new question -> answer from [pto-policy] [remote-work]
+  PASS  with the default options the same follow-up searches alone and abstains
+  PASS  an out-of-handbook question: no hit above 0.55, nothing injected, abstention
+
+-- 3. TextSearchProvider on demand: a tool, not a search before the call --
+  PASS  the model is offered search_handbook and nothing was searched before the call
+
+-- 4. Which context carries the caller's message --
+  turn 2, AIContextProvider.InvokingContext.AIContext.Messages: [user: What is the remote work equipment stipend?]
+  turn 2, MessageAIContextProvider.InvokingContext.RequestMessages: [user: What is the remote work equipment stipend?]
+  PASS  RequestMessages holds this call's question only (no history)
+  PASS  AIContext.Messages also carries it
+  PASS  FaqContextProvider retrieves for the latest question -> answer from [remote-work]
+  PASS  blank question "": no search, no throw, abstention
+  PASS  blank question "   ": no search, no throw, abstention
+
+-- 5. The failure: a shared provider with a mutable CurrentQuery (the first edition's shape) --
+  A asked about PTO      -> answer from [expense-policy]
+  B asked about expenses -> answer from [expense-policy]
+  PASS  DEFECT REPRODUCED: one request answered from the other request's chunks
+
+-- 6. The fix: 8 concurrent questions on one shared agent --
+  PASS  Custom: all 8 searches were in flight at the same time
+  PASS  Custom: each call saw only its own chunks (8/8)
+  PASS  TextSearch: all 8 searches were in flight at the same time
+  PASS  TextSearch: each call saw only its own chunks (8/8)
+
+RESULT 20/20
