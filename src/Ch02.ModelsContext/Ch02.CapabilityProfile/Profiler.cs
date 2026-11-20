@@ -135,14 +135,21 @@ public static class Profiler
         if (options.MaxOutputTokens is int cap)
         {
             List<long> outputs = [.. answered.Where(t => t.OutputTokens is not null).Select(t => t.OutputTokens!.Value)];
-            string evidence = outputs.Count == 0 ? "not observable: no usage reported"
-                : outputs.Max() > cap ? $"IGNORED: a reply used {outputs.Max()} output tokens"
-                : $"honored: max {outputs.Max()} output tokens, {answered.Count(t => t.Outcome == Outcome.Truncated)} truncated";
+            long? max = outputs.Count == 0 ? null : outputs.Max();
+            int truncated = answered.Count(t => t.Outcome == Outcome.Truncated);
+            // Honored needs a reply that reached the cap; staying under it proves nothing.
+            string evidence = max > cap ? $"IGNORED: a reply used {max} output tokens"
+                : max == cap || truncated > 0 ? $"honored: max {max?.ToString() ?? "unreported"} output tokens, {truncated} truncated"
+                : max is null ? "not observable: no usage reported"
+                : $"not exercised: max {max} of {cap}, none exceeded";
             checks.Add(new("MaxOutputTokens", cap.ToString(), evidence));
         }
         if (options.Reasoning is { } reasoning)
         {
-            string evidence = trials.Count > 0 && answered.Count == 0 ? "rejected: every call failed"
+            // Only a provider error is a refusal; a transport failure says nothing about the option.
+            bool transport = trials.Any(t => t.Outcome == Outcome.TransportError);
+            string evidence = trials.Count > 0 && answered.Count == 0
+                    ? (transport ? "not observable: calls failed in transport" : "rejected: every call was a provider error")
                 : answered.Any(t => t.ReasoningSeen || t.ReasoningTokens > 0) ? "observed: reasoning content or tokens"
                 : "NO EVIDENCE: no reasoning content and no reasoning tokens";
             checks.Add(new("Reasoning", $"Effort={reasoning.Effort}", evidence));

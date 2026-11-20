@@ -11,11 +11,11 @@ Each trial lands in exactly one bucket:
 | Refused | `FinishReason.ContentFilter`, or refusal text (a heuristic: the reply starts with "I can't", "I'm sorry", ...) |
 | Truncated | `FinishReason.Length`: the output cap cut the reply. Read before the text, so a cut reply is never called invalid |
 | TransportError | The call never got an answer (`HttpRequestException`, a timeout, an I/O error) |
-| ProviderError | The provider answered with an error (for example, a model that rejects an option) |
+| ProviderError | Any other exception; usually the provider answered with an error (for example, a model that rejects an option) |
 
 The caller's own cancellation stops the run; it is not counted.
 
-For each option a configuration sends, the profile says what the responses show: an output cap honored or ignored (from `UsageDetails.OutputTokenCount`), reasoning observed (`TextReasoningContent` or `ReasoningTokenCount`) or not, the share of replies that met the JSON contract. Temperature, top-p and seed are sent but cannot be observed from a response, and the profile says so.
+For each option a configuration sends, the profile says what the responses show: an output cap honored (a reply reached it), ignored (a reply went past it) or not exercised (every reply stayed under it), from `UsageDetails.OutputTokenCount` and the finish reason, reasoning observed (`TextReasoningContent` or `ReasoningTokenCount`), not seen, or rejected (every call a provider error; a transport failure proves nothing), the share of replies that met the JSON contract. Temperature, top-p and seed are sent but cannot be observed from a response, and the profile says so.
 
 ## Running
 

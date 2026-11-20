@@ -74,8 +74,16 @@ public static class SelfTest
         Expect("DEFECT REPRODUCED: the request still says MaxOutputTokens=8 while the reply used 40",
             capped.MaxOutputTokens == 8 && ignored.Trials[0].OutputTokens == 40);
         Expect("the profile reports the ignored cap from the usage", capEvidence.StartsWith("IGNORED"));
-        Expect("a cap the replies respect is reported as honored",
+        Expect("a cap a reply reached (finish Length) is reported as honored",
             run.Options.Single(o => o.Option == "MaxOutputTokens").Evidence.StartsWith("honored"));
+        // A client that drops the cap and answers short: staying under 64 is not proof the cap was applied.
+        string underCap = (await Profiler.RunAsync(new("drops-cap", "fake", "script-5", new ScriptedChatClient(o =>
+            {
+                o!.MaxOutputTokens = null;
+                return Reply("""{"decision":"allow"}""", ChatFinishReason.Stop, output: 6);
+            }), new ChatOptions { MaxOutputTokens = 64 }), ContosoTasks.All[..1], 1, none))
+            .Options.Single(o => o.Option == "MaxOutputTokens").Evidence;
+        Expect("a cap no reply reached is 'not exercised', not honored", underCap.StartsWith("not exercised: max 6 of 64"));
 
         ChatOptions reasoning = new() { Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Low } };
         string NoEvidence = (await Profiler.RunAsync(new("r1", "fake", "m", new ScriptedChatClient(
@@ -90,6 +98,10 @@ public static class SelfTest
         Expect("requested reasoning with no reasoning tokens or content: NO EVIDENCE", NoEvidence.StartsWith("NO EVIDENCE"));
         Expect("reasoning tokens in the usage: observed", Observed.StartsWith("observed"));
         Expect("every call rejected: the option was refused, not ignored", Rejected.StartsWith("rejected"));
+        string Unreachable = (await Profiler.RunAsync(new("r4", "fake", "m", new ScriptedChatClient(
+            _ => throw new HttpRequestException("Connection refused")), reasoning), ContosoTasks.All[..1], 1, none))
+            .Options.Single(o => o.Option == "Reasoning").Evidence;
+        Expect("every call failed in transport: not observable, not rejected", Unreachable.StartsWith("not observable"));
 
         // The profile is data: dated, pinned, and it lists what did not run.
         CapabilityReport report = new(new DateTimeOffset(2026, 11, 20, 9, 30, 0, TimeSpan.Zero),

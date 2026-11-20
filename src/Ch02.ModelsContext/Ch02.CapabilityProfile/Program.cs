@@ -22,7 +22,13 @@ if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 LlmSettings settings = new();
 builder.Configuration.GetSection("LlmProvider").Bind(settings);
-int trials = args.SkipWhile(a => a != "--trials").Skip(1).Select(int.Parse).FirstOrDefault(3);
+string? trialsArg = args.SkipWhile(a => a != "--trials").Skip(1).FirstOrDefault();
+int trials = 3;
+if (trialsArg is not null && (!int.TryParse(trialsArg, out trials) || trials < 1))
+{
+    Console.Error.WriteLine($"--trials needs a whole number of 1 or more, not '{trialsArg}'.");
+    return 2;
+}
 
 using HttpClient ollamaHttp = new() { Timeout = TimeSpan.FromMinutes(2) };
 IChatClient ollama = new OllamaChatClientProvider().CreateChatClient(ollamaHttp, settings);
@@ -56,10 +62,18 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 DateTimeOffset started = DateTimeOffset.UtcNow;
 List<ConfigurationResult> results = [];
-foreach (ProfileConfiguration configuration in configurations)
+try
 {
-    Console.WriteLine($"Profiling {configuration.Name} ({configuration.Provider} {configuration.Model}), {trials} trial(s) per task...");
-    results.Add(await Profiler.RunAsync(configuration, ContosoTasks.All, trials, cts.Token));
+    foreach (ProfileConfiguration configuration in configurations)
+    {
+        Console.WriteLine($"Profiling {configuration.Name} ({configuration.Provider} {configuration.Model}), {trials} trial(s) per task...");
+        results.Add(await Profiler.RunAsync(configuration, ContosoTasks.All, trials, cts.Token));
+    }
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+    Console.WriteLine("Stopped; no profile written.");
+    return 130;
 }
 
 CapabilityReport report = new(started,
