@@ -7,6 +7,7 @@
     <Project Path="src/Ch02.ModelsContext/Ch02.TokenExplorer/Ch02.TokenExplorer.csproj" />
   </Folder>
   <Folder Name="/src/Ch03.DevEnvironment/">
+    <Project Path="src/Ch03.DevEnvironment/Ch03.AnthropicCall/Ch03.AnthropicCall.csproj" />
     <Project Path="src/Ch03.DevEnvironment/Ch03.FirstLlmCall/Ch03.FirstLlmCall.csproj" />
     <Project Path="src/Ch03.DevEnvironment/Ch03.FoundryAgent/Ch03.FoundryAgent.csproj" />
   </Folder>
