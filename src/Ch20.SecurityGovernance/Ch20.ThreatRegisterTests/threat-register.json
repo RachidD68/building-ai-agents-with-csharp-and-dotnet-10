@@ -68,7 +68,7 @@
       "kind": "enforcement",
       "test": "exfiltration_image_is_removed",
       "owner": "Front-end team",
-      "residual": "Other sinks (HTML, SQL) need their own encoding; Ch20.OutputHandling covers them.",
+      "residual": "Checked as CommonMark plus bare-URL autolinks parse it; a renderer with other extensions needs the same walk. Other sinks (HTML, SQL) need their own encoding; Ch20.OutputHandling covers them.",
       "stop": "Render answers as plain text until the renderer is fixed."
     },
     {
@@ -90,7 +90,7 @@
       "kind": "enforcement",
       "test": "concurrent_callers_stay_within_budget",
       "owner": "Platform team",
-      "residual": "A provider that ignores MaxOutputTokens can exceed one call's reservation.",
+      "residual": "The reservation is an estimate: a call that uses more than it reserved (no MaxOutputTokens, or a provider that ignores it) passes the budget by the difference.",
       "stop": "Set the tenant's budget to zero; calls are refused before they reach the model."
     },
     {

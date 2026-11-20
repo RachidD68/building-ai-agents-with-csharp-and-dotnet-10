@@ -114,10 +114,10 @@ public sealed class ReimbursementService(
     {
         if (revocations.IsToolRevoked(Tool)) return Deny("tool_revoked");
         if (revocations.IsSubjectRevoked(caller)) return Deny("subject_revoked");
-        // An unknown employee gets the same answer as another tenant's: no oracle.
-        if (!accounts.TryGetHandle(command.EmployeeId, out AccountStore.Handle handle)) return Deny("resource_scope");
-
         DateTimeOffset now = clock.GetUtcNow();
+        if (!accounts.TryGetHandle(command.EmployeeId, out AccountStore.Handle handle))
+            return Unknown(caller, command, now);
+
         DateOnly today = DateOnly.FromDateTime(now.UtcDateTime);
         lock (handle.Gate)
         {
@@ -143,6 +143,19 @@ public sealed class ReimbursementService(
             };
             return new(Decision.Allow, baseline.Reason, handle.Current.ReimbursableBalance);
         }
+    }
+
+    // An unknown employee must answer exactly as another tenant's would, for
+    // every caller, or the reason code tells a caller which ids exist. So the
+    // same baseline runs against a placeholder whose tenant is blank: Ch08's
+    // policy refuses a blank caller tenant, so no caller can ever match it.
+    private static Outcome Unknown(Caller caller, ReimbursementCommand command, DateTimeOffset now)
+    {
+        EmployeeAccount nobody = new(TenantId: "", command.EmployeeId, Currency: "", ReimbursableBalance: 0m, Version: 0);
+        PolicyResult baseline = ReimbursementPolicy.Evaluate(caller, nobody,
+            new(command.OperationId, command.EmployeeId, command.Amount, command.Currency, ExpectedVersion: 0),
+            approval: null, now);
+        return baseline.Decision == Decision.Deny ? Deny(baseline.Reason) : Deny("resource_scope");
     }
 
     private static Outcome Deny(string reason) => new(Decision.Deny, reason);

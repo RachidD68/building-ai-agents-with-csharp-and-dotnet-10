@@ -6,10 +6,12 @@
 //
 //   1. FunctionInvokingChatClient.MaximumIterationsPerRequest stops a model
 //      that asks for the same tool forever (RunawayClient).
-//   2. TokenBudgetClient reserves a call's worst case BEFORE the call and
-//      refuses when the reservation does not fit, so the budget holds even
-//      under concurrent requests. A check after the call cannot: the tokens
-//      are already spent.
+//   2. TokenBudgetClient reserves an estimate of each call BEFORE the call
+//      (its worst case only when MaxOutputTokens is set) and refuses when the
+//      reservation does not fit, so concurrent requests cannot share one
+//      remainder. Spending can still pass the budget by the gap between the
+//      estimate and the real usage. A check after the call cannot refuse at
+//      all: the tokens are already spent.
 //   3. A deadline (CancellationToken) bounds wall-clock time.
 //
 // Rate limiting at the API edge is the hosting chapter's; this is the loop.
@@ -115,6 +117,15 @@ Console.WriteLine("\n-- 2. Token budget: reserve before the call --");
     Expect($"20 concurrent callers (Task.Run), budget 2000: {admitted} admitted, {refused} refused, " +
         $"peak {metered.PeakConcurrency} in flight, {budget.Spent} spent",
         admitted == 5 && refused == 15 && metered.Calls == 5 && budget.Spent <= 2000 && metered.PeakConcurrency > 1);
+}
+{
+    // The reservation is an estimate. A call that uses more than it reserved is
+    // charged what it used, so the budget is exceeded by the difference.
+    MeteredClient metered = new(tokensPerCall: 900);
+    TokenBudgetClient budget = new(metered, budget: 500, reservePerCall: 400);
+    await budget.GetResponseAsync([new ChatMessage(ChatRole.User, "one long answer")]);
+    Expect($"LIMIT: reserved 400, the call used 900: {budget.Spent} spent of a 500 budget (set MaxOutputTokens to bound it)",
+        budget.Spent == 900);
 }
 
 // ── 3. Deadline ────────────────────────────────────────────────────────

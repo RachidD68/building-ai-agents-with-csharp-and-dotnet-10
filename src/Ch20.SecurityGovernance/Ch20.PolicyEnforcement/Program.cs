@@ -53,6 +53,16 @@ internal static class PolicySuite
         await Parity("unknown employee answers like a foreign one", World.Alice, "E-9999", 10m, "Deny resource_scope");
         await Parity("80 EUR needs an approval", World.Alice, "E-1001", 80m, "RequireApproval approval_missing");
         await Parity("bob has no submit permission", World.Bob, "E-1001", 20m, "Deny missing_permission");
+        await Parity("bob, unknown employee answers like a foreign one", World.Bob, "E-9999", 10m, "Deny missing_permission");
+        await Parity("bob, foreign employee", World.Bob, "E-2002", 10m, "Deny missing_permission");
+        {
+            World fresh = new();   // no transport authenticates an anonymous caller; ask the service directly
+            Caller anonymous = new("", "", new HashSet<string>());
+            Outcome unknown = fresh.Service.Reimburse("http", anonymous, new(Guid.NewGuid(), "E-9999", 10m, "EUR"));
+            Outcome foreign = fresh.Service.Reimburse("http", anonymous, new(Guid.NewGuid(), "E-2002", 10m, "EUR"));
+            Expect($"anonymous caller, unknown vs foreign employee: {unknown}; {foreign}",
+                unknown == foreign && unknown.ToString() == "Deny missing_permission");
+        }
         Expect("the tenantId sent in every request body and tool call was never read (E-2002 stayed denied)",
             world.Audit.Entries.Where(e => e.EmployeeId == "E-2002").All(e => e.TenantId == "contoso" && e.Decision == Decision.Deny));
 
@@ -121,7 +131,7 @@ internal static class PolicySuite
         Console.WriteLine("\n-- Audit --");
         IReadOnlyList<AuditEntry> audit = world.Audit.Entries;
         Expect($"{audit.Count} decisions audited, each with its transport ({string.Join(", ", audit.GroupBy(e => e.Transport).OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}"))})",
-            audit.Count == 4 * 9 + 1 + 2 && audit.All(e => FourTransports.Names.Contains(e.Transport)));
+            audit.Count == 4 * 11 + 1 + 2 && audit.All(e => FourTransports.Names.Contains(e.Transport)));
 
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;

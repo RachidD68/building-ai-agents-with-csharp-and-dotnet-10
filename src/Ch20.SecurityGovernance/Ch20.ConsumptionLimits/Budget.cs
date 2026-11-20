@@ -6,9 +6,13 @@ public sealed class TokenBudgetExceededException(string message) : Exception(mes
 
 /// <summary>
 /// A token budget shared by every call through this client (one tenant, one
-/// session: scope it where you create it). Each call first reserves its worst
-/// case; the reservation is replaced by the real usage when the call returns.
-/// A call whose reservation does not fit is refused before it reaches the model.
+/// session: scope it where you create it). Each call first reserves an
+/// estimate: when the caller sets MaxOutputTokens, that worst-case output plus
+/// about one token per four characters of message text; otherwise reservePerCall. The reservation is replaced
+/// by the real usage when the call returns, so spending can pass the budget by
+/// the gap between estimate and usage. Instructions and tool schemas are not
+/// counted. A call whose reservation does not fit is refused before it reaches
+/// the model.
 /// </summary>
 public sealed class TokenBudgetClient(IChatClient inner, long budget, long reservePerCall)
     : DelegatingChatClient(inner)

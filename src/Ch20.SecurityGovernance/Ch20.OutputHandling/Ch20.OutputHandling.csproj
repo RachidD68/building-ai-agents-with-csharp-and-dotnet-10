@@ -11,5 +11,7 @@
          the native SQLite library for Windows, Linux and macOS. -->
     <PackageReference Include="Microsoft.Data.Sqlite.Core" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <!-- Markdig parses the answer the way a Markdown renderer would. -->
+    <PackageReference Include="Markdig" />
   </ItemGroup>
 </Project>

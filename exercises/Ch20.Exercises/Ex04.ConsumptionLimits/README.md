@@ -6,7 +6,8 @@ Cap a deliberately looping agent. Give it a tool that always reports "more work
 to do," set `MaximumIterationsPerRequest` to a small number, and prove from the
 output that the loop stops at exactly the configured limit instead of running
 forever. Then enforce per-session token and request budgets with middleware that
-short-circuits once a consumption limit is reached — budgets accumulate across
+reserves each call's worst case before it reaches the model and short-circuits
+a call that would not fit — budgets accumulate across
 calls in a session (keyed on the session id) and one session's exhaustion never
 affects another.
 
@@ -16,8 +17,9 @@ affects another.
 - `AllowMultipleToolCalls = false` — one tool call per iteration
 - Per-SESSION budgets: a ledger per `ChatOptions.ConversationId`, enforced across
   calls in that session — not a per-request check, not a global counter
-- Short-circuiting: once a session's token or request budget is spent, further
-  calls in that session return a refusal without reaching the model (no exception)
+- Reserve before the call: each call reserves its worst case under a lock; a call
+  whose reservation does not fit returns a refusal without reaching the model (no
+  exception), so a session never spends past its budget
 - Deterministic test doubles so every limit provably fires without a live model
 
 ## Run
