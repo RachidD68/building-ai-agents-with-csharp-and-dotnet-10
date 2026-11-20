@@ -40,7 +40,7 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     <!-- Ch09.ProtectedMcpServer: the MCP endpoint as an OAuth resource server (same 10.0.13 servicing line as Hosting) -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
-    <!-- Ch17.IdentityTests, Contoso v6 --self-test: an in-memory TestServer (GA, same 10.0.13 servicing line) -->
+    <!-- Ch17.IdentityTests, Contoso v6 self-test: an in-memory TestServer (GA, same 10.0.13 servicing line) -->
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.13" />
     <!-- Vector Data / RAG -->
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.10.0" />
