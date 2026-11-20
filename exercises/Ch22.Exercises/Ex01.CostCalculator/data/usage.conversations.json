@@ -1,0 +1,67 @@
+{
+  "workload": "8-turn helpdesk conversation, 25 runs per strategy (fixture)",
+  "date": "2026-11-12",
+  "conversationsPerMonth": 15000,
+  "runs": [
+    {
+      "strategy": "uncached",
+      "model": "model-r",
+      "conversations": 25,
+      "accepted": 22,
+      "usagePerConversation": {
+        "inputTokenCount": 6400,
+        "cachedInputTokenCount": 0,
+        "outputTokenCount": 1200,
+        "reasoningTokenCount": 800
+      }
+    },
+    {
+      "strategy": "stable prefix cached",
+      "model": "model-r",
+      "conversations": 25,
+      "accepted": 22,
+      "usagePerConversation": {
+        "inputTokenCount": 6400,
+        "cachedInputTokenCount": 2400,
+        "outputTokenCount": 1200,
+        "reasoningTokenCount": 800
+      }
+    },
+    {
+      "strategy": "window 3 turns + cached",
+      "model": "model-r",
+      "conversations": 25,
+      "accepted": 20,
+      "usagePerConversation": {
+        "inputTokenCount": 3600,
+        "cachedInputTokenCount": 2400,
+        "outputTokenCount": 1200,
+        "reasoningTokenCount": 800
+      }
+    },
+    {
+      "strategy": "window 3 turns + cached",
+      "model": "model-a",
+      "conversations": 25,
+      "accepted": 15,
+      "usagePerConversation": {
+        "inputTokenCount": 3600,
+        "cachedInputTokenCount": 2400,
+        "outputTokenCount": 400,
+        "reasoningTokenCount": 0
+      }
+    },
+    {
+      "strategy": "window 1 turn + cached",
+      "model": "model-a",
+      "conversations": 25,
+      "accepted": 0,
+      "usagePerConversation": {
+        "inputTokenCount": 1600,
+        "cachedInputTokenCount": 1200,
+        "outputTokenCount": 400,
+        "reasoningTokenCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "table-1",
+  "note": "ARTIFICIAL rates (XTS = ISO 4217 test currency). Not a vendor price list.",
+  "currency": "XTS",
+  "effectiveDate": "2026-11-01",
+  "unit": "per-million-tokens",
+  "models": {
+    "model-a": {
+      "input": 0.5,
+      "cachedInput": 0.05,
+      "output": 2.0
+    },
+    "model-r": {
+      "input": 2.0,
+      "cachedInput": 0.2,
+      "output": 8.0
+    }
+  }
+}

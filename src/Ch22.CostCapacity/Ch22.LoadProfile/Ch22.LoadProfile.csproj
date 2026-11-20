@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Stepped load against a model behind admission control, with the clocks
+       kept apart. GA only: OllamaSharp 5.4.25 for the live run, the
+       Microsoft.Extensions.AI abstractions for everything else. The live
+       client gets a plain HttpClient, not the AgenticAI.Common pipeline, on
+       purpose: that pipeline retries 429s, and a load test must count them.
+       Connector probe (metadata search of OllamaSharp 5.4.25): it sets
+       InputTokenCount, OutputTokenCount and TotalTokenCount, never
+       CachedInputTokenCount or ReasoningTokenCount. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="OllamaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The run's usage log is written in the cost model's format. -->
+    <ProjectReference Include="../Ch22.CostModel/Ch22.CostModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="data/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

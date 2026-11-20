@@ -1,0 +1,32 @@
+{
+  "id": "artificial-b",
+  "note": "ARTIFICIAL rates, a second table for comparison. Not a vendor price list.",
+  "currency": "XTS",
+  "effectiveDate": "2026-11-01",
+  "unit": "per-million-tokens",
+  "models": {
+    "model-small": {
+      "input": 0.15,
+      "cachedInput": 0.075,
+      "output": 0.6
+    },
+    "model-large": {
+      "input": 2.5,
+      "cachedInput": 1.25,
+      "output": 10.0,
+      "reasoningOutput": 14.0
+    },
+    "llama3.2": {
+      "input": 0,
+      "cachedInput": 0,
+      "output": 0
+    }
+  },
+  "tools": {
+    "policy_lookup": 0.001,
+    "receipt_ocr": 0.015
+  },
+  "runtimePerHour": {
+    "workstation": 0.9
+  }
+}

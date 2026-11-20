@@ -1,0 +1,67 @@
+{
+  "version": "contoso-claims-triage/1",
+  "system": "You triage expense claims. Reply with exactly one word: APPROVE if the claim is within policy and has a receipt, otherwise ESCALATE.",
+  "maxOutputTokens": 4,
+  "tasks": [
+    {
+      "id": "W01",
+      "prompt": "Claim: taxi to the airport, 18 USD, receipt attached, within policy (limit 50 USD).",
+      "expected": "APPROVE"
+    },
+    {
+      "id": "W02",
+      "prompt": "Claim: hotel, 940 USD, no receipt, policy limit 300 USD per night.",
+      "expected": "ESCALATE"
+    },
+    {
+      "id": "W03",
+      "prompt": "Claim: team lunch, 42 USD, receipt attached, within policy (limit 60 USD).",
+      "expected": "APPROVE"
+    },
+    {
+      "id": "W04",
+      "prompt": "Claim: personal gym membership, 75 USD, not a business expense.",
+      "expected": "ESCALATE"
+    },
+    {
+      "id": "W05",
+      "prompt": "Claim: train ticket, 64 USD, receipt attached, within policy (limit 120 USD).",
+      "expected": "APPROVE"
+    },
+    {
+      "id": "W06",
+      "prompt": "Claim: laptop, 2400 USD, no purchase approval, policy requires approval above 500 USD.",
+      "expected": "ESCALATE"
+    },
+    {
+      "id": "W07",
+      "prompt": "Claim: parking, 12 USD, receipt attached, within policy (limit 30 USD).",
+      "expected": "APPROVE"
+    },
+    {
+      "id": "W08",
+      "prompt": "Claim: conference fee, 1200 USD, receipt for a different employee.",
+      "expected": "ESCALATE"
+    }
+  ],
+  "steps": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "requestsPerStep": 8,
+  "service": {
+    "slots": 2,
+    "queueCapacity": 4,
+    "busyRetryAfterMs": 1000
+  },
+  "toolDelayMs": 150,
+  "timeoutMs": 60000,
+  "limit": {
+    "p95TotalMs": 10000,
+    "maxErrorRate": 0.05,
+    "maxBusyRate": 0.05,
+    "minAcceptedRate": 0.75
+  }
+}

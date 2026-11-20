@@ -1,64 +1,48 @@
-# Exercise 01 — Conversation Cost Simulator (Challenge)
+# Exercise 01: Cost Calculator (Basic)
 
 ## Prompt
 
-Build a **conversation cost simulator** that takes a message array and a daily
-volume, then prints the monthly cost three ways:
+The first-edition simulator kept a model catalogue with rates in the code and
+modelled reasoning as a multiplier on visible output. Replace both:
 
-1. **Uncached** — the whole history re-sent fresh on every turn.
-2. **Stable-prefix cached** — the unchanging prefix (the system message) billed
-   at a configurable cached-input discount.
-3. **Windowed + cached** — a sliding window caps the history to the system
-   message plus the last N turns, then caching applies on top.
+1. Load two **artificial** price tables from `data/` (currency, effective date,
+   unit, one rate per model). The formula must contain no provider name and no
+   price literal.
+2. Load one usage fixture: each run is a context strategy (uncached, stable
+   prefix cached, a sliding window plus caching) on one model, with the
+   `UsageDetails` it measured per conversation and how many of its
+   conversations were accepted.
+3. Price every run under both tables: per conversation, per month at the
+   fixture's volume, and **per accepted conversation**.
+4. Read reasoning cost from the measured `ReasoningTokenCount`, which is part of
+   `OutputTokenCount`; cached tokens are part of `InputTokenCount`.
 
-Then print a **comparative table** of every model, windowed + cached, sorted
-from cheapest to most expensive. Model reasoning models with a hidden
-reasoning-token multiplier (extra tokens billed at the output rate).
+## Accepted when
 
-## Hints
+- the totals change when you switch tables;
+- the formula contains no provider name or price literal;
+- a run with zero accepted conversations prints `undefined`, not `0`.
 
-- A chat request is an ordered message array; "history" is that array re-sent
-  every call. Re-counting it each turn is what makes an unbounded conversation
-  expensive.
-- The cached prefix is the part that does not change between calls — the system
-  message and any fixed context. Put volatile content last so the prefix caches.
-- Model reasoning cost as `ReasoningMultiplier x visibleOutput`, billed at the
-  output rate. Use `0.0` for ordinary models and `~5.0` for a reasoning model.
-- The sliding window keeps the system message plus the last N user/assistant
-  pairs; drop everything older.
+## Expected outcome
 
-## Expected Outcome
+`dotnet run -- --self-test` ends with `RESULT 6/6`. `dotnet run` prints, for table-1:
 
 ```
-  Monthly cost on GPT-4.1 (visible output 120 tok/turn):
-
-    Strategy                      Monthly $
-    ----------------------------------------
-    Uncached                         $23.28
-    Stable-prefix cached             $21.95
-    Windowed + cached                $17.33
-
-    Caching alone saves 6%.
-    Windowing + caching saves 26% vs uncached.
-
-  All models, windowed + cached, sorted cheapest first:
-
-    Model             Monthly $    Reasoning x
-    --------------------------------------------
-    GPT-5.6 Luna           $1.33            0.0
-    GPT-4.1-mini          $3.47            0.0
-    GPT-4.1              $17.33            0.0
-    GPT-5.6 Terra               $22.22            0.0
-    o4-mini              $49.13            5.0
+table-1 (XTS, effective 2026-11-01, artificial)
+  Strategy                   Model     Per conversation      Monthly  Accepted   Per accepted
+  uncached                   model-r           0.022400       336.00     22/25       0.025455
+  stable prefix cached       model-r           0.018080       271.20     22/25       0.020545
+  window 3 turns + cached    model-r           0.012480       187.20     20/25       0.015600
+  window 3 turns + cached    model-a           0.001520        22.80     15/25       0.002533
+  window 1 turn + cached     model-a           0.001060        15.90      0/25      undefined
 ```
 
-> Rates are illustrative mid-2026 figures — verify against the live rate card
-> before relying on them.
+The rates and the fixture are made up (XTS is the ISO 4217 code reserved for
+testing). They show the arithmetic; they are not prices.
 
-## Key Concepts
+## Key concepts
 
-- The message array and why history re-sends grow cost
-- Prompt caching: stable prefix at a cached-input discount
-- Sliding-window history caps
-- Reasoning models and hidden reasoning tokens
-- Model choice as the biggest cost lever
+- Price tables as dated data, never constants
+- `UsageDetails`: cached input inside the input count, reasoning inside the output count
+- Caching changes cost, not quality; a tighter window can cost quality
+- Cost per accepted conversation, undefined when nothing was accepted

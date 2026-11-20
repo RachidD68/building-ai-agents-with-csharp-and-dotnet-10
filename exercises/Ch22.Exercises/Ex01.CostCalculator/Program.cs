@@ -1,209 +1,102 @@
 // ============================================================================
-// Exercise 01 — Conversation Cost Simulator (Challenge)
+// Exercise 01: Cost Calculator (solution)
 // ----------------------------------------------------------------------------
-// Takes a message array and a daily volume, then prints monthly cost three ways:
-//   1. Uncached            — the whole history re-sent fresh every turn.
-//   2. Stable-prefix cache — the unchanging prefix billed at a cached discount.
-//   3. Windowed + cache    — a sliding window caps history, then caching applies.
+// Prices one usage fixture under two artificial price tables. Each fixture
+// run is one context strategy (uncached, stable prefix cached, a sliding
+// window plus caching) on one model, with the usage it measured per
+// conversation and how many of its conversations were accepted.
 //
-// It also models reasoning models (hidden reasoning tokens billed at the output
-// rate via a per-model multiplier) and prints a comparative table sorted from
-// cheapest to most expensive.
+// The formula holds no provider name and no price: rates come from the
+// table, token counts from UsageDetails. Reasoning cost is read from the
+// measured ReasoningTokenCount (part of OutputTokenCount), never from a
+// multiplier. Cost per accepted conversation is "undefined" when none was.
 //
-// No network calls — everything is arithmetic over a token-counted message array.
+//   dotnet run                    both tables, the bundled fixture
+//   dotnet run -- --self-test     offline checks, RESULT n/n
 // ============================================================================
 
-Console.WriteLine("=== Exercise 01: Conversation Cost Simulator ===\n");
+using System.Globalization;
+using System.Text.Json;
+using Microsoft.Extensions.AI;
 
-const int PerMessageOverhead = 4; // approximate role/delimiter framing per message
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+string data = Path.Combine(AppContext.BaseDirectory, "data");
+Fixture fixture = Json.Load<Fixture>(Path.Combine(data, "usage.conversations.json"));
+Table[] tables = [Json.Load<Table>(Path.Combine(data, "prices.table-1.json")), Json.Load<Table>(Path.Combine(data, "prices.table-2.json"))];
 
-// ---------------------------------------------------------------------------
-// Model catalogue. ReasoningMultiplier is the hidden-reasoning-token factor:
-// 0.0 for ordinary models, ~5.0 for a reasoning model (5x the visible output,
-// billed at the output rate). Rates are illustrative mid-2026 figures — verify
-// against the live rate card before trusting them.
-// ---------------------------------------------------------------------------
-ModelPricing[] catalogue =
-[
-    new("GPT-6 Astra",   InputPer1M: 10.00m, OutputPer1M: 50.00m, CachedInputPer1M: 1.00m, ReasoningMultiplier: 0.0),
-    new("GPT-5.6 Sol",   InputPer1M:  4.00m, OutputPer1M: 20.00m, CachedInputPer1M: 0.40m, ReasoningMultiplier: 0.0),
-    new("GPT-5.6 Terra", InputPer1M:  2.00m, OutputPer1M: 12.00m, CachedInputPer1M: 0.20m, ReasoningMultiplier: 0.0),
-    new("GPT-5.6 Luna",  InputPer1M:  0.20m, OutputPer1M:  1.20m, CachedInputPer1M: 0.02m, ReasoningMultiplier: 0.0),
-    new("o4-mini",      InputPer1M: 1.10m, OutputPer1M:  4.40m, CachedInputPer1M: 0.275m, ReasoningMultiplier: 5.0),
-];
+if (args.Contains("--self-test")) return SelfTest.Run(tables, fixture);
 
-// ---------------------------------------------------------------------------
-// A scripted conversation. Each turn is a (user, assistant) pair; the system
-// message is the stable prefix that a real provider would cache.
-// ---------------------------------------------------------------------------
-const string systemPrompt =
-    "You are a meticulous senior .NET engineer. Answer concisely, prefer modern " +
-    "C# 14 idioms, always include a short code example, and refuse non-technical " +
-    "questions. Keep responses under 200 words unless asked to elaborate.";
-
-(string User, string Assistant)[] turns =
-[
-    ("How do I read a file asynchronously?", "Use File.ReadAllTextAsync(path, ct)."),
-    ("How do I parse JSON?", "JsonSerializer.Deserialize<T>(json) from System.Text.Json."),
-    ("How do I cancel a long call?", "Pass a CancellationToken and check ct.ThrowIfCancellationRequested()."),
-    ("How do I retry on failure?", "Use Microsoft.Extensions.Http.Resilience or Polly's ResiliencePipeline."),
-    ("How do I log structured data?", "ILogger with message templates: logger.LogInformation(\"User {Id}\", id)."),
-    ("How do I write a unit test?", "xUnit [Fact], arrange-act-assert, assert with Assert.Equal."),
-    ("How do I stream results?", "Return IAsyncEnumerable<T> and await foreach over it."),
-    ("How do I cache a value?", "IMemoryCache.GetOrCreateAsync(key, factory)."),
-];
-
-// Conversation parameters.
-const int avgOutputTokens = 120;   // visible answer length, per turn
-const int requestsPerDay = 500;    // daily conversation volume
-const int daysPerMonth = 30;
-const int windowTurns = 3;         // sliding window: keep system + last N turns
-
-long callsPerMonth = (long)requestsPerDay * daysPerMonth;
-
-// ---------------------------------------------------------------------------
-// Build the full message array once, then measure the three strategies.
-// ---------------------------------------------------------------------------
-List<Message> full = [new(Role.System, systemPrompt)];
-foreach (var (user, assistant) in turns)
+Console.WriteLine("=== Exercise 01: Cost Calculator ===\n");
+Console.WriteLine($"Fixture: {fixture.Workload}, {fixture.ConversationsPerMonth:N0} conversations a month");
+foreach (Table table in tables)
 {
-    full.Add(new(Role.User, user));
-    full.Add(new(Role.Assistant, assistant));
-}
-
-int prefixTokens = EstimateTokens(systemPrompt) + PerMessageOverhead;
-int fullInputTokens = CountTokens(full);
-int windowedInputTokens = CountTokens(ApplyWindow(full, windowTurns));
-
-Console.WriteLine($"  Conversation: {turns.Length} turns, {full.Count} messages total.");
-Console.WriteLine($"  Stable prefix (system): {prefixTokens} tokens.");
-Console.WriteLine($"  Full input tokens (last turn): {fullInputTokens}.");
-Console.WriteLine($"  Windowed input tokens (system + last {windowTurns} turns): {windowedInputTokens}.");
-Console.WriteLine($"  Volume: {requestsPerDay}/day x {daysPerMonth} days = {callsPerMonth:N0} calls/month.\n");
-
-// ---------------------------------------------------------------------------
-// Three strategies for GPT-5.6 Terra, the worked headline example.
-// ---------------------------------------------------------------------------
-ModelPricing headline = catalogue.First(m => m.Name == "GPT-5.6 Terra");
-
-decimal uncached = MonthlyCost(headline, fullInputTokens, cachedPrefix: 0, avgOutputTokens, callsPerMonth);
-decimal cached = MonthlyCost(headline, fullInputTokens, cachedPrefix: prefixTokens, avgOutputTokens, callsPerMonth);
-decimal windowed = MonthlyCost(headline, windowedInputTokens, cachedPrefix: prefixTokens, avgOutputTokens, callsPerMonth);
-
-Console.WriteLine($"  Monthly cost on {headline.Name} (visible output {avgOutputTokens} tok/turn):\n");
-Console.WriteLine(string.Format("    {0,-26} {1,12}", "Strategy", "Monthly $"));
-Console.WriteLine($"    {new string('-', 40)}");
-Console.WriteLine(string.Format("    {0,-26} {1,12:C2}", "Uncached", uncached));
-Console.WriteLine(string.Format("    {0,-26} {1,12:C2}", "Stable-prefix cached", cached));
-Console.WriteLine(string.Format("    {0,-26} {1,12:C2}", "Windowed + cached", windowed));
-Console.WriteLine();
-Console.WriteLine($"    Caching alone saves {(uncached - cached) / uncached:P0}.");
-Console.WriteLine($"    Windowing + caching saves {(uncached - windowed) / uncached:P0} vs uncached.\n");
-
-// ---------------------------------------------------------------------------
-// Comparative table: windowed + cached monthly cost for every model, sorted
-// cheapest first. Reasoning models pay extra for hidden reasoning tokens.
-// ---------------------------------------------------------------------------
-Console.WriteLine("  All models, windowed + cached, sorted cheapest first:\n");
-Console.WriteLine(string.Format("    {0,-14} {1,12} {2,14}", "Model", "Monthly $", "Reasoning x"));
-Console.WriteLine($"    {new string('-', 44)}");
-
-var ranked = catalogue
-    .Select(m => (Model: m,
-                  Cost: MonthlyCost(m, windowedInputTokens, prefixTokens, avgOutputTokens, callsPerMonth)))
-    .OrderBy(r => r.Cost);
-
-foreach (var (model, cost) in ranked)
-{
-    Console.WriteLine(string.Format("    {0,-14} {1,12:C2} {2,14:F1}",
-        model.Name, cost, model.ReasoningMultiplier));
-}
-
-Console.WriteLine("\n=== Exercise complete! ===");
-
-// ============================================================================
-// Cost model
-// ============================================================================
-
-/// <summary>
-/// Monthly cost for a model given the per-call input token count, how many of
-/// those input tokens are a cached stable prefix, the visible output tokens per
-/// call, and the number of calls per month. Reasoning models add hidden
-/// reasoning tokens (ReasoningMultiplier x visible output) billed at the output
-/// rate.
-/// </summary>
-static decimal MonthlyCost(
-    ModelPricing model,
-    int inputTokens,
-    int cachedPrefix,
-    int visibleOutputTokens,
-    long callsPerMonth)
-{
-    int freshInput = Math.Max(0, inputTokens - cachedPrefix);
-
-    decimal inputCost = freshInput * model.InputPer1M + cachedPrefix * model.CachedInputPer1M;
-
-    // Visible output plus hidden reasoning tokens, both at the output rate.
-    decimal reasoningTokens = (decimal)model.ReasoningMultiplier * visibleOutputTokens;
-    decimal outputCost = (visibleOutputTokens + reasoningTokens) * model.OutputPer1M;
-
-    decimal perCall = (inputCost + outputCost) / 1_000_000m;
-    return perCall * callsPerMonth;
-}
-
-/// <summary>
-/// Applies a sliding window: always keep the system message, then keep only the
-/// last <paramref name="keepTurns"/> user/assistant pairs.
-/// </summary>
-static List<Message> ApplyWindow(List<Message> messages, int keepTurns)
-{
-    List<Message> system = messages.Where(m => m.Role == Role.System).ToList();
-    List<Message> rest = messages.Where(m => m.Role != Role.System).ToList();
-
-    int keepMessages = keepTurns * 2; // each turn = user + assistant
-    if (rest.Count > keepMessages)
+    Console.WriteLine($"\n{table.Id} ({table.Currency}, effective {table.EffectiveDate:yyyy-MM-dd}, artificial)");
+    Console.WriteLine($"  {"Strategy",-26} {"Model",-8} {"Per conversation",17} {"Monthly",12} {"Accepted",9} {"Per accepted",14}");
+    foreach (Run run in fixture.Runs)
     {
-        rest = rest.Skip(rest.Count - keepMessages).ToList();
+        decimal perConversation = Cost.PerConversation(table, run);
+        Console.WriteLine($"  {run.Strategy,-26} {run.Model,-8} {perConversation,17:0.000000} " +
+                          $"{perConversation * fixture.ConversationsPerMonth,12:0.00} {$"{run.Accepted}/{run.Conversations}",9} " +
+                          $"{Cost.Show(Cost.PerAccepted(table, run)),14}");
+    }
+}
+return 0;
+
+static class Cost
+{
+    /// <summary>Cached input is part of the input count, reasoning part of the output count.</summary>
+    public static decimal PerConversation(Table table, Run run)
+    {
+        Rate rate = table.Models[run.Model];
+        UsageDetails u = run.UsagePerConversation;
+        long input = u.InputTokenCount ?? 0, cached = u.CachedInputTokenCount ?? 0;
+        long output = u.OutputTokenCount ?? 0, reasoning = u.ReasoningTokenCount ?? 0;
+        return ((input - cached) * rate.Input + cached * rate.CachedInput
+              + (output - reasoning) * rate.Output + reasoning * (rate.ReasoningOutput ?? rate.Output)) / 1_000_000m;
     }
 
-    return [.. system, .. rest];
+    public static decimal? PerAccepted(Table table, Run run) =>
+        run.Accepted == 0 ? null : PerConversation(table, run) * run.Conversations / run.Accepted;
+
+    public static string Show(decimal? value) => value is { } v ? v.ToString("0.000000") : "undefined";
 }
 
-/// <summary>Sums estimated tokens across a message array, with per-message overhead.</summary>
-static int CountTokens(List<Message> messages)
+static class SelfTest
 {
-    int total = 0;
-    foreach (Message m in messages)
+    public static int Run(Table[] tables, Fixture fixture)
     {
-        total += PerMessageOverhead + EstimateTokens(m.Content);
+        Console.WriteLine("=== Exercise 01: Cost Calculator, self-test ===\n");
+        int passed = 0, total = 0;
+        void Expect(string name, bool ok) { total++; if (ok) passed++; Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}"); }
+        Run uncached = fixture.Runs[0], cached = fixture.Runs[1], windowed = fixture.Runs[2], none = fixture.Runs[4];
+
+        Expect("the totals change with the table (the formula holds no price)",
+            Cost.PerConversation(tables[0], uncached) != Cost.PerConversation(tables[1], uncached));
+        Expect("table-1, uncached, by hand: 6,400 x 2 + 1,200 x 8 = 0.0224 per conversation",
+            Cost.PerConversation(tables[0], uncached) == 0.0224m);
+        Expect("caching changes cost, not acceptance (22/25 both)",
+            Cost.PerConversation(tables[0], cached) < Cost.PerConversation(tables[0], uncached) && cached.Accepted == uncached.Accepted);
+        Expect("the window is cheaper per conversation and accepts fewer (20/25)",
+            Cost.PerConversation(tables[0], windowed) < Cost.PerConversation(tables[0], cached) && windowed.Accepted < cached.Accepted);
+        Run moreReasoning = uncached with { UsagePerConversation = new UsageDetails { InputTokenCount = 6_400, OutputTokenCount = 2_000, ReasoningTokenCount = 1_600 } };
+        Expect("reasoning is read from the measured count: 800 more reasoning tokens on table-2 add 800 x 9 per million",
+            Cost.PerConversation(tables[1], moreReasoning) - Cost.PerConversation(tables[1], uncached) == 0.0072m);
+        Expect("zero accepted conversations: \"undefined\", not 0",
+            Cost.PerAccepted(tables[0], none) is null && Cost.Show(Cost.PerAccepted(tables[0], none)) == "undefined");
+
+        Console.WriteLine($"\nRESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
     }
-    return total;
 }
 
-/// <summary>Estimates token count with the 4-characters-per-token heuristic.</summary>
-static int EstimateTokens(string text)
+sealed record Rate(decimal Input, decimal CachedInput, decimal Output, decimal? ReasoningOutput = null);
+sealed record Table(string Id, string Currency, DateOnly EffectiveDate, string Unit, Dictionary<string, Rate> Models);
+sealed record Run(string Strategy, string Model, int Conversations, int Accepted, UsageDetails UsagePerConversation);
+sealed record Fixture(string Workload, DateOnly Date, int ConversationsPerMonth, List<Run> Runs);
+
+static class Json
 {
-    if (string.IsNullOrEmpty(text)) return 0;
-    return Math.Max(1, (int)Math.Ceiling(text.Length / 4.0));
+    static readonly JsonSerializerOptions s_options = new(JsonSerializerDefaults.Web);
+    public static T Load<T>(string path) => JsonSerializer.Deserialize<T>(File.ReadAllText(path), s_options)
+        ?? throw new InvalidDataException($"{path} is empty.");
 }
-
-// ============================================================================
-// Types
-// ============================================================================
-
-enum Role { System, User, Assistant }
-
-/// <summary>One message in the conversation array.</summary>
-sealed record Message(Role Role, string Content);
-
-/// <summary>
-/// Per-model pricing. CachedInputPer1M is the discounted rate for a repeated,
-/// stable prefix; ReasoningMultiplier models hidden reasoning tokens (0 for
-/// ordinary models). All rates are per 1,000,000 tokens.
-/// </summary>
-sealed record ModelPricing(
-    string Name,
-    decimal InputPer1M,
-    decimal OutputPer1M,
-    decimal CachedInputPer1M,
-    double ReasoningMultiplier);

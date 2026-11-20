@@ -1,0 +1,31 @@
+{
+  "id": "artificial-a",
+  "note": "ARTIFICIAL rates for the book's examples, not a vendor price list. XTS is the ISO 4217 code reserved for testing.",
+  "currency": "XTS",
+  "effectiveDate": "2026-11-01",
+  "unit": "per-million-tokens",
+  "models": {
+    "model-small": {
+      "input": 0.4,
+      "cachedInput": 0.1,
+      "output": 1.6
+    },
+    "model-large": {
+      "input": 3.0,
+      "cachedInput": 0.75,
+      "output": 12.0
+    },
+    "llama3.2": {
+      "input": 0,
+      "cachedInput": 0,
+      "output": 0
+    }
+  },
+  "tools": {
+    "policy_lookup": 0.0005,
+    "receipt_ocr": 0.01
+  },
+  "runtimePerHour": {
+    "workstation": 0.6
+  }
+}

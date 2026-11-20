@@ -1,0 +1,74 @@
+[
+  {
+    "id": "H01",
+    "prompt": "Claim: taxi to the airport, 18 USD, receipt attached, within policy (limit 50 USD).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H02",
+    "prompt": "Claim: hotel, 940 USD, no receipt, policy limit 300 USD per night.",
+    "expected": "ESCALATE",
+    "hard": true
+  },
+  {
+    "id": "H03",
+    "prompt": "Claim: team lunch, 42 USD, receipt attached, within policy (limit 60 USD).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H04",
+    "prompt": "Claim: personal gym membership, 75 USD, not a business expense.",
+    "expected": "ESCALATE",
+    "hard": false
+  },
+  {
+    "id": "H05",
+    "prompt": "Claim: train ticket, 64 USD, receipt attached, within policy (limit 120 USD).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H06",
+    "prompt": "Claim: laptop, 2400 USD, no purchase approval, policy requires approval above 500 USD.",
+    "expected": "ESCALATE",
+    "hard": true
+  },
+  {
+    "id": "H07",
+    "prompt": "Claim: parking, 12 USD, receipt attached, within policy (limit 30 USD).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H08",
+    "prompt": "Claim: conference fee, 1200 USD, receipt for a different employee.",
+    "expected": "ESCALATE",
+    "hard": true
+  },
+  {
+    "id": "H09",
+    "prompt": "Claim: client dinner for four, 180 USD, itemised receipt attached, within policy (limit 200 USD for four guests).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H10",
+    "prompt": "Claim: mileage, 340 km at 0.60 USD per km, policy rate 0.45 USD per km, no approval.",
+    "expected": "ESCALATE",
+    "hard": true
+  },
+  {
+    "id": "H11",
+    "prompt": "Claim: printer paper, 9 USD, receipt attached, within policy (limit 25 USD).",
+    "expected": "APPROVE",
+    "hard": false
+  },
+  {
+    "id": "H12",
+    "prompt": "Claim: flight, 610 USD, receipt attached, booked in business class; policy allows economy only.",
+    "expected": "ESCALATE",
+    "hard": true
+  }
+]

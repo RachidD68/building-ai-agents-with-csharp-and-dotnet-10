@@ -1,0 +1,20 @@
+{
+  "id": "table-2",
+  "note": "ARTIFICIAL rates, a second table. Not a vendor price list.",
+  "currency": "XTS",
+  "effectiveDate": "2026-11-01",
+  "unit": "per-million-tokens",
+  "models": {
+    "model-a": {
+      "input": 0.3,
+      "cachedInput": 0.15,
+      "output": 1.5
+    },
+    "model-r": {
+      "input": 1.5,
+      "cachedInput": 0.75,
+      "output": 6.0,
+      "reasoningOutput": 9.0
+    }
+  }
+}

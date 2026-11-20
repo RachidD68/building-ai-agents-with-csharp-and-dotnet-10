@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Routing and failover compared on accepted tasks.
+       EXPERIMENTAL: OrderedFailoverChatClient, FailoverChatClient and
+       RoutingChatClient carry [Experimental("MEAI001")] in
+       Microsoft.Extensions.AI 10.11.0 (checked by reflection). Each use is
+       wrapped in #pragma warning disable MEAI001 at the call site, never
+       here, and each has its GA alternative next to it: GaFailoverChatClient
+       and DifficultyRouterChatClient, both on the GA DelegatingChatClient.
+       GA: DistributedCachingChatClient (Microsoft.Extensions.AI), Polly through
+       Microsoft.Extensions.Resilience 10.7.0, OllamaSharp 5.4.25. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
+    <PackageReference Include="OllamaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Prices and the cost formula; the manual clock, percentiles and the live workload. -->
+    <ProjectReference Include="../Ch22.CostModel/Ch22.CostModel.csproj" />
+    <ProjectReference Include="../Ch22.LoadProfile/Ch22.LoadProfile.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="data/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

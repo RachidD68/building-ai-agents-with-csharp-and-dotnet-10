@@ -1,0 +1,386 @@
+{
+  "workload": "contoso-claims, busy morning (fixture)",
+  "date": "2026-11-12",
+  "calls": [
+    {
+      "task": "C-01",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-02",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-02",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-02",
+      "model": "model-small",
+      "attempt": 3,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-03",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-03",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-04",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-05",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-05",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-05",
+      "model": "model-small",
+      "attempt": 3,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-06",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-07",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-08",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-08",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-09",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-09",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-09",
+      "model": "model-small",
+      "attempt": 3,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-10",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-11",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-11",
+      "model": "model-small",
+      "attempt": 2,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "timeout"
+    },
+    {
+      "task": "C-11",
+      "model": "model-small",
+      "attempt": 3,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    },
+    {
+      "task": "C-12",
+      "model": "model-small",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 1800,
+        "outputTokenCount": 220,
+        "totalTokenCount": 2020,
+        "cachedInputTokenCount": 1200
+      },
+      "tools": [
+        "policy_lookup"
+      ],
+      "status": "ok"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "C-01",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-02",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-03",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-04",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-05",
+      "outcome": "abandoned"
+    },
+    {
+      "id": "C-06",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-07",
+      "outcome": "rejected"
+    },
+    {
+      "id": "C-08",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-09",
+      "outcome": "abandoned"
+    },
+    {
+      "id": "C-10",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-11",
+      "outcome": "accepted"
+    },
+    {
+      "id": "C-12",
+      "outcome": "accepted"
+    }
+  ]
+}
