@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Ch19.Observability</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="OpenTelemetry" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One copy of the telemetry names and of the in-memory exporters, shared with Ch19.OpenTelemetryAgent. -->
+    <Compile Include="../Ch19.OpenTelemetryAgent/ContosoTelemetry.cs" Link="Shared/ContosoTelemetry.cs" />
+    <Compile Include="../Ch19.OpenTelemetryAgent/TelemetryCapture.cs" Link="Shared/TelemetryCapture.cs" />
+  </ItemGroup>
+</Project>

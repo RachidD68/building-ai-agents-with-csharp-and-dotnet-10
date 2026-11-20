@@ -1,17 +1,28 @@
-# Exercise 01 — Metrics Collector (Beginner)
+# Exercise 01: Metrics Collector (basic)
 
 ## Prompt
 
-Extend `Ch19.OpenTelemetryAgent` with one new metric: `agent.cache.hit_rate` as a
-`Counter<long>` tagged with `cache.name`. Simulate cache hits and misses inside the
-agent pipeline (this solution uses a small response cache keyed on the prompt, so
-only unique prompts reach the model). Run for 100 requests and confirm the metric
-shows up in the console exporter.
+Add a cache hit rate to the Contoso assistant's metrics. Run 100 simulated requests and export
+hit and miss counts. The only tag is `cache.name`, and it takes at most three values.
 
-## Key Concepts
+## This solution
 
-- `Meter` + `CreateCounter<long>("agent.cache.hit_rate")` — increment on hit, never on miss
-- Tagging measurements with `cache.name` and filtering by that tag in the exporter output
-- `AddOpenTelemetry().WithMetrics(...)` with `AddMeter(...)` and the console exporter
-- Starting the host so the OTel `MeterListener` is installed (no listener, no data)
-- A caching `DelegatingChatClient` in the agent pipeline — repeats are served from memory
+| Instrument | Kind | Tag |
+|---|---|---|
+| `agent.cache.hits` | `Counter<long>` | `cache.name` |
+| `agent.cache.misses` | `Counter<long>` | `cache.name` |
+| `agent.cache.hit_rate` | `ObservableGauge<double>`, hits / (hits + misses) | `cache.name` |
+
+`cache.name` comes from a fixed list (`response`, `policy`, `embedding`); any other name is
+refused when the cache is built, so the number of series cannot grow.
+
+The first edition's solution exported a single counter named `agent.cache.hit_rate` that
+counted hits only. With no miss count beside it, a dashboard cannot compute a rate from it.
+The self-test reproduces that first.
+
+## Running
+
+```bash
+dotnet run                  # 100 requests (10 distinct) to the configured model, console exporter
+dotnet run -- --self-test   # offline: echo model, the real MeterProvider, RESULT n/n
+```

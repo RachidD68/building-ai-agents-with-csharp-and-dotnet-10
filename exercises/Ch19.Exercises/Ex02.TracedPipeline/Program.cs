@@ -1,167 +1,193 @@
 // ============================================================================
-// Exercise 02 — Traced Pipeline (Intermediate)
-// the multi-agent chapter's Content Pipeline (Researcher -> Writer -> Editor) wrapped in
-// custom Activity spans: pipeline.researcher, pipeline.writer, pipeline.editor
-// as SIBLINGS under one pipeline.run root span, each tagged with the stage's
-// input length and output length. Each stage's actual output feeds the next
-// stage. The trace exports to the console. FULLY STANDALONE.
+// Exercise 02: Traced Pipeline (intermediate)
+// ----------------------------------------------------------------------------
+// The multi-agent chapter's sequential pipeline (Researcher -> Writer ->
+// Editor), one span per stage: pipeline.researcher, pipeline.writer and
+// pipeline.editor are siblings under one pipeline.run span. Each stage span
+// carries input.length and output.length, and no span carries any text.
+//
+// The first edition's solution also tagged pipeline.run with pipeline.topic,
+// the user's topic verbatim: user text in a span attribute. The self-test
+// reproduces that before checking the fix.
+//
+//   dotnet run                    one topic through the configured model, console exporter
+//   dotnet run -- --self-test     offline: scripted stages, the real TracerProvider
 // ============================================================================
 
-using System.ClientModel;
 using System.Diagnostics;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
-using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-// ---------------------------------------------------------------
-// Set up OTel tracing
-// ---------------------------------------------------------------
-ActivitySource activitySource = new("Ex02.TracedPipeline");
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService("TracedPipeline"))
-    .WithTracing(t => t
-        .AddSource(activitySource.Name)
-        .AddHttpClientInstrumentation()
-        .AddConsoleExporter());
-
+builder.Services.AddOpenTelemetry().WithTracing(t => t.AddSource(TracedPipeline.SourceName).AddConsoleExporter());
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+await host.StartAsync();
 
-Console.WriteLine("=== Exercise: Traced Pipeline (Researcher -> Writer -> Editor) ===\n");
+Console.WriteLine("=== Traced pipeline: Researcher -> Writer -> Editor ===\n");
+const string Topic = "How OpenTelemetry tracing helps debug multi-agent pipelines";
+using TracedPipeline pipeline = new(host.Services.GetRequiredService<IChatClient>());
+string result = await pipeline.RunAsync(Topic);
+Console.WriteLine($"Topic: {Topic}\n\n{result}\n");
+await host.StopAsync();   // the console exporter prints the four spans below
+return 0;
 
-using CancellationTokenSource cts = new();
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-// ---------------------------------------------------------------
-// The Content Pipeline agents (the multi-agent chapter)
-// ---------------------------------------------------------------
-ChatClientAgent researcher = new(chatClient,
-    instructions: "You are a researcher. List 4-5 key facts or points about the " +
-                  "given topic as short bullet points. Return ONLY the bullet points.",
-    name: "Researcher");
-
-ChatClientAgent writer = new(chatClient,
-    instructions: "You are a writer. Turn the provided research notes into one " +
-                  "clear, engaging paragraph. Use ONLY the notes. Return ONLY the paragraph.",
-    name: "Writer");
-
-ChatClientAgent editor = new(chatClient,
-    instructions: "You are an editor. Polish the provided draft for clarity, flow, " +
-                  "and concision. Return ONLY the edited text.",
-    name: "Editor");
-
-string topic = "How OpenTelemetry tracing helps debug multi-agent pipelines";
-
-Console.WriteLine($"Topic: {topic}\n");
-
-// ---------------------------------------------------------------
-// Execute the pipeline under one root span
-// ---------------------------------------------------------------
-// One outer Activity for pipeline.run, then three children inside it. The
-// using-block ordering creates the parent-child relationship via
-// Activity.Current: pipeline.run is Current while each stage span starts, so
-// all three stages are its children — siblings at the same level, NOT nested
-// inside each other (each stage's using block closes before the next opens).
-using Activity? pipelineActivity = activitySource.StartActivity("pipeline.run");
-pipelineActivity?.SetTag("pipeline.topic", topic);
-pipelineActivity?.SetTag("input.length", topic.Length);
-
-if (pipelineActivity is not null)
+/// <summary>Three agents in sequence, each stage in its own span under one run span.</summary>
+public sealed class TracedPipeline(IChatClient chat) : IDisposable
 {
-    Console.WriteLine($"pipeline.run: trace={pipelineActivity.TraceId} span={pipelineActivity.SpanId}\n");
-}
+    public const string SourceName = "Contoso.TracedPipeline";
 
-try
-{
-    // Stage 1: Researcher — gathers key points on the topic.
-    string research;
-    using (Activity? span = activitySource.StartActivity("pipeline.researcher"))
+    public static readonly (string Stage, string Instructions)[] Stages =
+    [
+        ("researcher", "List 4-5 key facts about the topic as short bullet points. Return only the bullets."),
+        ("writer", "Turn the research notes into one clear paragraph. Use only the notes."),
+        ("editor", "Polish the draft for clarity and concision. Return only the edited text."),
+    ];
+
+    private readonly ActivitySource _source = new(SourceName);
+
+    public async Task<string> RunAsync(string topic, CancellationToken ct = default)
     {
-        span?.SetTag("input.length", topic.Length);
-
-        AgentSession s1 = await researcher.CreateSessionAsync(cts.Token);
-        AgentResponse r1 = await researcher.RunAsync(topic, s1, cancellationToken: cts.Token);
-        research = r1.Text ?? string.Empty;
-
-        span?.SetTag("output.length", research.Length);
-        PrintStage("Researcher", span, research);
+        using Activity? run = _source.StartActivity("pipeline.run");
+        run?.SetTag("input.length", topic.Length);
+        string text = topic;
+        foreach ((string stage, string instructions) in Stages)
+        {
+            // Started while pipeline.run is Activity.Current, ended before the next
+            // stage starts: three siblings, not a chain.
+            using Activity? span = _source.StartActivity($"pipeline.{stage}");
+            span?.SetTag("input.length", text.Length);
+            ChatClientAgent agent = new(chat, instructions, name: stage);
+            text = (await agent.RunAsync(text, await agent.CreateSessionAsync(ct), cancellationToken: ct)).Text;
+            span?.SetTag("output.length", text.Length);
+        }
+        run?.SetTag("output.length", text.Length);
+        return text;
     }
 
-    // Stage 2: Writer — drafts from the RESEARCHER'S output.
-    string draft;
-    using (Activity? span = activitySource.StartActivity("pipeline.writer"))
-    {
-        span?.SetTag("input.length", research.Length);
-
-        AgentSession s2 = await writer.CreateSessionAsync(cts.Token);
-        AgentResponse r2 = await writer.RunAsync(research, s2, cancellationToken: cts.Token);
-        draft = r2.Text ?? string.Empty;
-
-        span?.SetTag("output.length", draft.Length);
-        PrintStage("Writer", span, draft);
-    }
-
-    // Stage 3: Editor — polishes the WRITER'S output.
-    string edited;
-    using (Activity? span = activitySource.StartActivity("pipeline.editor"))
-    {
-        span?.SetTag("input.length", draft.Length);
-
-        AgentSession s3 = await editor.CreateSessionAsync(cts.Token);
-        AgentResponse r3 = await editor.RunAsync(draft, s3, cancellationToken: cts.Token);
-        edited = r3.Text ?? string.Empty;
-
-        span?.SetTag("output.length", edited.Length);
-        PrintStage("Editor", span, edited);
-    }
-
-    pipelineActivity?.SetTag("pipeline.status", "success");
-
-    Console.WriteLine("Pipeline completed. In the console trace output, verify the");
-    Console.WriteLine("parent-child relationships: each pipeline.* stage span carries");
-    Console.WriteLine("the SAME ParentSpanId — the pipeline.run root span's id.");
-}
-catch (OperationCanceledException)
-{
-    pipelineActivity?.SetTag("pipeline.status", "cancelled");
-    Console.WriteLine("\n[Cancelled]");
+    public void Dispose() => _source.Dispose();
 }
 
-Console.WriteLine("\n=== Exercise complete! ===");
-
-/// <summary>Prints a stage's output and its span identifiers for verification.</summary>
-static void PrintStage(string stage, Activity? span, string output)
+/// <summary>The offline check: dotnet run -- --self-test.</summary>
+internal static class SelfTest
 {
-    Console.WriteLine($"[{stage}] {output}");
-    if (span is not null)
+    private const string Topic = "Contoso travel policy for client dinners in Toronto";
+    private static int s_passed, s_total;
+
+    public static async Task<int> RunAsync()
     {
-        Console.WriteLine($"    span {span.OperationName}: id={span.SpanId} parent={span.ParentSpanId}");
+        Console.WriteLine("=== Traced pipeline: self-test (offline) ===\n");
+        StageModel model = new();
+
+        // The first edition's run span: the same structure plus the topic itself as a tag.
+        List<Activity> v1 = await TraceAsync(TracedPipeline.SourceName, async () =>
+        {
+            using ActivitySource source = new(TracedPipeline.SourceName);
+            using Activity? run = source.StartActivity("pipeline.run");
+            run?.SetTag("pipeline.topic", Topic);
+            await Task.CompletedTask;
+        });
+        Expect("DEFECT REPRODUCED: the first edition's pipeline.run carries pipeline.topic = the user's topic, verbatim",
+            v1.Single().GetTagItem("pipeline.topic") as string == Topic);
+
+        string output = "";
+        List<Activity> spans = await TraceAsync(TracedPipeline.SourceName, async () =>
+        {
+            using TracedPipeline pipeline = new(model);
+            output = await pipeline.RunAsync(Topic);
+        });
+
+        Activity? run = spans.SingleOrDefault(a => a.OperationName == "pipeline.run");
+        Activity[] stages = [.. spans.Where(a => a.OperationName != "pipeline.run").OrderBy(a => a.StartTimeUtc)];
+        foreach (Activity a in spans.OrderBy(a => a.StartTimeUtc))
+            Console.WriteLine($"    {(a == run ? "" : "  ")}{a.OperationName,-20} parent={(a.ParentSpanId == default ? "-" : a.ParentSpanId.ToHexString())} " +
+                              string.Join(" ", a.TagObjects.Select(t => $"{t.Key}={t.Value}")));
+
+        Expect("three stage spans, in order: pipeline.researcher, pipeline.writer, pipeline.editor",
+            stages.Select(s => s.OperationName).SequenceEqual(["pipeline.researcher", "pipeline.writer", "pipeline.editor"]));
+        Expect("all three are siblings: the same parent, pipeline.run, and the same trace",
+            run is not null && stages.All(s => s.ParentSpanId == run.SpanId && s.TraceId == run.TraceId));
+        Expect("stages do not overlap: each ends before the next starts",
+            stages.Zip(stages.Skip(1)).All(p => p.First.StartTimeUtc + p.First.Duration <= p.Second.StartTimeUtc));
+
+        string[] texts = [Topic, .. model.Outputs];
+        bool lengthsMatch = stages.Select((s, i) =>
+            (int?)s.GetTagItem("input.length") == texts[i].Length && (int?)s.GetTagItem("output.length") == texts[i + 1].Length).All(ok => ok);
+        Expect("each stage's input.length and output.length match the text it received and produced", lengthsMatch);
+
+        bool noText = spans.SelectMany(a => a.TagObjects).All(t => t.Value is int)
+                      && !spans.SelectMany(a => a.TagObjects).Any(t => texts.Any(x => t.Value?.ToString() == x));
+        Expect("no span carries text: every tag is a length", noText && output == model.Outputs[^1]);
+
+        Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
+        return s_passed == s_total ? 0 : 1;
     }
-    Console.WriteLine();
+
+    /// <summary>Runs code under the real TracerProvider and returns the spans an exporter received.</summary>
+    private static async Task<List<Activity>> TraceAsync(string source, Func<Task> body)
+    {
+        List<Activity> exported = [];
+        using (TracerProvider provider = Sdk.CreateTracerProviderBuilder()
+                   .AddSource(source)
+                   .AddProcessor(new SimpleActivityExportProcessor(new ListExporter(exported)))
+                   .Build()!)
+        {
+            await body();
+            provider.ForceFlush();
+        }
+        return exported;
+    }
+
+    private static void Expect(string name, bool ok)
+    {
+        s_total++;
+        if (ok) s_passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+    }
 }
 
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
+/// <summary>Keeps every exported span.</summary>
+internal sealed class ListExporter(List<Activity> sink) : BaseExporter<Activity>
 {
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-    return provider switch
+    public override ExportResult Export(in Batch<Activity> batch)
     {
-        "azure" => new AzureOpenAIClient(new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing")), new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+        foreach (Activity a in batch) sink.Add(a);
+        return ExportResult.Success;
+    }
+}
+
+/// <summary>A scripted model: each stage returns a fixed text, so lengths are known.</summary>
+internal sealed class StageModel : IChatClient
+{
+    private static readonly string[] Replies =
+    [
+        "- Client dinners are client_meals\n- The limit is per person\n- Receipts are required",
+        "Client dinners count as client meals, with a per-person limit and a receipt for every claim.",
+        "Client dinners are client meals: a per-person limit, and every claim needs a receipt.",
+    ];
+
+    public List<string> Outputs { get; } = [];
+
+    public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        string reply = Replies[Outputs.Count % Replies.Length];
+        Outputs.Add(reply);
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply)));
+    }
+
+    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+    public void Dispose() { }
 }

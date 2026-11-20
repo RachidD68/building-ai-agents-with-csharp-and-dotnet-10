@@ -1,253 +1,266 @@
 // ============================================================================
-// Exercise 01 — Metrics Collector (Beginner)
-// Extends Ch19.OpenTelemetryAgent with ONE new metric: agent.cache.hit_rate,
-// a Counter<long> tagged with cache.name, emitted from a simulated response
-// cache inside the agent pipeline. 100 requests over a small question set
-// drive the hits and misses; the OpenTelemetry console exporter shows the
-// metric at shutdown. Per the hint: increment on hit, don't increment on
-// miss, and filter by the cache.name tag in the exporter output.
-// FULLY STANDALONE.
+// Exercise 01: Metrics Collector (basic)
+// ----------------------------------------------------------------------------
+// A response cache inside the agent pipeline, measured with three instruments
+// on one meter, all tagged with cache.name and nothing else:
+//   agent.cache.hits        Counter<long>
+//   agent.cache.misses      Counter<long>
+//   agent.cache.hit_rate    ObservableGauge<double>, hits / (hits + misses)
+// cache.name comes from a fixed list of three, so the series count is fixed.
+//
+// The first edition's solution exported one counter named hit_rate that
+// counted hits only: with no miss count next to it, no dashboard can turn it
+// into a rate. The self-test reproduces that before checking the fix.
+//
+//   dotnet run                    100 requests (10 distinct) to the configured model
+//   dotnet run -- --self-test     offline: echo model, the real MeterProvider
 // ============================================================================
 
-using System.ClientModel;
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry;
 using OpenTelemetry.Metrics;
 
-// Same meter name as src/Ch19.Observability's AgentMetrics — the new counter
-// extends that meter family; the exercise stays standalone by creating the
-// Meter locally instead of referencing the src project.
-const string MeterName = "AgenticAI.Agent";
-const string CacheName = "response-cache";
-const int TotalRequests = 100;
+if (args.Contains("--self-test")) return await SelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-// Metrics pipeline mirrors Ch19.OpenTelemetryAgent's zero-config default:
-// subscribe to our meter, export to the console. (The src project also adds
-// HTTP-client instrumentation; omitted here so the cache metric is easy to
-// spot in the exporter dump.)
-builder.Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics
-        .AddMeter(MeterName)
-        .AddConsoleExporter());
-
+builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter(CacheMetrics.MeterName).AddConsoleExporter());
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
+await host.StartAsync();   // installs the MeterListener; without it the counters record into the void
 
-// Start the host so the OpenTelemetry hosted service installs its
-// MeterListener. Without this, the counter records into the void and the
-// exporter stays silent — the empty-dashboard failure the observability chapter warns about.
-await host.StartAsync();
+Console.WriteLine("=== Metrics collector: agent.cache.* ===\n");
+using CacheMetrics metrics = new();
+ResponseCache cache = new(host.Services.GetRequiredService<IChatClient>(), metrics, "response");
+int requests = await Workload.RunAsync(cache, total: 100);
+Console.WriteLine($"{requests} requests: {cache.Hits} hits, {cache.Misses} misses, hit rate {cache.HitRate:P0}");
+Console.WriteLine("The console exporter prints agent.cache.hits, .misses and .hit_rate below.\n");
+await host.StopAsync();   // flushes the last export
+return 0;
 
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
-
-Console.WriteLine("=== Exercise: Metrics Collector (agent.cache.hit_rate) ===\n");
-
-using CancellationTokenSource cts = new();
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-// One new metric — exactly one, as the brief asks: a Counter<long> named
-// agent.cache.hit_rate, tagged with cache.name. Incremented on hit only.
-using Meter meter = new(MeterName, "1.0.0");
-Counter<long> cacheHitCounter = meter.CreateCounter<long>(
-    "agent.cache.hit_rate",
-    unit: "hits",
-    description: "Response-cache hits (incremented on hit only), tagged with cache.name");
-
-// The simulated cache lives inside the agent pipeline: a DelegatingChatClient
-// keyed on the user prompt. Only unique prompts reach the model; repeats are
-// served from memory and count as cache hits.
-ResponseCachingChatClient cachedClient = new(chatClient, cacheHitCounter, CacheName);
-
-ChatClientAgent agent = new(cachedClient,
-    instructions: "You are a helpful assistant. Be concise (2-3 sentences max).",
-    name: "CachedAgent");
-
-// 10 unique questions x 10 rounds = 100 requests. The first pass over the set
-// misses (those prompts hit the model); the remaining 90 requests hit the
-// cache, so the final hit rate lands at 90%.
-string[] questions =
-[
-    "What is C#?",
-    "Explain async/await in one sentence.",
-    "What is dependency injection?",
-    "Name 3 SOLID principles.",
-    "What is the difference between struct and class?",
-    "What is LINQ?",
-    "What does the using statement do?",
-    "What is a record type in C#?",
-    "What is garbage collection?",
-    "What is the purpose of NuGet?"
-];
-
-Console.WriteLine($"Running {TotalRequests} requests over {questions.Length} unique questions...\n");
-
-try
+/// <summary>The three instruments, and the one bounded tag they share.</summary>
+public sealed class CacheMetrics : IDisposable
 {
-    for (int i = 0; i < TotalRequests; i++)
+    public const string MeterName = "Contoso.Assistant.Cache";
+    public static readonly string[] CacheNames = ["response", "policy", "embedding"];
+
+    private readonly Meter _meter = new(MeterName);
+    private readonly Counter<long> _hits, _misses;
+    private readonly List<ResponseCache> _caches = [];
+
+    public CacheMetrics()
     {
-        string prompt = questions[i % questions.Length];
-
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        await agent.RunAsync(prompt, session, cancellationToken: cts.Token);
-
-        if ((i + 1) % 25 == 0)
-        {
-            Console.WriteLine($"  ... {i + 1}/{TotalRequests} requests processed " +
-                              $"(hits so far: {cachedClient.Hits})");
-        }
-    }
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("\n[Cancelled]");
-}
-
-// ---------------------------------------------------------------
-// Local summary — the metric itself is flushed by the exporter below.
-// ---------------------------------------------------------------
-double hitRate = cachedClient.Hits + cachedClient.Misses == 0
-    ? 0.0
-    : (double)cachedClient.Hits / (cachedClient.Hits + cachedClient.Misses);
-
-Console.WriteLine();
-Console.WriteLine(new string('=', 60));
-Console.WriteLine("=== Cache Summary ===\n");
-Console.WriteLine($"  Total requests : {cachedClient.Hits + cachedClient.Misses}");
-Console.WriteLine($"  Unique prompts : {cachedClient.UniqueEntries}");
-Console.WriteLine($"  Cache hits     : {cachedClient.Hits}");
-Console.WriteLine($"  Cache misses   : {cachedClient.Misses}");
-Console.WriteLine($"  Hit rate       : {hitRate:P1}");
-Console.WriteLine();
-Console.WriteLine("Stopping the host — the console exporter flushes agent.cache.hit_rate");
-Console.WriteLine($"below. Filter for the cache.name = \"{CacheName}\" tag on the metric points.");
-
-// Stop the host so the meter provider flushes its final batch to the console
-// exporter before the process exits.
-await host.StopAsync();
-
-Console.WriteLine("\n=== Exercise complete! ===");
-
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing")), new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
-}
-
-// ---------------------------------------------------------------
-// Simulated response cache (the agent pipeline's cache layer)
-// ---------------------------------------------------------------
-
-/// <summary>
-/// A simulated response cache inside the agent pipeline. Repeated prompts are
-/// served from memory (a hit — no model call); unique prompts forward to the
-/// inner client (a miss) and their responses are stored. Every hit increments
-/// the agent.cache.hit_rate counter with a cache.name tag; misses do not
-/// increment (the hint's contract), so the exporter shows pure hit counts.
-/// </summary>
-sealed class ResponseCachingChatClient : DelegatingChatClient
-{
-    private readonly Counter<long> _hitCounter;
-    private readonly string _cacheName;
-    private readonly Dictionary<string, string> _cache = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>Number of requests served from the cache.</summary>
-    public int Hits { get; private set; }
-
-    /// <summary>Number of requests forwarded to the model.</summary>
-    public int Misses { get; private set; }
-
-    /// <summary>Number of distinct prompts stored in the cache.</summary>
-    public int UniqueEntries => _cache.Count;
-
-    /// <summary>
-    /// Initializes a new <see cref="ResponseCachingChatClient"/>.
-    /// </summary>
-    /// <param name="innerClient">The next client in the pipeline.</param>
-    /// <param name="hitCounter">The agent.cache.hit_rate counter (incremented on hit only).</param>
-    /// <param name="cacheName">Value for the cache.name tag on every measurement.</param>
-    public ResponseCachingChatClient(
-        IChatClient innerClient, Counter<long> hitCounter, string cacheName)
-        : base(innerClient)
-    {
-        _hitCounter = hitCounter;
-        _cacheName = cacheName;
+        _hits = _meter.CreateCounter<long>("agent.cache.hits", "{request}", "Requests served from the cache");
+        _misses = _meter.CreateCounter<long>("agent.cache.misses", "{request}", "Requests sent to the model");
+        _meter.CreateObservableGauge("agent.cache.hit_rate", ObserveRates, "1", "Hits / (hits + misses)");
     }
 
-    /// <inheritdoc/>
+    public void Register(ResponseCache cache)
+    {
+        lock (_caches) _caches.Add(cache);
+    }
+
+    public void Hit(string cacheName) => _hits.Add(1, new KeyValuePair<string, object?>("cache.name", cacheName));
+
+    public void Miss(string cacheName) => _misses.Add(1, new KeyValuePair<string, object?>("cache.name", cacheName));
+
+    private IEnumerable<Measurement<double>> ObserveRates()
+    {
+        lock (_caches)
+            return [.. _caches.Where(c => c.Hits + c.Misses > 0)
+                .Select(c => new Measurement<double>(c.HitRate, new KeyValuePair<string, object?>("cache.name", c.Name)))];
+    }
+
+    public void Dispose() => _meter.Dispose();
+}
+
+/// <summary>A response cache keyed on the last user message, inside the agent pipeline.</summary>
+public sealed class ResponseCache : DelegatingChatClient
+{
+    private readonly CacheMetrics _metrics;
+    private readonly Dictionary<string, ChatResponse> _entries = new(StringComparer.OrdinalIgnoreCase);
+    private int _hits, _misses;
+
+    public ResponseCache(IChatClient inner, CacheMetrics metrics, string name) : base(inner)
+    {
+        if (!CacheMetrics.CacheNames.Contains(name))
+            throw new ArgumentException($"cache.name must be one of {string.Join(", ", CacheMetrics.CacheNames)}", nameof(name));
+        (_metrics, Name) = (metrics, name);
+        metrics.Register(this);
+    }
+
+    public string Name { get; }
+    public int Hits => _hits;
+    public int Misses => _misses;
+    public double HitRate => _hits + _misses == 0 ? 0 : (double)_hits / (_hits + _misses);
+
     public override async Task<ChatResponse> GetResponseAsync(
-        IEnumerable<ChatMessage> messages,
-        ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
-        string key = CacheKey(messages);
-        if (_cache.TryGetValue(key, out string? cachedText))
+        string key = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? "";
+        lock (_entries)
         {
-            Hits++;
-            // Increment on hit; never on miss.
-            _hitCounter.Add(1, new KeyValuePair<string, object?>("cache.name", _cacheName));
-            return new ChatResponse(new ChatMessage(ChatRole.Assistant, cachedText));
+            if (_entries.TryGetValue(key, out ChatResponse? cached))
+            {
+                Interlocked.Increment(ref _hits);
+                _metrics.Hit(Name);
+                return cached;
+            }
         }
-
-        Misses++;
+        Interlocked.Increment(ref _misses);
+        _metrics.Miss(Name);
         ChatResponse response = await base.GetResponseAsync(messages, options, cancellationToken);
-        string text = response.Text ?? string.Empty;
-        _cache[key] = text;
-        Console.WriteLine($"  [cache miss] \"{Truncate(key, 44)}\" -> model ({text.Length} chars)");
+        lock (_entries) _entries[key] = response;
         return response;
     }
 
-    /// <inheritdoc/>
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-        IEnumerable<ChatMessage> messages,
-        ChatOptions? options = null,
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        string key = CacheKey(messages);
-        if (_cache.TryGetValue(key, out string? cachedText))
+        ChatResponse response = await GetResponseAsync(messages, options, cancellationToken);
+        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates()) yield return update;
+    }
+}
+
+/// <summary>100 requests over 10 distinct questions, one agent run each.</summary>
+public static class Workload
+{
+    public static readonly string[] Questions =
+    [
+        "What is C#?", "Explain async/await in one sentence.", "What is dependency injection?",
+        "Name 3 SOLID principles.", "What is the difference between struct and class?", "What is LINQ?",
+        "What does the using statement do?", "What is a record type in C#?", "What is garbage collection?",
+        "What is the purpose of NuGet?",
+    ];
+
+    public static async Task<int> RunAsync(IChatClient cache, int total)
+    {
+        ChatClientAgent agent = new(cache, instructions: "Answer in one sentence.", name: "CachedAgent");
+        for (int i = 0; i < total; i++)
+            await agent.RunAsync(Questions[i % Questions.Length], await agent.CreateSessionAsync());
+        return total;
+    }
+}
+
+/// <summary>The offline check: dotnet run -- --self-test.</summary>
+internal static class SelfTest
+{
+    private static int s_passed, s_total;
+
+    public static async Task<int> RunAsync()
+    {
+        Console.WriteLine("=== Metrics collector: self-test (offline) ===\n");
+
+        // The first edition's instrument: a counter called hit_rate, incremented on hits only.
+        PointCopy v1 = new();
+        using (MeterProvider provider = Listen("V1.Cache", v1))
+        using (Meter meter = new("V1.Cache"))
         {
-            Hits++;
-            _hitCounter.Add(1, new KeyValuePair<string, object?>("cache.name", _cacheName));
-            yield return new ChatResponseUpdate(ChatRole.Assistant, cachedText);
-            yield break;
+            Counter<long> hitsOnly = meter.CreateCounter<long>("agent.cache.hit_rate");
+            for (int i = 0; i < 100; i++)
+                if (i >= Workload.Questions.Length) hitsOnly.Add(1, new KeyValuePair<string, object?>("cache.name", "response-cache"));
+            provider.ForceFlush();
+        }
+        Expect($"DEFECT REPRODUCED: the first edition exports agent.cache.hit_rate = {v1.Points.Sum(p => p.Value)} " +
+               "(a count of hits) and no miss count, so no rate can be computed",
+            v1.Points.All(p => p.Name == "agent.cache.hit_rate") && v1.Points.Sum(p => p.Value) == 90);
+
+        PointCopy copy = new();
+        List<(string Name, Dictionary<string, string> Tags, double Value)> points;
+        int requests;
+        using (MeterProvider provider = Listen(CacheMetrics.MeterName, copy))
+        using (CacheMetrics metrics = new())
+        {
+            ResponseCache response = new(new EchoModel(), metrics, "response");
+            ResponseCache policy = new(new EchoModel(), metrics, "policy");
+            requests = await Workload.RunAsync(response, 100);
+            await Workload.RunAsync(policy, 20);
+            provider.ForceFlush();
+            points = [.. copy.Points];   // before disposal: the shutdown export has no gauge callback left
         }
 
-        Misses++;
-        StringBuilder buffer = new();
-        await foreach (ChatResponseUpdate update in base.GetStreamingResponseAsync(
-            messages, options, cancellationToken))
-        {
-            if (update.Text is { Length: > 0 } chunk)
-            {
-                buffer.Append(chunk);
-            }
-            yield return update;
-        }
+        double Value(string name, string cache) =>
+            points.Where(p => p.Name == name && p.Tags["cache.name"] == cache).Sum(p => p.Value);
 
-        _cache[key] = buffer.ToString();
+        foreach (var p in points.OrderBy(p => p.Name).ThenBy(p => p.Tags["cache.name"]))
+            Console.WriteLine($"    {p.Name,-20} cache.name={p.Tags["cache.name"],-9} {p.Value:0.##}");
+
+        Expect($"{requests} requests on the response cache export hits + misses = 100 " +
+               $"({Value("agent.cache.hits", "response")} + {Value("agent.cache.misses", "response")})",
+            Value("agent.cache.hits", "response") + Value("agent.cache.misses", "response") == 100
+            && Value("agent.cache.misses", "response") == Workload.Questions.Length);
+        Expect($"agent.cache.hit_rate for the response cache is {Value("agent.cache.hit_rate", "response"):0.##}, " +
+               "hits / (hits + misses)",
+            Math.Abs(Value("agent.cache.hit_rate", "response") - 0.9) < 1e-9);
+        Expect("the only tag on every point is cache.name",
+            points.Count > 0 && points.All(p => p.Tags.Keys.SequenceEqual(["cache.name"])));
+        Expect($"cache.name takes at most 3 values (here: {string.Join(", ", points.Select(p => p.Tags["cache.name"]).Distinct())})",
+            points.Select(p => p.Tags["cache.name"]).Distinct().Count() <= 3);
+
+        bool rejected = false;
+        try { using CacheMetrics m = new(); _ = new ResponseCache(new EchoModel(), m, "conv-1234"); }
+        catch (ArgumentException) { rejected = true; }
+        Expect("a cache.name outside the list (an id, say) is refused at construction", rejected);
+
+        Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
+        return s_passed == s_total ? 0 : 1;
     }
 
-    private static string CacheKey(IEnumerable<ChatMessage> messages)
-        => messages.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
+    /// <summary>The real MeterProvider, reading into memory instead of a backend.</summary>
+    private static MeterProvider Listen(string meterName, PointCopy copy) =>
+        Sdk.CreateMeterProviderBuilder()
+            .AddMeter(meterName)
+            .AddReader(new BaseExportingMetricReader(copy) { TemporalityPreference = MetricReaderTemporalityPreference.Cumulative })
+            .Build()!;
 
-    private static string Truncate(string value, int max)
-        => value.Length <= max ? value : value[..(max - 3)] + "...";
+    private static void Expect(string name, bool ok)
+    {
+        s_total++;
+        if (ok) s_passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+    }
+}
+
+/// <summary>An exporter that copies each point: name, tags, value.</summary>
+internal sealed class PointCopy : BaseExporter<Metric>
+{
+    public List<(string Name, Dictionary<string, string> Tags, double Value)> Points { get; } = [];
+
+    public override ExportResult Export(in Batch<Metric> batch)
+    {
+        Points.Clear();
+        foreach (Metric metric in batch)
+        {
+            foreach (ref readonly MetricPoint point in metric.GetMetricPoints())
+            {
+                Dictionary<string, string> tags = [];
+                foreach (KeyValuePair<string, object?> t in point.Tags) tags[t.Key] = t.Value?.ToString() ?? "";
+                double value = metric.MetricType == MetricType.DoubleGauge ? point.GetGaugeLastValueDouble() : point.GetSumLong();
+                Points.Add((metric.Name, tags, value));
+            }
+        }
+        return ExportResult.Success;
+    }
+}
+
+/// <summary>A model stand-in: answers at once, echoing the question.</summary>
+internal sealed class EchoModel : IChatClient
+{
+    public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Answer to: " + messages.Last().Text)));
+
+    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+    public void Dispose() { }
 }

@@ -2,26 +2,30 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <RootNamespace>Ch19.Observability</RootNamespace>
+    <!-- No NoWarn needed: UseOpenTelemetry (chat client and agent), OpenTelemetryAgent.EnableSensitiveData,
+         OpenTelemetryChatClient.EnableSensitiveData and WorkflowBuilder.WithOpenTelemetry carry no
+         [Experimental] attribute at Microsoft.Agents.AI 1.28.0 / Microsoft.Extensions.AI 10.11.0.
+         OpenTelemetryAgent.DefaultSourceName is MAAI001, so the source name is read from a run instead. -->
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Agents.AI"      />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI"   />
-    <PackageReference Include="Microsoft.Extensions.AI"      />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI"   />
-    <PackageReference Include="Microsoft.Extensions.Hosting"     />
-    <PackageReference Include="OpenTelemetry"    />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting"     />
-    <PackageReference Include="OpenTelemetry.Exporter.Console"     />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http"     />
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- Exporter wiring (console, or OTLP for the Aspire dashboard) shared with the hosting chapter. -->
+    <ProjectReference Include="../../Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj" />
   </ItemGroup>
-
 
   <ItemGroup>
     <Content Include="appsettings.json">

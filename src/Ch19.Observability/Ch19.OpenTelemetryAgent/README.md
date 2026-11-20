@@ -1,48 +1,40 @@
-# Ch19.OpenTelemetryAgent — Observability and Debugging
+# Ch19.OpenTelemetryAgent
 
-This project demonstrates the three pillars of observability applied to AI agents:
-logging, metrics, and distributed tracing.
+The Contoso reimbursement assistant with OpenTelemetry on both layers, and an offline
+self-test that asserts what Microsoft Agent Framework 1.28 and Microsoft.Extensions.AI 10.11
+actually emit.
 
-## What It Shows
+## What it wires
 
-### 1. Structured Logging
-- `ILogger` integration for agent request/response logging
-- Structured log properties for filtering and analysis
+| Call | Emits |
+|---|---|
+| `ChatClientBuilder.UseOpenTelemetry(...)` | `chat <model>` spans, `gen_ai.client.token.usage` and `gen_ai.client.operation.duration` |
+| `AIAgentBuilder.UseOpenTelemetry(...)` | `invoke_agent <name>(<id>)` and `execute_tool <tool>` spans |
+| `WorkflowBuilder.WithOpenTelemetry()` | `workflow.build` and `invoke_workflow <name>` spans |
+| `ContosoTelemetry` | `contoso.request` span; `contoso.assistant.*` metrics with bounded tags only |
+| `StatusDescriptionRedactor` | drops exception messages from failed spans before any exporter |
 
-### 2. Custom Metrics
-- **agent.tokens.input** — Input tokens consumed per request
-- **agent.tokens.output** — Output tokens generated per request
-- **agent.requests.total** — Total agent request count
-- **agent.request.duration** — Request latency histogram (ms)
-- **agent.tools.invocations** — Tool call counts
-- **agent.errors.total** — Error counts by type
+Sources to subscribe to (`ContosoTelemetry.Sources`): `Contoso.Assistant`,
+`Experimental.Microsoft.Agents.AI`, `Experimental.Microsoft.Extensions.AI`,
+`Microsoft.Agents.AI.Workflows`. The `Experimental.` prefix means these names may change:
+re-run the self-test after every package upgrade.
 
-### 3. Distributed Tracing
-- Custom `Activity` spans for each agent interaction
-- Span attributes: agent name, prompt, token counts, duration
-- Full trace context propagation across HTTP boundaries
+`EnableSensitiveData` is set to `false` in code on both layers. Left unset, it follows the
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` environment variable.
+
+Exporters come from the hosting chapter's `Ch17.AspireOrchestration.ServiceDefaults` (console,
+or OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, as the Aspire dashboard does). Azure Monitor
+is used when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set; that path is compiled but was not
+run here.
 
 ## Running
 
 ```bash
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
-dotnet run
+dotnet run                  # one question to the configured model (Ollama by default), then the trace tree
+dotnet run -- --self-test   # offline: scripted model, fake provider, in-memory exporters, RESULT n/n
 ```
 
-The console exporter prints traces and metrics to stdout. In production,
-replace the console exporter with Jaeger, Zipkin, Azure Monitor, or any
-OTLP-compatible backend.
-
-## Key Classes
-
-| Class            | Purpose                                          |
-|------------------|--------------------------------------------------|
-| `AgentMetrics`   | Custom metrics and activity source for tracing   |
-| `TraceFormatter` | Human-readable formatting of trace spans         |
-
-## Production Exporters
-
-Replace `AddConsoleExporter()` with:
-- `AddOtlpExporter()` for OTLP (Jaeger, Grafana Tempo)
-- `AddZipkinExporter()` for Zipkin
-- `AddAzureMonitorTraceExporter()` for Azure Monitor
+The self-test covers the span names and attributes, the sources to subscribe to, sensitive data
+(property and environment variable), cardinality (metric tags and span names), workflow spans
+(`gen_ai.workflow.name`, not `workflow.name`) and retry owners (attempts multiply when the HTTP
+pipeline, the SDK and the application all retry).
