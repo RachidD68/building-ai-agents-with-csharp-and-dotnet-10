@@ -100,7 +100,7 @@ Console.WriteLine($"  {response.Text?.Trim()}");
 Console.WriteLine();
 Console.WriteLine(outcome == LoopOutcome.Stopped
     ? $"Outcome: STOPPED by the evaluators after iteration {requirements.LastIteration}."
-    : $"Outcome: CAP REACHED ({loopOptions.MaxIterations} iterations); no evaluator accepted the last draft.");
+    : $"Outcome: CAP REACHED (MaxIterations = {loopOptions.MaxIterations}); no evaluator accepted the last draft.");
 Console.WriteLine();
 Console.WriteLine("=== Harness loop demo complete! ===");
 return RecordingLoopEvaluator.ExitCode(outcome);

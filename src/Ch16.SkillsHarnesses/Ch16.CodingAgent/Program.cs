@@ -39,7 +39,7 @@ Console.WriteLine();
 // A throwaway copy, so a bad write costs nothing.
 ScratchScope scope = new(Path.Combine(Path.GetTempPath(), "ch16-scratch-" + Guid.NewGuid().ToString("N")[..8]));
 SampleRepo.Create(scope.Root);
-Console.WriteLine($"Scratch repo: {scope.Root}");
+Console.WriteLine($"Scratch repo: <temp>/{Path.GetFileName(scope.Root)}");   // no user path in the transcript
 Console.WriteLine();
 
 ChatClientAgent agent = CodingTools.CreateAgent(chatClient, scope);
