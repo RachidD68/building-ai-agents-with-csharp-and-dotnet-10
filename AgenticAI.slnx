@@ -148,6 +148,10 @@
     <Project Path="src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj" />
     <Project Path="src/Ch22.CostCapacity/Ch22.ModelRouting/Ch22.ModelRouting.csproj" />
   </Folder>
+  <Folder Name="/src/Ch24.Operations/">
+    <Project Path="src/Ch24.Operations/Ch24.KillSwitch/Ch24.KillSwitch.csproj" />
+    <Project Path="src/Ch24.Operations/Ch24.RestoreDrill/Ch24.RestoreDrill.csproj" />
+  </Folder>
   <Folder Name="/src/AppA.CSharpEssentials/">
     <Project Path="src/AppA.CSharpEssentials/AppA.ConsoleApp/AppA.ConsoleApp.csproj" />
     <Project Path="src/AppA.CSharpEssentials/AppA.MinimalApi/AppA.MinimalApi.csproj" />
