@@ -1,4 +1,4 @@
-﻿// ============================================================================
+﻿﻿// ============================================================================
 // The Model Context Protocol (MCP Consumer)
 // Connects to an MCP server, discovers its tools, and feeds them to a
 // ChatClientAgent. The agent code is identical to the tools chapter; the only
@@ -54,11 +54,20 @@ if (httpIndex >= 0 && httpIndex + 1 < args.Length)
     else
     {
         // Before the token leaves: the endpoint is on the allow-list, and its public
-        // metadata names that same endpoint. Either check failing throws here.
+        // metadata names that same endpoint. Either check failing ends the run here.
         McpDestinationGuard guard = new(
             builder.Configuration.GetSection("McpConsumer:AllowedServers").Get<Uri[]>() ?? []);
         using HttpClient metadataClient = new();
-        options = await guard.CreateCheckedTransportOptionsAsync(metadataClient, endpoint, token, cts.Token);
+        try
+        {
+            options = await guard.CreateCheckedTransportOptionsAsync(metadataClient, endpoint, token, cts.Token);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or System.Text.Json.JsonException)
+        {
+            // Refused (or the metadata could not be read): no request has carried the token.
+            Console.Error.WriteLine($"Refused: {ex.Message} The token was not sent.");
+            return 3;
+        }
     }
     Console.WriteLine($"Connecting over streamable HTTP to: {endpoint}");
     transport = new HttpClientTransport(options);
