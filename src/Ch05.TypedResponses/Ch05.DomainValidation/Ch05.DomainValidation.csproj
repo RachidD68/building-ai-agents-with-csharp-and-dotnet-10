@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shape, then meaning: an expense claim extracted from free text is checked by
+       the schema (it deserializes) and then by the domain rules (it makes sense).
+       Every result is an explicit state: Valid, Invalid, Missing, Refused,
+       Truncated or Unreadable. Nothing is executed; the claim is only data.
+       Offline proof: the self-test mode of Program.cs. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GA-only provider switch: Ollama by default. -->
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- TryRunStructuredAsync<T>, Result<T> and the fake chat client, used as they are. -->
+    <ProjectReference Include="../Ch05.RobustExtraction/Ch05.RobustExtraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

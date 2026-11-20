@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ch05.RobustExtraction;
 
@@ -49,8 +51,8 @@ public static class InvoiceValidation
         }
     }
 
-    /// <summary>Offline check (JSON parsing only, no LLM): dotnet run -- --self-test</summary>
-    public static int SelfTest()
+    /// <summary>Offline check (no LLM: canned JSON and a fake chat client): dotnet run -- --self-test</summary>
+    public static async Task<int> SelfTestAsync()
     {
         Console.WriteLine("=== Robust Extraction — self-test (offline) ===\n");
 
@@ -133,6 +135,42 @@ public static class InvoiceValidation
         InvoiceExtraction overconfident = valid! with { SelfReportedConfidence = 0.95, Vendor = "", AmountDue = 0, Currency = "" };
         Check("0.95 confidence does not clear failed invariants",
             Validate(overconfident).Count() == 3);
+
+        // TryRunStructuredAsync over a fake chat client: canned bad replies, no model.
+        Console.WriteLine();
+        const string Good = """{ "vendor": "Northwind", "invoiceNumber": "INV-1", "amountDue": 12.50, "currency": "USD", "priority": "Standard", "lineItems": [], "confidence": 0.8 }""";
+        async Task<(Result<InvoiceExtraction> Result, int Calls)> Run(params (string, ChatFinishReason)[] replies)
+        {
+            CannedChatClient client = new(replies);
+            ChatClientAgent agent = new(client, instructions: "Extract the invoice.");
+            Result<InvoiceExtraction> result = await agent.TryRunStructuredAsync<InvoiceExtraction>(
+                "Extract this invoice.", JsonOptions, NullLogger.Instance);
+            return (result, client.Calls);
+        }
+
+        var proseThenGood = await Run(CannedChatClient.Stop("Here is the invoice you asked for."), CannedChatClient.Stop(Good));
+        Check("prose, then valid JSON -> Success after one retry (2 calls)",
+            proseThenGood is { Result: Success<InvoiceExtraction> { Value.AmountDue: 12.50m }, Calls: 2 });
+
+        var proseTwice = await Run(CannedChatClient.Stop("Sorry, no JSON today."));
+        Check("prose twice -> Failure, raw text of the failed reply kept, 2 calls (no third call)",
+            proseTwice is { Result: Failure<InvoiceExtraction> { RawResponse: "Sorry, no JSON today." }, Calls: 2 });
+
+        var emptyTwice = await Run(CannedChatClient.Stop(""));
+        Check("empty reply twice -> Failure (InvalidOperationException caught), not a crash",
+            emptyTwice.Result is Failure<InvoiceExtraction> f && f.Messages[0].Contains("InvalidOperationException"));
+
+        var nullJson = await Run(CannedChatClient.Stop("null"));
+        Check("JSON null twice -> Failure, never a null Success",
+            nullJson is { Result: Failure<InvoiceExtraction>, Calls: 2 });
+
+        var truncated = await Run(("""{ "vendor": "Northw""", ChatFinishReason.Length));
+        Check("cut off at the output limit -> Failure with FinishReason length, no retry (1 call)",
+            truncated is { Result: Failure<InvoiceExtraction> { FinishReason: var lr }, Calls: 1 } && lr == ChatFinishReason.Length);
+
+        var filtered = await Run(("", ChatFinishReason.ContentFilter));
+        Check("content filter -> Failure with FinishReason content_filter, no retry (1 call)",
+            filtered is { Result: Failure<InvoiceExtraction> { FinishReason: var cr }, Calls: 1 } && cr == ChatFinishReason.ContentFilter);
 
         Console.WriteLine($"RESULT {passed}/{total}");
         return passed == total ? 0 : 1;

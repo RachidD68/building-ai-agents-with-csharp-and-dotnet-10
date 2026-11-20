@@ -1,56 +1,53 @@
 // ============================================================================
-// Exercise 01 — Recipe Extractor (Basic)
+// Exercise 01 — Recipe Extractor (Basic, solution)
 // A typed agent that extracts a Recipe record from pasted-in recipe text:
 // title, ingredients as a NESTED list of Ingredient records (name/quantity/
 // unit), steps as a list of strings, and total time in MINUTES as an int.
 // The nested list shape is exactly Ch05.TypedResponses' TaskList/TaskItem.
-// Every property carries a [Description] schema hint — they survive into the
-// schema whether or not the project generates a documentation file. Failures
-// use the chapter's recovery pattern: catch JsonException, retry ONCE with a
-// stricter prompt on a fresh session, never loop. FULLY STANDALONE.
+// Every property carries a [Description] schema hint. Every ingredient has a
+// unit or an explicit null: Unit is [JsonRequired] and nullable. Failures use
+// the chapter's TryRunStructuredAsync<T>: one stricter retry, never a loop.
+//
+//   dotnet run                    three recipes through the model
+//   dotnet run -- --self-test     offline checks, fake chat client, RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
+using Ch05.RobustExtraction;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+JsonSerializerOptions jsonOptions = new(JsonSerializerOptions.Web);
+const string Instructions = """
+    You are a recipe parser. Extract structured recipe data from the provided text.
+    Return ONLY valid JSON matching the requested schema. Do not include any extra text.
+    totalTimeMinutes is the TOTAL time (prep + cook) in minutes, as an integer.
+    Each ingredient is an object with name, quantity, and unit. Write the quantity
+    as it appears in the text ("500", "3", "half"); set unit to null when the
+    ingredient has none (e.g., "3 avocados"), and always include the unit key.
+    """;
+
+if (args.Contains("--self-test")) return await SelfTestAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
+ILogger logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RecipeExtractor");
 
 Console.WriteLine("=== Exercise: Recipe Extractor ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-JsonSerializerOptions jsonOptions = new()
-{
-    WriteIndented = true,
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-};
-
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: """
-        You are a recipe parser. Extract structured recipe data from the provided text.
-        Return ONLY valid JSON matching the requested schema. Do not include any extra text.
-        totalTimeMinutes is the TOTAL time (prep + cook) in minutes, as an integer.
-        Each ingredient is an object with name, quantity, and unit. Write the quantity
-        as it appears in the text ("500", "3", "half"); use an empty string for a
-        unit when the ingredient has none (e.g., "3 avocados").
-        """,
-    name: "RecipeParser");
+ChatClientAgent agent = new(chatClient, instructions: Instructions, name: "RecipeParser");
 
 string[] sampleRecipes =
 [
@@ -69,129 +66,102 @@ string[] sampleRecipes =
     in a bowl. Mix in half a diced red onion, one chopped tomato, juice of two limes,
     a handful of fresh cilantro chopped, one jalapeno minced, and salt to taste.
     Stir gently and serve with tortilla chips.
+    """,
+    """
+    Pancakes for four, 10 minutes to mix and 20 minutes at the stove. Whisk 250 g
+    flour, 2 eggs, 500 ml milk and a pinch of salt into a smooth batter. Melt a knob
+    of butter in a hot pan, pour in a ladle of batter, and cook each side until golden.
     """
 ];
 
-foreach (string recipeText in sampleRecipes)
+try
 {
-    Console.WriteLine("--- Input Text ---");
-    Console.WriteLine(recipeText.Trim());
-    Console.WriteLine();
-
-    try
+    foreach (string recipeText in sampleRecipes)
     {
-        Recipe? recipe = await ExtractRecipeAsync(recipeText);
+        Console.WriteLine("--- Input Text ---");
+        Console.WriteLine(recipeText.Trim());
+        Console.WriteLine();
 
-        if (recipe is not null)
+        Result<Recipe> result = await agent.TryRunStructuredAsync<Recipe>(
+            $"Extract the recipe from this text:\n\n{recipeText}", jsonOptions, logger, cts.Token);
+
+        switch (result)
         {
-            Console.WriteLine("--- Extracted Recipe ---");
-            Console.WriteLine($"  Title      : {recipe.Title}");
-            Console.WriteLine($"  Total time : {recipe.TotalTimeMinutes} minutes");
+            case Success<Recipe> { Value: Recipe recipe }:
+                Console.WriteLine("--- Extracted Recipe ---");
+                Console.WriteLine($"  Title      : {recipe.Title}");
+                Console.WriteLine($"  Total time : {recipe.TotalTimeMinutes} minutes");
+                Console.WriteLine($"  Ingredients ({recipe.Ingredients.Count}):");
+                foreach (Ingredient ingredient in recipe.Ingredients)
+                {
+                    string amount = ingredient.Unit is null
+                        ? $"{ingredient.Quantity} (no unit)"
+                        : $"{ingredient.Quantity} {ingredient.Unit}";
+                    Console.WriteLine($"    - {ingredient.Name,-20} {amount}");
+                }
+                Console.WriteLine($"  Steps ({recipe.Steps.Count}):");
+                for (int step = 0; step < recipe.Steps.Count; step++)
+                {
+                    Console.WriteLine($"    {step + 1}. {recipe.Steps[step]}");
+                }
+                break;
 
-            Console.WriteLine($"  Ingredients ({recipe.Ingredients.Count}):");
-            foreach (Ingredient ingredient in recipe.Ingredients)
-            {
-                string amount = string.IsNullOrWhiteSpace(ingredient.Unit)
-                    ? ingredient.Quantity
-                    : $"{ingredient.Quantity} {ingredient.Unit}";
-                Console.WriteLine($"    - {ingredient.Name,-20} {amount}");
-            }
-
-            Console.WriteLine($"  Steps ({recipe.Steps.Count}):");
-            int step = 0;
-            foreach (string s in recipe.Steps)
-            {
-                step++;
-                Console.WriteLine($"    {step}. {s}");
-            }
+            case Failure<Recipe> failure:
+                Console.WriteLine($"--- No recipe: {string.Join("; ", failure.Messages)}");
+                break;
         }
+        Console.WriteLine();
     }
-    catch (OperationCanceledException)
-    {
-        Console.WriteLine("\n[Cancelled]");
-        return;
-    }
-
-    Console.WriteLine();
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("\n[Cancelled]");
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
-// Typed call with the chapter's recovery pattern:
-// one attempt, one stricter retry on JsonException, never a loop.
+// Offline checks: canned replies through the chapter's fake chat client.
 // ---------------------------------------------------------------
-async Task<Recipe?> ExtractRecipeAsync(string recipeText)
+async Task<int> SelfTestAsync()
 {
-    string prompt = $"Extract the recipe from this text:\n\n{recipeText}";
-
-    // Attempt 1: the ordinary typed call.
-    try
+    Console.WriteLine("=== Recipe Extractor — self-test (offline) ===\n");
+    int passed = 0, total = 0;
+    async Task<Result<Recipe>> Extract(params string[] replies)
     {
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse<Recipe> response = await agent.RunAsync<Recipe>(
-            prompt, session, jsonOptions, cancellationToken: cts.Token);
-        return response.Result;
+        CannedChatClient client = new([.. replies.Select(CannedChatClient.Stop)]);
+        ChatClientAgent fake = new(client, instructions: Instructions);
+        return await fake.TryRunStructuredAsync<Recipe>("Extract the recipe.", jsonOptions, NullLogger.Instance);
     }
-    catch (JsonException ex)
+    void Check(string name, bool ok)
     {
-        Console.WriteLine($"  [retry] Typed run failed to deserialize ({ex.Message}); retrying once with a stricter prompt.");
+        total++; passed += ok ? 1 : 0;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
 
-    // Attempt 2: one stricter retry, on a fresh session — a fresh session
-    // avoids carrying the malformed exchange forward as context.
-    string stricterPrompt =
-        prompt +
-        "\n\nIMPORTANT: Respond with valid JSON ONLY. No prose, no markdown, no code fences. " +
-        "Every field is required. Use the exact field names from the schema.";
-
-    try
+    string[] canned =
+    [
+        """{"title":"Spaghetti Bolognese","totalTimeMinutes":60,"steps":["Brown the beef."],"ingredients":[{"name":"ground beef","quantity":"500","unit":"g"},{"name":"onion","quantity":"1","unit":null}]}""",
+        """{"title":"Guacamole","totalTimeMinutes":5,"steps":["Mash the avocados."],"ingredients":[{"name":"avocado","quantity":"3","unit":null},{"name":"lime","quantity":"2","unit":null}]}""",
+        """{"title":"Pancakes","totalTimeMinutes":30,"steps":["Whisk the batter."],"ingredients":[{"name":"flour","quantity":"250","unit":"g"},{"name":"milk","quantity":"500","unit":"ml"}]}"""
+    ];
+    foreach (string json in canned)
     {
-        AgentSession retrySession = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse<Recipe> retry = await agent.RunAsync<Recipe>(
-            stricterPrompt, retrySession, jsonOptions, cancellationToken: cts.Token);
-        return retry.Result;
+        Result<Recipe> r = await Extract(json);
+        Check($"{(r as Success<Recipe>)?.Value.Title ?? "?"}: deserializes, nested ingredients, each with a unit or an explicit null",
+            r is Success<Recipe> { Value.Ingredients.Count: 2 });
     }
-    catch (JsonException ex)
-    {
-        Console.WriteLine($"\nJSON deserialization error after one retry: {ex.Message}");
-        Console.WriteLine("The LLM response did not match the expected schema.");
-        Console.WriteLine("This can happen with less capable models. Try a different model or");
-        Console.WriteLine("add more explicit schema instructions to the system prompt.");
-        return null;
-    }
-}
+    Check("an explicit null unit stays null (no empty-string default)",
+        await Extract(canned[1]) is Success<Recipe> { Value.Ingredients: [{ Unit: null }, ..] });
+    string noUnitKey = canned[0].Replace(",\"unit\":null", "");
+    Check("an ingredient without the unit key fails twice -> Failure, not a silent empty unit",
+        await Extract(noUnitKey) is Failure<Recipe>);
+    Check("an ingredient without the unit key, then a full reply -> Success after one retry",
+        await Extract(noUnitKey, canned[0]) is Success<Recipe>);
 
-// ---------------------------------------------------------------
-// Provider factory
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Creates an <see cref="IChatClient"/> from User Secrets configuration.
-/// </summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
 }
 
 // ---------------------------------------------------------------
@@ -234,7 +204,10 @@ sealed record Ingredient
     [JsonPropertyName("quantity")]
     public string Quantity { get; init; } = string.Empty;
 
-    [Description("The unit of measure, e.g. 'g', 'cups', 'cloves'; empty string if none.")]
+    // Required but nullable: the key must be present, and null means "no unit"
+    // ("3 avocados"). A reply that leaves the key out fails to deserialize.
+    [Description("The unit of measure, e.g. 'g', 'cups', 'cloves'; null if the ingredient has none.")]
     [JsonPropertyName("unit")]
-    public string Unit { get; init; } = string.Empty;
+    [JsonRequired]
+    public string? Unit { get; init; }
 }

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ex03.InvoiceValidator": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

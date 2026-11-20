@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ch05.DomainValidation": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

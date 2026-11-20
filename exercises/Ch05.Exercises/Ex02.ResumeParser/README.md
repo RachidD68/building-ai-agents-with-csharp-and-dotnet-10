@@ -8,6 +8,8 @@ Extract a `Resume` record from a pasted resume text: candidate name, contact inf
 
 - `DateTime?` in a record deserializes from ISO-8601 strings.
 - Under strict mode that nullable doesn't mean "the key may be absent" — it means the key is always present and may be null (a `["string","null"]` union in the schema), so instruct the model to set `endDate` to `null` for ongoing jobs rather than omitting it.
+- Put `[JsonRequired]` on `EndDate` so your own parser enforces the same rule: a reply that omits the key, or writes `"Present"` or `"June 2021"`, fails to deserialize.
+- Use the chapter's `TryRunStructuredAsync<T>()`: a malformed date then ends as a `Failure`, never as a default date.
 - Run on a real-ish resume and examine which fields the model gets wrong.
 
 ## Expected Outcome
@@ -32,4 +34,12 @@ Extract a `Resume` record from a pasted resume text: candidate name, contact inf
 - Nested records: `Resume` / `WorkExperience` / `Education`
 - `DateTime?` for optional dates — `null` end date means an ongoing job
 - `[Description]` schema hints on every property
-- The chapter's `JsonException` retry-once pattern
+- `[JsonRequired]` on a nullable: the key is present, the value may be null
+- `TryRunStructuredAsync<T>()`: one retry, then an explicit `Failure`
+
+## Run
+
+```bash
+dotnet run
+dotnet run -- --self-test   # offline: canned replies, fake chat client, RESULT n/n
+```

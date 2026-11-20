@@ -82,6 +82,11 @@ public sealed record Success<T>(T Value) : Result<T>;
 
 /// <summary>
 /// A failed extraction. <paramref name="Messages"/> explains what went wrong;
-/// <paramref name="RawResponse"/> preserves the model's text for offline review.
+/// <paramref name="RawResponse"/> preserves the model's text for offline review;
+/// <paramref name="FinishReason"/> is why the provider stopped (length, content
+/// filter), or null when it did not say.
 /// </summary>
-public sealed record Failure<T>(IReadOnlyList<string> Messages, string? RawResponse) : Result<T>;
+public sealed record Failure<T>(
+    IReadOnlyList<string> Messages,
+    string? RawResponse,
+    Microsoft.Extensions.AI.ChatFinishReason? FinishReason = null) : Result<T>;

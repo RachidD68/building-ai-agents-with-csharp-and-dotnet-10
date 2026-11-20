@@ -18,6 +18,7 @@
     <Project Path="src/Ch04.FirstAgent/Ch04.StreamingAgent/Ch04.StreamingAgent.csproj" />
   </Folder>
   <Folder Name="/src/Ch05.TypedResponses/">
+    <Project Path="src/Ch05.TypedResponses/Ch05.DomainValidation/Ch05.DomainValidation.csproj" />
     <Project Path="src/Ch05.TypedResponses/Ch05.EntityExtraction/Ch05.EntityExtraction.csproj" />
     <Project Path="src/Ch05.TypedResponses/Ch05.ResponseFormat/Ch05.ResponseFormat.csproj" />
     <Project Path="src/Ch05.TypedResponses/Ch05.RobustExtraction/Ch05.RobustExtraction.csproj" />
@@ -25,10 +26,11 @@
   </Folder>
   <Folder Name="/src/Ch06.ConversationsMemory/">
     <Project Path="src/Ch06.ConversationsMemory/Ch06.AgentSessionDemo/Ch06.AgentSessionDemo.csproj" />
+    <Project Path="src/Ch06.ConversationsMemory/Ch06.ContextBudget/Ch06.ContextBudget.csproj" />
     <Project Path="src/Ch06.ConversationsMemory/Ch06.ContextProviderDemo/Ch06.ContextProviderDemo.csproj" />
-    <Project Path="src/Ch06.ConversationsMemory/Ch06.HistoryReduction/Ch06.HistoryReduction.csproj" />
     <Project Path="src/Ch06.ConversationsMemory/Ch06.PersistentSession/Ch06.PersistentSession.csproj" />
     <Project Path="src/Ch06.ConversationsMemory/Ch06.ServiceManagedState/Ch06.ServiceManagedState.csproj" />
+    <Project Path="src/Ch06.ConversationsMemory/Ch06.SessionOwnership/Ch06.SessionOwnership.csproj" />
     <Project Path="src/Ch06.ConversationsMemory/Ch06.StatelessDemo/Ch06.StatelessDemo.csproj" />
   </Folder>
   <Folder Name="/src/Ch07.Tools/">
@@ -145,12 +147,14 @@
   <Folder Name="/exercises/Ch05.Exercises/">
     <Project Path="exercises/Ch05.Exercises/Ex01.RecipeExtractor/Ex01.RecipeExtractor.csproj" />
     <Project Path="exercises/Ch05.Exercises/Ex02.ResumeParser/Ex02.ResumeParser.csproj" />
+    <Project Path="exercises/Ch05.Exercises/Ex03.InvoiceValidator/Ex03.InvoiceValidator.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch06.Exercises/">
     <Project Path="exercises/Ch06.Exercises/Ex01.ConversationLogger/Ex01.ConversationLogger.csproj" />
     <Project Path="exercises/Ch06.Exercises/Ex02.SessionManager/Ex02.SessionManager.csproj" />
     <Project Path="exercises/Ch06.Exercises/Ex03.WindowedChat/Ex03.WindowedChat.csproj" />
     <Project Path="exercises/Ch06.Exercises/Ex04.WhereDoesItLive/Ex04.WhereDoesItLive.csproj" />
+    <Project Path="exercises/Ch06.Exercises/Ex05.ConcurrentWrites/Ex05.ConcurrentWrites.csproj" />
   </Folder>
   <Folder Name="/exercises/Ch07.Exercises/">
     <Project Path="exercises/Ch07.Exercises/Ex01.UnitConverterTool/Ex01.UnitConverterTool.csproj" />
@@ -211,6 +215,9 @@
     <Project Path="exercises/AppA.Exercises/Ex04.JsonRoundTrip/Ex04.JsonRoundTrip.csproj" />
   </Folder>
   <Folder Name="/contoso/" />
+  <Folder Name="/contoso/v1-owned-conversation/">
+    <Project Path="contoso/v1-owned-conversation/Contoso.OwnedConversation.csproj" />
+  </Folder>
   <Folder Name="/contoso/v2-authorized-reimbursement/">
     <Project Path="contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj" />
   </Folder>

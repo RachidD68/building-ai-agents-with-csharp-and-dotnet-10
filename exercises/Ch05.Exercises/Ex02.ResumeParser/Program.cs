@@ -1,57 +1,54 @@
 // ============================================================================
-// Exercise 02 — Resume Parser (Intermediate)
+// Exercise 02 — Resume Parser (Intermediate, solution)
 // Extracts a Resume record from pasted resume text: candidate name, contact
 // info (email AND phone), skills, experiences as WorkExperience records with
 // DateTime? start/end dates, and a list of Education entry records. DateTime?
 // covers fields that may be missing — a current job has no end date. Under
-// strict mode the nullable means "the key is always present and may be null",
-// so the instructions tell the model to set endDate to null for ongoing jobs
-// rather than omitting it. Every property carries a [Description] schema
-// hint, and JsonException failures use the chapter's retry-once pattern.
-// FULLY STANDALONE.
+// strict mode the nullable means "the key is always present and may be null";
+// [JsonRequired] on EndDate enforces the same on our side, so a reply that
+// omits the key, or writes "Present" or "June 2021", is a Failure, never a
+// default date. Failures use the chapter's TryRunStructuredAsync<T>.
+//
+//   dotnet run                    one resume through the model
+//   dotnet run -- --self-test     offline checks, fake chat client, RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
+using Ch05.RobustExtraction;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+JsonSerializerOptions jsonOptions = new(JsonSerializerOptions.Web);
+const string Instructions = """
+    You are a resume parser. Extract structured data from resume text.
+    Return ONLY valid JSON matching the requested schema.
+    Dates must be ISO-8601 (yyyy-MM-dd). When only a year is given, use
+    January 1 of that year. For ongoing jobs ("Present"), set endDate to
+    null — include the key, do not omit it.
+    For lists, return an empty array if no items are found.
+    """;
+
+if (args.Contains("--self-test")) return await SelfTestAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
+ILogger logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ResumeParser");
 
 Console.WriteLine("=== Exercise: Resume Parser ===\n");
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-JsonSerializerOptions jsonOptions = new()
-{
-    WriteIndented = true,
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-};
-
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: """
-        You are a resume parser. Extract structured data from resume text.
-        Return ONLY valid JSON matching the requested schema.
-        Dates must be ISO-8601 (yyyy-MM-dd). When only a year is given, use
-        January 1 of that year. For ongoing jobs ("Present"), set endDate to
-        null — include the key, do not omit it.
-        For lists, return an empty array if no items are found.
-        """,
-    name: "ResumeParser");
+ChatClientAgent agent = new(chatClient, instructions: Instructions, name: "ResumeParser");
 
 string sampleResume = """
     Jane Smith
@@ -85,9 +82,14 @@ Console.WriteLine();
 
 try
 {
-    Resume? resume = await ParseResumeAsync(sampleResume);
+    Result<Resume> result = await agent.TryRunStructuredAsync<Resume>(
+        $"Parse this resume:\n\n{sampleResume}", jsonOptions, logger, cts.Token);
 
-    if (resume is not null)
+    if (result is Failure<Resume> failure)
+    {
+        Console.WriteLine($"--- No resume: {string.Join("; ", failure.Messages)}");
+    }
+    else if (result is Success<Resume> { Value: Resume resume })
     {
         Console.WriteLine("--- Parsed Resume ---\n");
         Console.WriteLine($"  Name  : {resume.Name}");
@@ -126,82 +128,45 @@ catch (OperationCanceledException)
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
-// Typed call with the chapter's recovery pattern:
-// one attempt, one stricter retry on JsonException, never a loop.
+// Offline checks: canned replies through the chapter's fake chat client.
 // ---------------------------------------------------------------
-async Task<Resume?> ParseResumeAsync(string resumeText)
+async Task<int> SelfTestAsync()
 {
-    string prompt = $"Parse this resume:\n\n{resumeText}";
-
-    // Attempt 1: the ordinary typed call.
-    try
+    Console.WriteLine("=== Resume Parser — self-test (offline) ===\n");
+    int passed = 0, total = 0;
+    async Task<Result<Resume>> Parse(string endDateMember)
     {
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse<Resume> response = await agent.RunAsync<Resume>(
-            prompt, session, jsonOptions, cancellationToken: cts.Token);
-        return response.Result;
+        string json = $$"""
+            {"name":"Jane Smith","email":"jane.smith@techcorp.dev","phone":"+1 (206) 555-0142","skills":["C#"],
+             "experiences":[{"company":"TechCorp Inc.","title":"Senior Software Engineer","startDate":"2021-06-01"{{endDateMember}},"description":"Cloud migration."}],
+             "education":[{"institution":"MIT","degree":"M.Sc. Computer Science","graduationYear":2016}]}
+            """;
+        CannedChatClient client = new(CannedChatClient.Stop(json));
+        ChatClientAgent fake = new(client, instructions: Instructions);
+        return await fake.TryRunStructuredAsync<Resume>("Parse this resume.", jsonOptions, NullLogger.Instance);
     }
-    catch (JsonException ex)
+    void Check(string name, bool ok)
     {
-        Console.WriteLine($"  [retry] Typed run failed to deserialize ({ex.Message}); retrying once with a stricter prompt.");
+        total++; passed += ok ? 1 : 0;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
 
-    // Attempt 2: one stricter retry, on a fresh session — a fresh session
-    // avoids carrying the malformed exchange forward as context.
-    string stricterPrompt =
-        prompt +
-        "\n\nIMPORTANT: Respond with valid JSON ONLY. No prose, no markdown, no code fences. " +
-        "Every field is required. Use the exact field names from the schema.";
+    Check("the current job, \"endDate\": null with the key present -> EndDate == null",
+        await Parse(""","endDate":null""") is Success<Resume> { Value.Experiences: [{ EndDate: null, StartDate.Year: 2021 }] });
+    Check("a past job, \"endDate\": \"2021-06-01\" -> EndDate is that date",
+        await Parse(""","endDate":"2021-06-01" """) is Success<Resume> { Value.Experiences: [{ EndDate.Month: 6 }] });
+    Check("the endDate key omitted -> Failure, not a silent \"ongoing\"",
+        await Parse("") is Failure<Resume>);
+    Check("a malformed date \"June 2021\" -> Failure, not a default date",
+        await Parse(""","endDate":"June 2021" """) is Failure<Resume>);
+    Check("\"Present\" written as a date -> Failure",
+        await Parse(""","endDate":"Present" """) is Failure<Resume>);
 
-    try
-    {
-        AgentSession retrySession = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse<Resume> retry = await agent.RunAsync<Resume>(
-            stricterPrompt, retrySession, jsonOptions, cancellationToken: cts.Token);
-        return retry.Result;
-    }
-    catch (JsonException ex)
-    {
-        Console.WriteLine($"\nJSON deserialization error after one retry: {ex.Message}");
-        Console.WriteLine("The LLM response did not match the expected schema.");
-        Console.WriteLine("This can happen with less capable models. Try a different model or");
-        Console.WriteLine("add more explicit schema instructions to the system prompt.");
-        return null;
-    }
-}
-
-// ---------------------------------------------------------------
-// Provider factory
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Creates an <see cref="IChatClient"/> from User Secrets configuration.
-/// </summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
-
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
 }
 
 // ---------------------------------------------------------------
@@ -256,8 +221,10 @@ sealed record WorkExperience
     [JsonPropertyName("startDate")]
     public DateTime? StartDate { get; init; }
 
+    // Required but nullable: the key must be present; null means "ongoing".
     [Description("End date as ISO-8601 (yyyy-MM-dd); null when the job is ongoing.")]
     [JsonPropertyName("endDate")]
+    [JsonRequired]
     public DateTime? EndDate { get; init; }
 
     [Description("A short description of the role and its achievements.")]

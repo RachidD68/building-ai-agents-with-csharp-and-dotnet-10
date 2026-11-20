@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Challenge solution: invoice rules on top of TryRunStructuredAsync<T>.
+       The offline suite (the self-test mode of Program.cs) prints RESULT n/n. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The GA-only provider switch (Ollama by default), and TryRunStructuredAsync<T>,
+         Result<T> and the fake chat client from the chapter's robust-extraction sample. -->
+    <ProjectReference Include="../../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../../src/Ch05.TypedResponses/Ch05.RobustExtraction/Ch05.RobustExtraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

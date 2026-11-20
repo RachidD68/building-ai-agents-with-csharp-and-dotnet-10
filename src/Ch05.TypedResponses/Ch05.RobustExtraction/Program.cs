@@ -3,7 +3,7 @@
 // The production counterpart to the happy path. Three ideas, together:
 //   1. [Description] attributes carry schema hints independent of build config.
 //   2. TryRunStructuredAsync<T>() wraps RunAsync<T>() with a single stricter
-//      retry and an untyped fallback, returning a Success<T>/Failure<T> result.
+//      retry, returning a Success<T>/Failure<T> result that keeps the raw reply.
 //   3. Soft validation (confidence + cross-field invariants) flags suspect
 //      extractions for review — it never silently "fixes" the model's output.
 //
@@ -11,7 +11,7 @@
 // range-checked (0.0..1.0; missing, NaN or string values are flagged or
 // rejected) and never gates on its own: an extraction is auto-processed only
 // when every soft-validation rule passes.
-// Offline check of that logic (JSON parsing only, no LLM): dotnet run -- --self-test
+// Offline check (canned JSON and a fake chat client, no LLM): dotnet run -- --self-test
 // ============================================================================
 
 using System.Text.Json;
@@ -24,7 +24,7 @@ using Microsoft.Extensions.Logging;
 using AgenticAI.Common.Extensions;
 using Ch05.RobustExtraction;
 
-if (args.Contains("--self-test")) return InvoiceValidation.SelfTest();
+if (args.Contains("--self-test")) return await InvoiceValidation.SelfTestAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -110,7 +110,7 @@ try
                 break;
 
             case Failure<InvoiceExtraction> fail:
-                Console.WriteLine("  Extraction FAILED after one retry:");
+                Console.WriteLine($"  Extraction FAILED (finish reason: {fail.FinishReason?.Value ?? "none"}):");
                 foreach (string message in fail.Messages)
                 {
                     Console.WriteLine($"    ! {message}");

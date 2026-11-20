@@ -6,15 +6,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
-    <PackageReference Include="Azure.AI.OpenAI" />
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The GA-only provider switch (Ollama by default), and TryRunStructuredAsync<T>,
+         Result<T> and the fake chat client from the chapter's robust-extraction sample. -->
+    <ProjectReference Include="../../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../../src/Ch05.TypedResponses/Ch05.RobustExtraction/Ch05.RobustExtraction.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">
