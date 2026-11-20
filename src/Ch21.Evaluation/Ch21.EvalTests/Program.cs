@@ -1,123 +1,133 @@
 // ============================================================================
 // Eval as a test suite: a deterministic regression harness
 // ----------------------------------------------------------------------------
-// This is the "treat your eval suite like your test suite" discipline made
-// concrete. It is a plain console assertion harness (no xUnit, matching the
-// book's other Tests projects) that runs a GOLDEN DATASET through a
-// LocalEvaluator and asserts the whole batch passes.
+// A plain console assertion harness (no xUnit, matching the book's other Tests
+// projects) that runs a GOLDEN DATASET through a LocalEvaluator and asserts
+// which answers pass. It evaluates PRE-BUILT responses, not a live agent:
+// EvaluateAsync has an overload that takes the responses you already have
+// (a fixture here, a production log replay elsewhere). No model is called, so
+// the same inputs always give the same verdicts. The same shape moves to xUnit
+// unchanged: turn each case into a [Fact] and let AssertAllPassed throw.
 //
-// The trick that makes it a *test* rather than a *demo*: we evaluate
-// PRE-BUILT responses, not a live agent. EvaluateAsync has an overload that
-// takes the responses you already have (from a previous batch, a production
-// log replay, or — here — a fixture) alongside the queries. No model is
-// called, so the run is fast, free, and 100% deterministic: the same inputs
-// always produce the same pass/fail. That is exactly what a regression test
-// needs. The same shape moves to xUnit unchanged — turn each block into a
-// [Fact] and let AssertAllPassed throw.
+// The red half comes first: a substring check (string.Contains, or MAF's
+// EvalChecks.ContainsExpected) accepts "115 days" and "Not 15 days; ... 20".
+// Then the value check that replaces it, named for what it measures
+// (pto_value_check), rejects both and still passes the correct answer.
+// It is a lexical value check, not a groundedness score.
 //
-// Cases:
-//   1. Golden responses that SHOULD pass  -> AssertAllPassed() succeeds.
-//   2. Known-bad responses -> the evaluator catches them; we assert they fail.
-//      The confabulated PTO answer from the chapter's opening anecdote, plus
-//      two answers that merely CONTAIN "15" ("115 days", "Not 15 days ... 20").
-//      This is the red half of red-green for agents: prove the check bites.
-//
-// What this check is — and is not: it is a VALUE check (does the answer state
-// the policy number, and no other number of days?). It is a lexical signal,
-// not proof that the answer is faithful to the source; a reworded correct
-// answer can fail it and a wrong answer can be built to pass it. Faithfulness
-// needs a judge or human labels — the chapter's groundedness section.
-//
-// Exit code 0 when every assertion holds; 1 otherwise.
+//   dotnet run                    the harness (same as --self-test)
+//   dotnet run -- --self-test     RESULT n/n; exit code 0 only when every check holds
 // ============================================================================
 
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
-int failures = 0;
+if (args.Length > 0 && !args.Contains("--self-test"))
+{
+    Console.WriteLine("usage: dotnet run [-- --self-test]");
+    return 2;
+}
+
+int passed = 0, total = 0;
+void Check(bool ok, string name)
+{
+    total++;
+    if (ok) passed++;
+    Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+}
 
 Console.WriteLine("=== Eval test harness (deterministic, offline) ===");
-Console.WriteLine();
 
-// A stub agent: the pre-response EvaluateAsync overload needs an AIAgent for
-// its signature, but it scores the responses we hand it and never calls the
-// model. The stub's chat client throws if anything ever invokes it — proof the
-// suite is deterministic.
+// The pre-response EvaluateAsync overload needs an AIAgent for its signature, but
+// it scores the responses we hand it. The stub client throws if anything calls it.
 ChatClientAgent agent = new(new UninvokedChatClient(), name: "FaqAgentUnderTest");
+string[] ptoQuery = ["How many PTO days do new employees get?"];
 
-// The value check: every "<n> days" / "<n> PTO days" in the answer must be 15,
-// and there must be at least one. A bare Contains("15") would accept
-// "115 days" and "Not 15 days; employees get 20".
+const string Correct = "New employees (0-2 years of service) receive 15 PTO days per year.";
+const string Confabulated = "New employees get 20 PTO days per year.";
+const string Bigger = "Employees get 115 days of PTO.";
+const string Negated = "Not 15 days; employees get 20 days.";
+
+// ── 1. The failure: substring checks accept both counterexamples ───
+Console.WriteLine("\n-- 1. Substring checks (the check the first edition called groundedness) --");
+LocalEvaluator substring = new(
+    FunctionEvaluator.Create("contains_15", (string response) => response.Contains("15", StringComparison.Ordinal)),
+    EvalChecks.ContainsExpected());
+foreach (string answer in new[] { Bigger, Negated })
+{
+    bool ok = await Passes(substring, answer);
+    Check(ok, $"DEFECT REPRODUCED: Contains(\"15\") and EvalChecks.ContainsExpected() pass \"{answer}\"");
+}
+
+// ── 2. The fix: a value check named for what it measures ───────────
+Console.WriteLine("\n-- 2. pto_value_check: every day count stated must be 15, and one must be stated --");
 LocalEvaluator valueCheck = new(
     FunctionEvaluator.Create("pto_value_check",
         (string response) => PtoValue.StatesOnly(response, days: 15)));
+Check(await Passes(valueCheck, Correct), "the correct answer passes");
+Check(!await Passes(valueCheck, Confabulated), "the confabulated \"20 PTO days\" fails");
+Check(!await Passes(valueCheck, Bigger), "\"115 days\" fails");
+Check(!await Passes(valueCheck, Negated), "\"Not 15 days; employees get 20 days\" fails");
 
-string[] ptoQuery = ["How many PTO days do new employees get?"];
+// ── 3. What numRepetitions does (probe against MAF 1.28) ───────────
+// A counting client answers every call; two queries with numRepetitions: 3.
+Console.WriteLine("\n-- 3. numRepetitions, observed --");
+CountingChatClient counter = new(Correct);
+ChatClientAgent counted = new(counter, name: "Counted");
+AgentEvaluationResults repeated = await counted.EvaluateAsync(
+    ["How many PTO days do new employees get?", "And after six years?"], valueCheck, numRepetitions: 3);
+Console.WriteLine($"  2 queries x numRepetitions 3: model calls {counter.Calls}, Items {repeated.Items.Count}, " +
+                  $"Total {repeated.Total}, Passed {repeated.Passed}");
+Check(counter.Calls == 6 && repeated.Items.Count == 6 && repeated.Total == 6,
+    "each repetition is its own run and its own item: the results are not averaged per query");
 
-// ── Case 1: the golden answer passes ───────────────────────────────
-await Case("correct PTO answer passes", expectPass: true,
-    response: "New employees (0-2 years of service) receive 15 PTO days per year.");
+Console.WriteLine($"\nRESULT {passed}/{total}");
+return passed == total ? 0 : 1;
 
-// ── Case 2: the confabulated answer is caught (the opening incident) ──
-await Case("confabulated PTO answer is caught", expectPass: false,
-    response: "New employees get 20 PTO days per year.");
-
-// ── Cases 3-4: answers that only CONTAIN "15" are caught too ────────
-await Case("'115 days' is caught", expectPass: false,
-    response: "Employees get 115 days of PTO.");
-await Case("'Not 15 days ... 20' is caught", expectPass: false,
-    response: "Not 15 days; employees get 20 days.");
-
-Console.WriteLine();
-if (failures == 0)
-{
-    Console.WriteLine("All eval-harness assertions passed.");
-    return 0;
-}
-
-Console.WriteLine($"{failures} assertion(s) FAILED.");
-return 1;
-
-// ──────────────────────────────────────────────────────────────────
-// One case: evaluate a single pre-built response and assert whether the
-// value check passed or failed, the way a [Fact] would.
-async Task Case(string name, bool expectPass, string response)
+// One pre-built response through one evaluator; true when every check passed.
+async Task<bool> Passes(LocalEvaluator evaluator, string response)
 {
     AgentResponse[] responses = [new AgentResponse(new ChatMessage(ChatRole.Assistant, response))];
-
     AgentEvaluationResults results = await agent.EvaluateAsync(
-        responses,
-        ptoQuery,
-        valueCheck);
-
-    bool actuallyPassed = results.AllPassed;
-
-    if (actuallyPassed == expectPass)
-    {
-        Console.WriteLine($"[pass] {name}  (Passed {results.Passed}/{results.Total})");
-    }
-    else
-    {
-        failures++;
-        Console.WriteLine($"[FAIL] {name}  (expected AllPassed={expectPass}, got {actuallyPassed})");
-    }
+        responses, ptoQuery, evaluator, expectedOutput: ["15"]);
+    return results.AllPassed;
 }
 
-// A chat client that must never be called. If the eval ever tries to run the
-// agent for real, this throws — which would mean the suite is no longer
-// deterministic. It stays silent precisely because we evaluate stored responses.
+// A chat client that must never be called: the harness scores stored responses.
 internal sealed class UninvokedChatClient : IChatClient
 {
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => throw new InvalidOperationException(
-            "The eval harness must not call the model — it scores stored responses.");
+        => throw new InvalidOperationException("The eval harness must not call the model; it scores stored responses.");
 
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException("The eval harness must not call the model; it scores stored responses.");
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+    public void Dispose() { }
+}
+
+// Answers every call with the same text and counts the calls.
+internal sealed class CountingChatClient(string reply) : IChatClient
+{
+    private int _calls;
+    public int Calls => Volatile.Read(ref _calls);
+
+    public Task<ChatResponse> GetResponseAsync(
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _calls);
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply)));
+    }
+
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-        => throw new InvalidOperationException(
-            "The eval harness must not call the model — it scores stored responses.");
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ChatResponse response = await GetResponseAsync(messages, options, cancellationToken);
+        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates()) yield return update;
+    }
 
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
     public void Dispose() { }

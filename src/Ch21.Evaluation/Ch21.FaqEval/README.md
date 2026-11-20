@@ -12,16 +12,18 @@ whenever an answer drifts off the source.
 - A golden set pairing each question with the exact policy value a grounded
   answer must contain. Questions are curated against the source wording so a
   correctly grounded answer retrieves the right chunk.
-- **`LocalEvaluator` (always on, offline)** — `expected_value` reads the aligned
+- **`LocalEvaluator` (always on)**: `expected_value` reads the aligned
   `expectedOutput` for each query and asserts the value is present as a whole
-  token ("15" matches "15 days", not "115 days"). It is a lexical value check,
-  not a groundedness or faithfulness score;
+  token and not negated ("15" matches "15 days", not "115 days" and not
+  "Not 15 days; employees get 20"). It is a lexical value check, not a
+  groundedness or faithfulness score;
   `no_idk_leak` asserts the agent did not fall back to "I don't have
   information" on an answerable question.
 - **MEAI `GroundednessEvaluator` (gated, off by default)** — a 1-5 LLM-judged
   groundedness score against the retrieved context (the actual groundedness
   measure), wired through
-  `ChatConfiguration`. It reuses the local model as the judge.
+  `ChatConfiguration`. The judge must be a different model from the agent's: a
+  model grading its own answers is lenient, so the sample refuses that pairing.
 
 Exit code `0` when every local value check passes, `1` otherwise.
 
@@ -35,9 +37,16 @@ dotnet run --project src/Ch21.Evaluation/Ch21.FaqEval
 
 ## Enabling the groundedness judge
 
-Set `LlmProvider:Judge:Enabled` to `true` in `appsettings.json`. A 3B local
-model is a poor judge (expect "Inconclusive" on some items) — point
-`ChatConfiguration` at a frontier model for trustworthy scores.
+Set `LlmProvider:Judge:Enabled` to `true` and `LlmProvider:Judge:Model` to an
+Ollama model other than the agent's (`LlmProvider:Ollama:Model`). With the same
+model, or with another provider, the judge is skipped and the reason printed.
+Calibrate the judge against human labels first (`Ch21.JudgeCalibration`): its
+score means little before that.
+
+```bash
+# Offline: the value check and the judge pairing rule. RESULT n/n
+dotnet run --project src/Ch21.Evaluation/Ch21.FaqEval -- --self-test
+```
 
 > Note: like `Ch10.FaqAgent`, this project uses `CommunityToolkit.VectorData.InMemory`
 > and takes `Microsoft.Extensions.VectorData.Abstractions` from

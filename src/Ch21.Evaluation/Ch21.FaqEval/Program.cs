@@ -12,15 +12,18 @@
 // into a test that fails loudly whenever the stated value drifts off the source.
 //
 // Two layers, mirroring the rest of the chapter:
-//   1. LocalEvaluator (always on, offline) — a per-question value check
-//      that asserts the answer contains the exact policy value from the docs
-//      as a whole token (lexical, not a faithfulness or groundedness score),
-//      plus a global KeywordCheck that the "I don't know" fallback never leaks
-//      into a question the KB can actually answer.
-//   2. MEAI GroundednessEvaluator (gated) — an LLM-as-judge groundedness score
-//      against the retrieved context. Runs when LlmProvider:Judge:Enabled is
-//      true (it reuses the local Ollama model as the judge); skipped otherwise
-//      with a printed note, so the suite stays runnable with zero cloud setup.
+//   1. LocalEvaluator (always on) — expected_value, a per-question VALUE check:
+//      the exact policy value from the docs appears as a whole token and is not
+//      negated ("115 days" and "Not 15 days; ... 20" fail). It is lexical, not
+//      a faithfulness or groundedness score. no_idk_leak checks that the
+//      "I don't know" fallback never answers a question the KB can answer.
+//   2. MEAI GroundednessEvaluator (gated) — an LLM judge scores support from
+//      the retrieved context. It runs when LlmProvider:Judge:Enabled is true
+//      AND LlmProvider:Judge:Model names a different Ollama model from the
+//      agent's: a model grading its own answers is lenient, so the sample
+//      refuses that pairing and says so.
+//
+//   dotnet run -- --self-test   the value check and the judge pairing rule, offline; RESULT n/n
 //
 // Exit code 0 when every local value check passes; 1 otherwise — so this
 // drops into CI as the nightly evaluation gate the observability chapter points at. The
@@ -39,6 +42,8 @@ using Microsoft.Extensions.Hosting;
 using CommunityToolkit.VectorData.InMemory;
 using AgenticAI.Common.Extensions;
 using Ch21.FaqEval;
+
+if (args.Contains("--self-test")) return FaqEvalSelfTest.Run();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddAzureOpenAIProvider();   // the azure arm, from AgenticAI.Common.Azure
@@ -172,14 +177,14 @@ string[] queries = golden.Select(g => g.Question).ToArray();
 string[] expectedOutputs = golden.Select(g => g.GroundTruth).ToArray();
 
 // ── Step 3: the LocalEvaluator (value checks, always on) ──────────
-// "expected_value" is the load-bearing check: the response must contain the
-// exact policy value for this question. Because EvaluateAsync aligns the
+// "expected_value" is the load-bearing check: the response must state the
+// exact policy value for this question, not negated. Because EvaluateAsync aligns the
 // expectedOutput array with the queries positionally, the (response,
 // expectedOutput) overload sees the ground-truth value for each item.
 LocalEvaluator local = new(
     FunctionEvaluator.Create("expected_value",
         (string response, string? expectedOutput) =>
-            expectedOutput is not null && TextMatch.ContainsWhole(response, expectedOutput)),
+            expectedOutput is not null && TextMatch.StatesValue(response, expectedOutput)),
     FunctionEvaluator.Create("no_idk_leak",
         (string response) =>
             !response.Contains("don't have information", StringComparison.OrdinalIgnoreCase)));
@@ -216,24 +221,25 @@ for (int i = 0; i < items.Count && i < inputs.Count; i++)
 
 // ── Step 4: MEAI GroundednessEvaluator (LLM judge, gated) ─────────
 // The MEAI Quality GroundednessEvaluator asks an LLM judge to score, on a 1-5
-// scale, how well the answer is supported by the grounding context. It is the
-// "did it stay on the source?" question expressed as a continuous score rather
-// than a keyword assertion. We gate it because a judge model is real inference:
-// when enabled it reuses the local Ollama model so the demo stays offline.
-bool judgeEnabled = config.GetValue("LlmProvider:Judge:Enabled", false);
-if (!judgeEnabled)
+// scale, how well the answer is supported by the grounding context. Its score
+// means something only after the judge is calibrated against human labels
+// (Ch21.JudgeCalibration), and only when the judge is not the agent's model.
+string? judgeSkip = JudgePairing.SkipReason(
+    config.GetValue("LlmProvider:Judge:Enabled", false), provider,
+    config["LlmProvider:Ollama:Model"] ?? "llama3.2", config["LlmProvider:Judge:Model"]);
+if (judgeSkip is not null)
 {
     Console.WriteLine();
-    Console.WriteLine("[Groundedness judge skipped] Set LlmProvider:Judge:Enabled to true to run");
-    Console.WriteLine("the MEAI GroundednessEvaluator (1-5 LLM-judged score) against the retrieved");
-    Console.WriteLine("context. It reuses the local Ollama model as the judge — no cloud required.");
+    Console.WriteLine($"[Groundedness judge skipped] {judgeSkip}");
 }
 else
 {
     Console.WriteLine();
-    Console.WriteLine("--- MEAI GroundednessEvaluator (LLM judge, 1-5) ---");
+    Console.WriteLine($"--- MEAI GroundednessEvaluator (judge {config["LlmProvider:Judge:Model"]}, 1-5) ---");
 
-    ChatConfiguration judgeConfig = new(chatClient);
+    using IChatClient judgeClient = new OllamaSharp.OllamaApiClient(
+        new Uri(config["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), config["LlmProvider:Judge:Model"]!);
+    ChatConfiguration judgeConfig = new(judgeClient);
     GroundednessEvaluator groundedness = new();
 
     foreach (GoldenItem item in golden)
@@ -267,14 +273,61 @@ return localResults.Passed == localResults.Total ? 0 : 1;
 // ──────────────────────────────────────────────────────────────────
 internal readonly record struct GoldenItem(string Question, string GroundTruth);
 
-// The expected value must appear as a whole token: "15" matches "15 PTO days"
-// but not "115 days". This is still a lexical signal (a value check), not a
-// faithfulness score — that is what the LLM judge in step 4 measures.
+// The expected value must appear as a whole token and not right after a
+// negation: "15" matches "15 PTO days" but not "115 days" or "Not 15 days".
+// This is still a lexical signal (a value check), not a faithfulness score.
 internal static class TextMatch
 {
-    public static bool ContainsWhole(string response, string expected) =>
-        System.Text.RegularExpressions.Regex.IsMatch(
-            response,
-            @"(?<![\w])" + System.Text.RegularExpressions.Regex.Escape(expected) + @"(?![\w])",
+    public static bool StatesValue(string response, string expected)
+    {
+        string value = System.Text.RegularExpressions.Regex.Escape(expected);
+        bool present = System.Text.RegularExpressions.Regex.IsMatch(response, @"(?<![\w])" + value + @"(?![\w])");
+        bool negated = System.Text.RegularExpressions.Regex.IsMatch(response,
+            @"\b(?:not|no|never|isn't|aren't|rather than|instead of)\b(?:\s+\S+){0,2}?\s+" + value + @"(?![\w])",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return present && !negated;
+    }
+}
+
+// The judge runs only when it was asked for, on Ollama, with a model that is not the agent's.
+internal static class JudgePairing
+{
+    public static string? SkipReason(bool enabled, string provider, string agentModel, string? judgeModel)
+    {
+        static string Norm(string m) => m.EndsWith(":latest", StringComparison.OrdinalIgnoreCase) ? m[..^7] : m;
+        if (!enabled) return "set LlmProvider:Judge:Enabled to true and LlmProvider:Judge:Model to another Ollama model.";
+        if (!string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
+            return $"this sample wires the judge for the ollama provider only (provider is {provider}).";
+        if (string.IsNullOrWhiteSpace(judgeModel)) return "LlmProvider:Judge:Model is not set.";
+        return string.Equals(Norm(agentModel), Norm(judgeModel), StringComparison.OrdinalIgnoreCase)
+            ? $"judge model {judgeModel} is the agent's model; a model grading its own answers is lenient. Pick another judge."
+            : null;
+    }
+}
+
+internal static class FaqEvalSelfTest
+{
+    public static int Run()
+    {
+        Console.WriteLine("=== FAQ evaluation: self-test (value check and judge pairing, no model) ===");
+        int passed = 0, total = 0;
+        void Check(bool ok, string name)
+        {
+            total++;
+            if (ok) passed++;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+        }
+        Check(System.Text.RegularExpressions.Regex.IsMatch("Not 15 days; employees get 20 days.", @"(?<![\w])15(?![\w])"),
+            "DEFECT REPRODUCED: the whole-token check alone accepts \"Not 15 days; employees get 20 days\"");
+        Check(TextMatch.StatesValue("New employees (0-2 years) receive 15 PTO days per year.", "15"), "expected_value: \"15 PTO days\" passes");
+        Check(!TextMatch.StatesValue("Employees get 115 days of PTO.", "15"), "expected_value: \"115 days\" fails");
+        Check(!TextMatch.StatesValue("Not 15 days; employees get 20 days.", "15"), "expected_value: \"Not 15 days; ... 20\" fails");
+        Check(TextMatch.StatesValue("Contoso observes 11 company holidays per year.", "11"), "expected_value: \"11 company holidays\" passes");
+        Check(JudgePairing.SkipReason(true, "ollama", "llama3.2", "llama3.2:latest")?.Contains("agent's model", StringComparison.Ordinal) == true,
+            "judge = agent model (llama3.2 / llama3.2:latest): skipped, with the reason");
+        Check(JudgePairing.SkipReason(true, "ollama", "llama3.2", "phi4") is null, "judge phi4 for agent llama3.2: allowed");
+        Check(JudgePairing.SkipReason(false, "ollama", "llama3.2", "phi4") is not null, "judge not enabled: skipped");
+        Console.WriteLine($"\nRESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
+    }
 }

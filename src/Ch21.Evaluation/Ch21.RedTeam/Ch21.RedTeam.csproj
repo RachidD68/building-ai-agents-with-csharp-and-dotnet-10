@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Red-team regression suite: versioned attack cases (indirect injection,
+       cross-tenant ids, judge manipulation), failed on any forbidden effect the
+       tools record. Offline with a scripted obedient model. GA packages only. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="OllamaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="cases\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

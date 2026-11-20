@@ -6,15 +6,19 @@ checks composed in a single `LocalEvaluator`, plus an optional, gated
 
 ## What it shows
 
-- **`EvalChecks.KeywordCheck("F")`** — the response must contain the temperature
-  unit. `KeywordCheck` is **match-all**: every keyword you pass must appear, so
-  grade on a signal present in every good answer.
-- **`EvalChecks.ToolCalledCheck("get_weather")`** — the agent must have invoked
-  the tool.
-- **`FunctionEvaluator.Create("response_length", ...)`** — a custom predicate.
-- **Gated `FoundryEvals`** — when `LlmProvider:Foundry:ProjectEndpoint` is set,
-  the suite also scores Relevance + Coherence with a cloud judge. With no
-  endpoint, it runs `LocalEvaluator` only and prints a skip note.
+- **`temperature_stated`** (a `FunctionEvaluator.Create` check): the answer states a
+  Fahrenheit temperature as a number ("55F"). It replaces the first edition's
+  `EvalChecks.KeywordCheck("F")`: the self-test shows that keyword passing
+  "Fog maybe? I could not reach the weather service." (`DEFECT REPRODUCED`).
+  `KeywordCheck` is match-all: every keyword you pass must appear.
+- **`EvalChecks.ToolCalledCheck("get_weather")`**: the agent must have invoked the tool.
+- **`response_length`**: a custom predicate, not empty and not runaway.
+- **Gated `FoundryEvals`**: when `LlmProvider:Foundry:ProjectEndpoint` is set, the
+  suite also scores Relevance and Coherence with a cloud judge. `FoundryEvals`
+  lives in `Microsoft.Agents.AI.Foundry`, a **preview** package; the project client
+  comes from `AgenticAI.Common.Foundry` (`FoundryProjects.TryCreate`). With no
+  endpoint it prints a skip note and scores locally only. This path is compiled
+  but was not run for the book (no Foundry credentials).
 
 The exit code is the CI contract: `0` when every local check passes, `1`
 otherwise. `AgentEvaluationResults` members used: `ProviderName`, `Passed`,
@@ -23,8 +27,11 @@ otherwise. `AgentEvaluationResults` members used: `ProviderName`, `Passed`,
 ## Running
 
 ```bash
-# Offline by default: Ollama (llama3.2). No cloud needed.
+# Local model: Ollama (llama3.2). No cloud needed.
 dotnet run --project src/Ch21.Evaluation/Ch21.EvalSuite
+
+# Offline: a scripted model drives the same agent and checks. RESULT n/n
+dotnet run --project src/Ch21.Evaluation/Ch21.EvalSuite -- --self-test
 ```
 
 ## Enabling the Foundry judge

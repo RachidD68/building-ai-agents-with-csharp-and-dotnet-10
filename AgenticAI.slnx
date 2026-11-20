@@ -135,7 +135,10 @@
   <Folder Name="/src/Ch21.Evaluation/">
     <Project Path="src/Ch21.Evaluation/Ch21.EvalSuite/Ch21.EvalSuite.csproj" />
     <Project Path="src/Ch21.Evaluation/Ch21.EvalTests/Ch21.EvalTests.csproj" />
+    <Project Path="src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj" />
     <Project Path="src/Ch21.Evaluation/Ch21.FaqEval/Ch21.FaqEval.csproj" />
+    <Project Path="src/Ch21.Evaluation/Ch21.JudgeCalibration/Ch21.JudgeCalibration.csproj" />
+    <Project Path="src/Ch21.Evaluation/Ch21.RedTeam/Ch21.RedTeam.csproj" />
   </Folder>
   <Folder Name="/src/AppA.CSharpEssentials/">
     <Project Path="src/AppA.CSharpEssentials/AppA.ConsoleApp/AppA.ConsoleApp.csproj" />
