@@ -1,21 +1,21 @@
 # Ch15.RestartTests --self-test
-# code: CodeSample 1bc822f, Release build (-warnaserror) on Windows (clean worktree)
+# code: CodeSample 0a6a507, Release build (-warnaserror) on Windows (clean worktree)
 # platform: Windows 11, dotnet Ch15.RestartTests.dll --self-test, exit 0
 
 === Restart Tests (real processes, offline) ===
 
 -- 1. External effects: kill the worker inside the payout step
-  PASS  before-effect: worker 25444 reached the point and was killed there (no outcome printed)
+  PASS  before-effect: worker 25580 reached the point and was killed there (no outcome printed)
   PASS  before-effect: 0 effect(s) in the provider's journal when it died
-  PASS  before-effect: a new process (35016) restores the pre-payout checkpoint and settles: "not found; sent again"
+  PASS  before-effect: a new process (16728) restores the pre-payout checkpoint and settles: "not found; sent again"
   PASS  before-effect: exactly one effect, reference contoso:<the approval's operation id>, no new id
-  PASS  after-accept: worker 29288 reached the point and was killed there (no outcome printed)
+  PASS  after-accept: worker 19768 reached the point and was killed there (no outcome printed)
   PASS  after-accept: 1 effect(s) in the provider's journal when it died
-  PASS  after-accept: a new process (5080) restores the pre-payout checkpoint and settles: "by reference"
+  PASS  after-accept: a new process (27300) restores the pre-payout checkpoint and settles: "by reference"
   PASS  after-accept: exactly one effect, reference contoso:<the approval's operation id>, no new id
-  PASS  after-record: worker 28588 reached the point and was killed there (no outcome printed)
+  PASS  after-record: worker 7344 reached the point and was killed there (no outcome printed)
   PASS  after-record: 1 effect(s) in the provider's journal when it died
-  PASS  after-record: a new process (12408) restores the pre-payout checkpoint and settles: "re-read the operation record"
+  PASS  after-record: a new process (23788) restores the pre-payout checkpoint and settles: "re-read the operation record"
   PASS  after-record: exactly one effect, reference contoso:<the approval's operation id>, no new id
   PASS  DEFECT REPRODUCED: killed after-record, the naive step (new operation id per attempt) pays a second time
   PASS  reply lost: the worker ends with an explicit Unknown (exit 6), the journal already holds the payment
@@ -23,12 +23,14 @@
   PASS  worker B takes the expired lease (token 2) while A is stalled, and pays
   PASS  worker A wakes with token 1: StaleLease (exit 4), nothing committed, one effect
   PASS  two worker processes started together: one pays, the other finds the lease held or re-reads; one effect
+  PASS  cancel after the payout began (killed before-effect, 0 effects): the resume settles it, "not found; sent again"
+  PASS  ... under the approval's reference: Paid, exactly one effect, no new id
 
 -- 2. Durable review: two commands, no shared memory
   PASS  prepare exited (exit 0) before resume started; resume in a fresh process -> [APPROVED]
-  PASS  Ch15.DurableReview.dll: no mutable static field
-  PASS  Ch15.ExternalEffects.dll: no mutable static field
-  PASS  Contoso.DurableResume.dll: no mutable static field
+  PASS  Ch15.DurableReview.dll: no static field that can be reassigned
+  PASS  Ch15.ExternalEffects.dll: no static field that can be reassigned
+  PASS  Contoso.DurableResume.dll: no static field that can be reassigned
 
 -- 3. Contoso v5: kill the resume while it pays the approved claim
   PASS  v5 before-effect: the resume was killed there with 0 payment(s) in the journal
@@ -41,4 +43,4 @@
   PASS  v5 after-record: a new process reconciles and reports the claim: "re-read the claim: already Delivered"
   PASS  v5 after-record: one committed operation, one payment
 
-RESULT 31/31
+RESULT 33/33

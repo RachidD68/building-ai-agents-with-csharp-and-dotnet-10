@@ -1,77 +1,77 @@
 # Ch15.ExternalEffects --self-test
-# code: CodeSample 1bc822f, Release build (-warnaserror) on Windows (clean worktree)
+# code: CodeSample 0a6a507, Release build (-warnaserror) on Windows (clean worktree)
 # platform: Windows 11, dotnet Ch15.ExternalEffects.dll --self-test, exit 0
 
 === External Effects: self-test (in process, offline) ===
 
 -- 1. Pay, then run the payout step again from the restart point
-Lease: worker-a holds token 1 until 17:05:01Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation a718f520-bd56-4e06-8f46-43162824ea14
-Outcome: Paid: paid (PAY-AE5D21D6D2A9)
-Lease: worker-b holds token 2 until 17:05:01Z, renewed while this process lives
-Restored checkpoint 7f83105c5c9b4c449a58caae31f91e0d (taken before the payout step); operation a718f520-bd56-4e06-8f46-43162824ea14
-Outcome: Paid: re-read the operation record: already Paid as PAY-AE5D21D6D2A9; no provider call
+Lease: worker-a holds token 1 until 18:47:50Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation 10bf5601-864a-4d6e-9009-76552c9050ca
+Outcome: Paid: paid (PAY-D6B57EBFCB3C)
+Lease: worker-b holds token 2 until 18:47:51Z, renewed while this process lives
+Restored checkpoint edd6c5f676cf4f9ba16932958eb5929c (taken before the payout step); operation 10bf5601-864a-4d6e-9009-76552c9050ca
+Outcome: Paid: re-read the operation record: already Paid as PAY-D6B57EBFCB3C; no provider call
   PASS  first run: Paid, one effect, reference contoso:<operation id>
   PASS  replay re-reads the operation record: still Paid, no provider call, still one effect
   PASS  never a new operation id: the record and the result keep the approval's id
-Lease: worker-a holds token 1 until 17:05:01Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation 43d2d042-ff47-4114-b9f2-cf1bf88cc797
-Outcome: Paid: paid (PAY-A9D762F43832)
-Lease: worker-b holds token 2 until 17:05:02Z, renewed while this process lives
-Restored checkpoint e7f4ecde37cc4f41b0d5d1a4a8c6ab77 (taken before the payout step); operation 43d2d042-ff47-4114-b9f2-cf1bf88cc797
-Outcome: Paid: naive attempt with a new operation id (PAY-9D99DA714FBD)
+Lease: worker-a holds token 1 until 18:47:51Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation a535e1ae-9fc7-43f5-a3e7-634a1391b549
+Outcome: Paid: paid (PAY-F9B463BF7F5B)
+Lease: worker-b holds token 2 until 18:47:52Z, renewed while this process lives
+Restored checkpoint 49350a0099a34f84bc3aec6a6a2696f4 (taken before the payout step); operation a535e1ae-9fc7-43f5-a3e7-634a1391b549
+Outcome: Paid: naive attempt with a new operation id (PAY-15C3258DBE82)
   PASS  DEFECT REPRODUCED: the naive step replayed with a fresh operation id pays twice (two references)
 
 -- 2. Cancel: before the effect, after it, and during an uncertain call
-Lease: worker-a holds token 1 until 17:05:02Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation 994888fd-2cee-4b6e-9fb3-7e3d77b71f86
+Lease: worker-a holds token 1 until 18:47:52Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation 05d90326-8864-435f-a772-fb0349c27840
 Outcome: Cancelled: cancelled before the effect; nothing was sent
   PASS  cancel before the effect -> Cancelled, nothing sent (0 effects)
-Lease: worker-b holds token 2 until 17:05:02Z, renewed while this process lives
-Restored checkpoint 4c17e58b6b394425ae802982c40c0588 (taken before the payout step); operation 994888fd-2cee-4b6e-9fb3-7e3d77b71f86
+Lease: worker-b holds token 2 until 18:47:52Z, renewed while this process lives
+Restored checkpoint acf573ccc04449a4b336d23a7d0db132 (taken before the payout step); operation 05d90326-8864-435f-a772-fb0349c27840
 Outcome: Cancelled: re-read the operation record: already Cancelled; no provider call
   PASS  a replay of a cancelled payout stays Cancelled
-Lease: worker-a holds token 1 until 17:05:02Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation 791f8ac4-a93d-4f57-bfea-93405caa51e3
-Outcome: Paid: paid (PAY-9844B74CDB9E)
-Lease: worker-b holds token 2 until 17:05:02Z, renewed while this process lives
-Restored checkpoint 0e564f1806f04423a75b32305e895d8f (taken before the payout step); operation 791f8ac4-a93d-4f57-bfea-93405caa51e3
-Outcome: Paid: re-read the operation record: already Paid as PAY-9844B74CDB9E; no provider call; a cancel arrived after the payout: cancelling is not undoing, a refund is a new approved operation
+Lease: worker-a holds token 1 until 18:47:52Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation a46bd484-ba85-4a22-93b0-9980234a73f1
+Outcome: Paid: paid (PAY-BF641A60CDE5)
+Lease: worker-b holds token 2 until 18:47:52Z, renewed while this process lives
+Restored checkpoint 663b0a01711a493f9f3410a1663b79c3 (taken before the payout step); operation a46bd484-ba85-4a22-93b0-9980234a73f1
+Outcome: Paid: re-read the operation record: already Paid as PAY-BF641A60CDE5; no provider call; the cancel came too late to stop the payout: cancelling is not undoing, a refund is a new approved operation
   PASS  cancel after the payout completed -> still Paid, one effect; cancelling is not undoing
-Lease: worker-a holds token 1 until 17:05:02Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation 869895b1-1440-4f20-bc3b-46365c23a3e2
+Lease: worker-a holds token 1 until 18:47:52Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation 0380cae5-26ba-436e-918b-52da4fc670be
 Outcome: Unknown: outcome unknown: the provider may have paid; entered reconciliation
   PASS  cancel during a call whose reply is lost -> Unknown, and the journal already holds the payment
-Lease: worker-b holds token 2 until 17:05:02Z, renewed while this process lives
-Restored checkpoint e28ec50c42de4ea9b655c18883d36c75 (taken before the payout step); operation 869895b1-1440-4f20-bc3b-46365c23a3e2
-Outcome: Paid: reconciled from the restored workflow: found PAY-653C7D839B03 by reference; a cancel arrived after the payout: cancelling is not undoing, a refund is a new approved operation
+Lease: worker-b holds token 2 until 18:47:53Z, renewed while this process lives
+Restored checkpoint c44eb8d405d24326affc83e107b2ce6b (taken before the payout step); operation 0380cae5-26ba-436e-918b-52da4fc670be
+Outcome: Paid: reconciled from the restored workflow: found PAY-87A216906B4B by reference; the cancel came too late to stop the payout: cancelling is not undoing, a refund is a new approved operation
   PASS  resume reconciles from the restored workflow: found by reference -> Paid, one effect, cancel too late
 
 -- 3. A request that never arrived
-Lease: worker-a holds token 1 until 17:05:02Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation b3709e6d-1936-48ca-9af9-36d53476682f
+Lease: worker-a holds token 1 until 18:47:53Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation 3eff3ede-3be1-4a19-a557-e4efde0ae20f
 Outcome: Unknown: outcome unknown: the provider may have paid; entered reconciliation
   PASS  lost request -> Unknown, nothing in the journal
-Lease: worker-b holds token 2 until 17:05:02Z, renewed while this process lives
-Restored checkpoint fe30c525e01945daa977cffa534bb32f (taken before the payout step); operation b3709e6d-1936-48ca-9af9-36d53476682f
-Outcome: Paid: reconciled from the restored workflow: not found; sent again as PAY-2A120DB9FE46
+Lease: worker-b holds token 2 until 18:47:53Z, renewed while this process lives
+Restored checkpoint e33001c0b0b94c99a9b8231da57d498a (taken before the payout step); operation 3eff3ede-3be1-4a19-a557-e4efde0ae20f
+Outcome: Paid: reconciled from the restored workflow: not found; sent again as PAY-90DC21FB9F1C
   PASS  resume: not found by reference, sent again with the SAME reference -> Paid, one effect
 
 -- 4. Two workers, one claim
 Lease: worker-a holds token 1 until 09:00:30Z, not renewed
-Started payout of 64.80 EUR for CLM-2001, operation 70dd0f41-c00e-406d-96b8-0823bcb32e3b
+Started payout of 64.80 EUR for CLM-2001, operation 9fbe76a1-fb04-495f-a188-960b3129b5ca
 Lease: worker-b holds token 2 until 09:01:01Z, renewed while this process lives
-Restored checkpoint bdfff7c61117474584b534700b89fc0e (taken before the payout step); operation 70dd0f41-c00e-406d-96b8-0823bcb32e3b
-Outcome: Paid: paid (PAY-277C37D0787C)
+Restored checkpoint 79f84b18037a48a48bf681b190afb5ee (taken before the payout step); operation 9fbe76a1-fb04-495f-a188-960b3129b5ca
+Outcome: Paid: paid (PAY-E0DF1EF64839)
 Outcome: StaleLease: lease token 1 is no longer current (now 2); nothing committed
   PASS  B takes the expired lease (token 2) and pays
   PASS  A wakes with token 1: StaleLease, nothing committed, still one effect
-LEASE HELD by someone-else (token 1) until 17:05:02Z; this worker does nothing.
+LEASE HELD by someone-else (token 1) until 18:47:53Z; this worker does nothing.
   PASS  an unexpired lease held by another worker -> this worker does nothing
-Lease: worker-b holds token 1 until 17:05:02Z, renewed while this process lives
-Started payout of 64.80 EUR for CLM-2001, operation f6914b23-1c95-4536-8845-caf2bf76f58c
-Outcome: Paid: paid (PAY-405D75464CEF)
-LEASE HELD by worker-b (token 1) until 17:04:33Z; this worker does nothing.
+Lease: worker-a holds token 1 until 18:47:53Z, renewed while this process lives
+Started payout of 64.80 EUR for CLM-2001, operation 972537d0-b04a-4b24-81c4-d35c222870c4
+LEASE HELD by worker-a (token 1) until 18:47:53Z; this worker does nothing.
+Outcome: Paid: paid (PAY-5122C1F16AB4)
   PASS  two workers started at once (Task.Run): one pays; the other finds the lease held or re-reads; one effect
 
 RESULT 15/15
