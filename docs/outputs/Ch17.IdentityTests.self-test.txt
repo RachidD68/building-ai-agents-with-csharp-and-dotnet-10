@@ -1,6 +1,6 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from which concurrent request wins, where there is one
 # Ch17.IdentityTests --self-test
-# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree)
+# code: CodeSample e1a350e, Release build (-warnaserror) on Windows (clean worktree)
 # platform: Windows 11, dotnet Ch17.IdentityTests.dll --self-test, exit 0
 
 === Ch17.IdentityTests (TestServer, minted tokens, fake model, offline) ===
@@ -11,6 +11,8 @@
   PASS  expired: 401
   PASS  signed with another key: 401
   PASS  valid token without "tid": 403 (no identity key, no conversation)
+  PASS  valid token without "tid" on the single-turn route: 403
+  PASS  valid token without "sub" on the single-turn route: 403
   PASS  no audience configured: a valid token is refused (401), not accepted for any audience
 
 -- 2. Conversations: the id round trip, and who can load it
@@ -30,8 +32,9 @@
   PASS  the fix: A's fourth call is refused (429)
   PASS  B, same IP, still has a quota (200)
   PASS  fabrikam/alice, same "sub", still has a quota (200)
+  PASS  default claim mapping on the fixed host: A x4 then B on /ask: 403,403,403,403,403 (403, never a shared 429)
 
 -- 5. Health probes never reach the model
   PASS  100 liveness probes and one readiness probe: 200, 0 model calls
 
-RESULT 19/19
+RESULT 22/22
