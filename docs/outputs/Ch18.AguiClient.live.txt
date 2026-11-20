@@ -1,0 +1,29 @@
+# Ch18.AguiClient (live run)
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree); Ch18.AguiServer in process (TestServer, minted tokens), AG-UI 1.5.0-preview
+# platform: Windows 11, Ollama llama3.2 (LlmProvider__Provider=ollama), dotnet Ch18.AguiClient.dll, exit 0, 37 s
+
+=== Ch18.AguiClient: live run (Ch18.AguiServer in process, LlmProvider model) ===
+
+-- alice, over AG-UI: "Please submit my taxi receipt of 120 EUR."
+   RUN_STARTED
+   TOOL_CALL_START submit_claim
+   TOOL_CALL_ARGS
+   TOOL_CALL_END
+   TEXT_MESSAGE_START
+   TOOL_CALL_RESULT
+   TEXT_MESSAGE_END
+   RUN_FINISHED
+   text: "Your taxi claim for 120 EUR has been submitted and is currently being reviewed by a finance reviewer. You will receive an update on the status of your claim shortly."
+   tools: submit_claim: finished
+   response: finished | operation: AwaitingApproval (amount_above_review_limit) | not done
+
+-- rita opens the review screen and approves
+   review: 120 EUR for E-1001, version 1
+   decision: 200
+   status #3: state Completed committed_approved
+   response: finished | operation: Completed (committed_approved) | DONE
+
+-- the same host through MAF's AGUIChatClient (Microsoft.Agents.AI.AGUI)
+   25 updates: "Here are the claims you have submitted:
+
+* 1 claim with a total amount of 120 EUR."

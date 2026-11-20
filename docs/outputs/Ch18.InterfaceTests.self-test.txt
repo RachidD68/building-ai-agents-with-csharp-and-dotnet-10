@@ -1,0 +1,36 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
+# Ch18.InterfaceTests --self-test
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# platform: Windows 11, dotnet Ch18.InterfaceTests.dll --self-test, exit 0
+
+=== Ch18.InterfaceTests (offline) ===
+
+-- 1. Replay: disconnect, the operation moves on, resume from the cursor
+  PASS  resumed from cursor 2: 1 event(s), Completed; DONE True
+  PASS  every event id applied exactly once: 3 ids for cursors 1..3
+  PASS  a full replay from 0 onto the same view: 3 discarded, the view unchanged
+
+-- 2. Stale binding: the arguments change under an open review screen
+  PASS  the application revises the claim to 130 EUR (version 2); rita posts the screen she opened (version 1): 409 stale_version
+  PASS  version 2's number with version 1's digest: 409 digest_mismatch
+  PASS  rita reloads (130 EUR, version 2) and approves: 200 Approved
+  PASS  the commit paid the reviewed amount: balance 250 (500 - 120 - 130)
+
+-- 3. Double click: two approve POSTs at once
+  PASS  clicks (Task.Run): 200 Approved / 200 Approved replayed
+  PASS  one stored decision (1), one commit (+1), one Completed event (1)
+
+-- 4. Slow client: bounded, dropped, resynced
+  PASS  1000 events to a client that reads nothing: peak 64 of 64, dropped True
+  PASS  it reconnects from cursor 2: the window has moved on, so the server sends a snapshot at 1002; state AwaitingApproval
+
+-- 5. A reviewer revoked mid-review
+  PASS  after the revocation: review agent 403, review screen 404, POST 403 reviewer_not_authorized
+  PASS  the claim is still AwaitingApproval
+
+-- 6. A valid id under another identity
+  PASS  bob with alice's thread id: AG-UI 404, events 404, snapshot 404; with her proposal id: review 404
+  PASS  fabrikam/E-1001 (alice's subject, another tenant): AG-UI 403, snapshot 404
+  PASS  no token: snapshot 401
+
+RESULT 16/16

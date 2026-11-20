@@ -1,0 +1,27 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
+# Ch18.AguiClient --self-test
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# platform: Windows 11, dotnet Ch18.AguiClient.dll --self-test, exit 0
+
+=== Ch18.AguiClient (self-test, offline, AG-UI 1.5.0-preview) ===
+
+-- 1. A whole run, applied by identity
+  PASS  RUN_FINISHED for run run_4f092f9299; text "The application says: claim 4738faa7-291..."; tools submit_claim: finished
+  PASS  a duplicated TEXT_MESSAGE_START and another run's RUN_FINISHED are discarded (2); not finished yet
+  PASS  screen after RUN_FINISHED: response: finished | operation: AwaitingApproval (amount_above_review_limit) | not done
+
+-- 2. A cut run is discarded; the operation is resynced
+  PASS  the connection drops after 8 events: NeedsResync, partial text discarded ("")
+  PASS  the snapshot says AwaitingApproval (amount_above_review_limit): the claim exists, still not done
+  PASS  content for a message that never started: NeedsResync
+
+-- 3. DONE only for the operation's terminal state
+  PASS  rita approves; the client follows the status stream: response: finished | operation: Completed (committed_approved) | DONE
+
+-- 4. Another identity on a valid thread id
+  PASS  bob posts to alice's thread: 404; bob's snapshot of it: 404
+
+-- 5. MAF's AGUIChatClient against the same host
+  PASS  RunStreamingAsync over AG-UI: "The application says: 75 EUR (6339b276-db58-4671-abcb-0ef1e9..."
+
+RESULT 9/9

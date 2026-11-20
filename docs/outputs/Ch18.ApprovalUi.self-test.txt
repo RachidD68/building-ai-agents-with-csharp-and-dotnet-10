@@ -1,0 +1,46 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
+# Ch18.ApprovalUi --self-test
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# platform: Windows 11, dotnet Ch18.ApprovalUi.dll --self-test, exit 0
+
+=== Ch18.ApprovalUi (self-test, offline) ===
+
+-- 1. Who sees the review screen
+  PASS  rita (finance reviewer): version 1, 120 EUR, digest C319879C...
+  PASS  bob (no reviewer role): not found
+  PASS  fabrikam/rita (same subject, other tenant): not found
+
+-- 2. Who may decide
+  PASS  alice on her own claim: 403 separation_of_duties
+  PASS  bob: 403 reviewer_not_authorized
+  PASS  fabrikam/rita: 404 not_found
+  PASS  a digest for 12 EUR on the 120 EUR proposal: 409 digest_mismatch
+
+-- 3. The double click
+  PASS  DEFECT REPRODUCED: check-then-insert with no key per version, two clicks on Task.Run: 2 approvals stored
+  PASS  rita approves twice at once (Task.Run): 200 Approved / 200 Approved (replayed)
+  PASS  the first response is lost and rita retries: 200 Approved (replayed); stored decisions: 1
+  PASS  ana rejects the decided version: 409 already_decided
+
+-- 4. The commit is ch. 8's policy and idempotent commit
+  PASS  policy Allow (exact_proposal_approved); Committed: reimbursed 120 EUR to E-1001; balance 380, version 8
+  PASS  commit again: Replayed, the stored outcome
+  PASS  a committed proposal cannot be revised
+
+-- 5. Revise is not reject; a changed argument makes the old approval stale
+  PASS  rita asks for a revision: 200 RevisionRequested
+  PASS  while a revision is pending the policy says approval_missing
+  PASS  the application revises to 180 EUR: version 2, new digest
+  PASS  rita's old approval (version 1, old digest) replayed: 409 stale_version
+  PASS  rita approves version 2: 200 Approved; commit reimbursed 180 EUR to E-1001; balance 200, version 9
+  PASS  a rejected proposal stays rejected: no revision, no commit
+
+-- 6. What a version check prevents
+  PASS  DEFECT REPRODUCED: keyed by proposal id, rita's approval of 180 EUR also covers 300 EUR
+  PASS  bound to the digest, the same approval for 300 EUR: Deny (approval_invalid)
+
+-- 7. A reviewer revoked mid-review, an expired proposal
+  PASS  ana's role is revoked, then she posts: 403 reviewer_not_authorized
+  PASS  25 hours later rita approves: 410 expired
+
+RESULT 24/24

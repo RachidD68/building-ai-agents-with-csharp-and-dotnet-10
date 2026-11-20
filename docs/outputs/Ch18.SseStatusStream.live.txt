@@ -1,0 +1,55 @@
+# Ch18.SseStatusStream (live run)
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree)
+# platform: Windows 11, Ollama llama3.2 (LlmProvider__Provider=ollama), dotnet Ch18.SseStatusStream.dll, exit 0, 55 s
+
+=== Ch18.SseStatusStream: live run (in-process server, LlmProvider model) ===
+
+-- client connects at cursor 0, drops the connection after 5 events
+   #1   state          Running  run_started
+   #2   tool           get_review_limit started
+   #3   tool           get_review_limit finished
+   #4   delta          "Since"
+   #5   delta          " the"
+   (disconnected) run run_fbe875e99813 | Running (run_started) | cursor 5
+
+-- client reconnects with Last-Event-ID: 5
+   #6   delta          " taxi"
+   #7   delta          " receipt"
+   #8   delta          " is"
+   #9   delta          " above"
+   #10  delta          " "
+   #11  delta          "50"
+   #12  delta          " EUR"
+   #13  delta          ","
+   #14  delta          " it"
+   #15  delta          " will"
+   #16  delta          " wait"
+   #17  delta          " for"
+   #18  delta          " a"
+   #19  delta          " finance"
+   #20  delta          " reviewer"
+   #21  delta          "."
+   #22  delta          " The"
+   #23  delta          " receipt"
+   #24  delta          " will"
+   #25  delta          " be"
+   #26  delta          " placed"
+   #27  delta          " on"
+   #28  delta          " hold"
+   #29  delta          " until"
+   #30  delta          " a"
+   #31  delta          " reviewer"
+   #32  delta          " is"
+   #33  delta          " available"
+   #34  delta          " to"
+   #35  delta          " verify"
+   #36  delta          " the"
+   #37  delta          " claim"
+   #38  delta          "."
+   #39  response.done  
+   #40  state          AwaitingApproval  amount_above_review_limit
+   run run_fbe875e99813 | AwaitingApproval (amount_above_review_limit) | cursor 40
+   text applied once: True (162 chars, server 162)
+   event ids applied: 40, discarded: 0, server cursor: 40
+   the model said: "Since the taxi receipt is above 50 EUR, it will wait for a finance reviewer. The receipt will be placed on hold until a reviewer is available to verify the claim."
+   the UI shows done: False (state AwaitingApproval, set by the application)

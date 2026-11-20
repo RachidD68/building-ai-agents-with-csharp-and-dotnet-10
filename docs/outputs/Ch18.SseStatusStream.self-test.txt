@@ -1,0 +1,49 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
+# Ch18.SseStatusStream --self-test
+# code: CodeSample 3d3d304, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# platform: Windows 11, dotnet Ch18.SseStatusStream.dll --self-test, exit 0
+
+=== Ch18.SseStatusStream (self-test, offline) ===
+
+-- 1. Typed events; the response ends, the operation does not
+  PASS  event types in order: state,tool,delta,response.done
+  PASS  cursors are 1..n with no hole
+  PASS  DEFECT REPRODUCED: the naive UI shows 'Done' while the operation is AwaitingApproval
+  PASS  the view shows AwaitingApproval, not done; the text says 'submitted' and changes nothing
+  PASS  Completed, set by the application after its commit, is the one event that shows done; the server then ends the stream
+
+-- 2. Reconnect from a cursor
+  PASS  resumed with Last-Event-ID 4: text 'Your claim is with a reviewer.' applied once
+  PASS  every event id applied exactly once: 8 ids for cursors 1..8
+  PASS  an overlapping replay (from cursor 2) is discarded: 6 events, text unchanged
+  PASS  DEFECT REPRODUCED: snapshot, then a replay from 0 doubles the text (62 chars for 31)
+
+-- 3. A cursor older than the retained window gets a snapshot
+  PASS  cursor 3, window of 32: the first event is a snapshot at cursor 81
+  PASS  the snapshot carries the whole text (80 words)
+  PASS  a hole in the cursors (3 missing) sets NeedsResync instead of applying past it
+
+-- 4. An older run's outcome does not end the newer run
+  PASS  DEFECT REPRODUCED: the naive UI shows Completed for the retry
+  PASS  the view stays on run B, Running, not done (discarded 1 event of run A)
+  PASS  the server's stream ended on run B's Failed, not on run A's Completed
+
+-- 5. A slow client: the queue is bounded
+  PASS  1000 events, queue bound 8: peak 8, then the client is dropped
+  PASS  it holds 8 queued events, no more
+  PASS  the endpoint's stream for a stalled client: 8 events, then 'resync'; the client reconnects from its cursor
+  PASS  DEFECT REPRODUCED: an unbounded queue holds 1000 events for one stalled client
+
+-- 6. Cancellation is a request; the outcome is observed
+  PASS  after the click: 'cancel requested', not done
+  PASS  DEFECT REPRODUCED: the naive UI shows Cancelled; the payment committed
+  PASS  the view shows Completed (committed_before_cancel)
+  PASS  a provider timeout after the request: OutcomeUnknown, still not done
+
+-- 7. Concurrent writers, one order
+  PASS  4 writers on Task.Run, 1000 deltas: cursors 2..1001, each once
+
+-- 8. The host decides who reads
+  PASS  a conversation the caller may not read: 404 on events and snapshot (same as no such id)
+
+RESULT 25/25
