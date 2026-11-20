@@ -1,4 +1,4 @@
-﻿﻿// ============================================================================
+﻿// ============================================================================
 // The Model Context Protocol (MCP Consumer)
 // Connects to an MCP server, discovers its tools, and feeds them to a
 // ChatClientAgent. The agent code is identical to the tools chapter; the only
