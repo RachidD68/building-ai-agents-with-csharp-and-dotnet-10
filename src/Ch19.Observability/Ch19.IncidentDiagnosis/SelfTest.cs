@@ -40,6 +40,14 @@ internal static class SelfTest
                 Expect($"{fault}: diagnosed as {verdict.Step} ({verdict.Evidence})", verdict.Step == step);
             }
 
+            // A converted backend export spells the boolean its own way (OTLP/JSON writes false).
+            string wrong = File.ReadAllText(Path.Combine(dir, $"{Fault.WrongValue}.jsonl"));
+            string lowered = Path.Combine(dir, "wrongvalue-lowercase.jsonl");
+            File.WriteAllText(lowered, wrong.Replace("\"contoso.answer.grounded\":\"False\"", "\"contoso.answer.grounded\":\"false\""));
+            Verdict spelled = Diagnosis.Diagnose(Diagnosis.Load(lowered));
+            Expect($"WrongValue with the flag written \"false\": diagnosed as {spelled.Step} (the reason code decides, not the spelling)",
+                spelled.Step == Diagnosis.Model && File.ReadAllText(lowered).Contains("\"contoso.answer.grounded\":\"false\""));
+
             Console.WriteLine("\n-- The same faults with framework spans only (no step spans) --");
             List<string> undetermined = [];
             foreach (Fault fault in new[] { Fault.EmptyRetrieval, Fault.ToolException, Fault.WrongValue })

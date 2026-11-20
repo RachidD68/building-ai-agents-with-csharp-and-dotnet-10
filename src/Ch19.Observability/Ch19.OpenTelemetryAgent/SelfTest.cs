@@ -110,7 +110,7 @@ internal static class SelfTest
 
         int ownOnly = await ExportedAsync([ContosoTelemetry.SourceName]);
         int all = await ExportedAsync(ContosoTelemetry.Sources);
-        Console.WriteLine($"    sources seen by a listen-to-everything listener: {string.Join(", ", seen.Order())}");
+        Console.WriteLine($"    sources seen by a listener on every non-System source: {string.Join(", ", seen.Order())}");
         Expect($"DEFECT REPRODUCED: subscribed to the app's own source only, {ownOnly} of {all} spans reach the exporter",
             ownOnly == 1 && all > ownOnly);
         Expect("fixed: the four sources in ContosoTelemetry.Sources cover every source that emitted",
@@ -274,7 +274,7 @@ internal static class SelfTest
     {
         Console.WriteLine("\n-- Retry owners (fake provider, no network) --");
 
-        async Task<(int Attempts, int ChatSpans, bool Answered)> RunAsync(
+        async Task<(int Attempts, int ChatSpans, bool ChatFailed, bool Answered)> RunAsync(
             Func<int, HttpStatusCode> status, bool http, bool sdk, int appAttempts)
         {
             using Capture cap = new(ContosoTelemetry.Sources);
@@ -284,7 +284,9 @@ internal static class SelfTest
             try { answered = (await RetryOwners.AskWithAppRetriesAsync(chat, appAttempts)).Text.Length > 0; }
             catch (System.ClientModel.ClientResultException) { answered = false; }
             cap.Flush();
-            return (provider.Attempts, cap.Spans.Spans.Count(s => s.Tag("gen_ai.operation.name") == "chat"), answered);
+            SpanRecord[] chats = [.. cap.Spans.Spans.Where(s => s.Tag("gen_ai.operation.name") == "chat")];
+            bool failed = chats.Length > 0 && chats.All(s => s.Status == ActivityStatusCode.Error || s.Tag("error.type") is not null);
+            return (provider.Attempts, chats.Length, failed, answered);
         }
 
         int n = RetryOwners.RetriesPerOwner;
@@ -299,7 +301,7 @@ internal static class SelfTest
 
         var stuck = await RunAsync(_ => HttpStatusCode.TooManyRequests, http: true, sdk: false, appAttempts: 1);
         Expect($"fixed, one owner, provider stuck at 429: {stuck.Attempts} attempts, then one failed chat span",
-            stuck.Attempts == n + 1 && stuck.ChatSpans == 1 && !stuck.Answered);
+            stuck.Attempts == n + 1 && stuck.ChatSpans == 1 && stuck.ChatFailed && !stuck.Answered);
     }
 
     // ---------------------------------------------------------------

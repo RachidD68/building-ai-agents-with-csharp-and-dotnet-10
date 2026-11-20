@@ -7,9 +7,11 @@ namespace Ch19.Observability;
 public sealed record Verdict(string Step, string Evidence);
 
 /// <summary>
-/// Names the failing step of one request from its exported spans alone. The
-/// rules run in pipeline order, so the first broken step wins: a guess made
-/// after an empty search is a retrieval problem, not a model problem.
+/// Names the failing step of one request from its exported spans alone.
+/// Unambiguous errors come first (a failed tool), then retrieval, then the
+/// answer check: a guess made after an empty search is a retrieval problem,
+/// not a model problem. The answer check is read by its reason code, never by
+/// how an exporter spelled the boolean.
 /// </summary>
 public static class Diagnosis
 {
@@ -25,14 +27,19 @@ public static class Diagnosis
             return new(Retrieval, $"{empty.Name}: contoso.retrieval.hits=0");
 
         if (spans.FirstOrDefault(s => s.Name == "contoso.answer.check") is { } check)
-            return check.Tag("contoso.answer.grounded") == "False"
-                ? new(Model, $"{check.Name}: contoso.answer.reason={check.Tag("contoso.answer.reason")}")
-                : new(None, $"{check.Name}: contoso.answer.reason={check.Tag("contoso.answer.reason")}");
+        {
+            // The reason code decides: "False", "false" and false are one verdict, and only
+            // matches_tool means the answer is grounded. A check without a reason proves nothing.
+            string? reason = check.Tag("contoso.answer.reason");
+            string step = reason is null ? Unknown : reason == "matches_tool" ? None : Model;
+            return new(step, $"{check.Name}: contoso.answer.reason={reason ?? "-"}");
+        }
 
         return new(Unknown, "no step span tells the steps apart");
     }
 
-    // One span per line: what a backend export (or a support bundle) would hold.
+    // One span per line, in this runner's own SpanRecord format. An export from a
+    // backend (OTLP/JSON, a vendor's trace download) has to be converted to it first.
     public static void Save(string path, IEnumerable<SpanRecord> spans) =>
         File.WriteAllLines(path, spans.Select(s => JsonSerializer.Serialize(s)));
 

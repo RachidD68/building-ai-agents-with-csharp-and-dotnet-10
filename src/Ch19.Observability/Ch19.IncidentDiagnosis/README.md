@@ -23,6 +23,11 @@ dotnet run -- --diagnose run.jsonl           # name the failing step from the fi
 dotnet run -- --self-test                    # offline checks, RESULT n/n
 ```
 
+`--diagnose` reads this runner's own JSONL (one `SpanRecord` per line, as `--capture` writes it).
+A trace exported from a backend (OTLP/JSON, a vendor download) has to be converted to that format
+first. The verdict on the answer check comes from `contoso.answer.reason`, not from how an
+exporter spelled the `contoso.answer.grounded` boolean.
+
 Everything is offline: a scripted model, no provider, no network.
 
 The challenge exercise is this project's `--capture` / `--diagnose` pair: given a captured

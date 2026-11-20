@@ -8,7 +8,7 @@ namespace Ch19.Observability;
 
 /// <summary>
 /// The Contoso reimbursement assistant with telemetry on both layers: the chat
-/// client (model calls and tool calls) and the agent (one span per run).
+/// client (one chat span per model call) and the agent (the run and its tool calls).
 /// Sensitive data is set to false explicitly on both, because the default is
 /// not a constant: Microsoft.Extensions.AI reads it from an environment variable.
 /// </summary>
@@ -76,13 +76,14 @@ public sealed class PolicyTools(ContosoTelemetry telemetry)
     public static readonly IReadOnlyDictionary<string, string> Limits = new Dictionary<string, string>
     {
         ["meals"] = "75 CAD per day",
+        ["client_meals"] = "120 CAD per person",   // client dinners are their own category
         ["lodging"] = "300 CAD per night",
         ["travel"] = "2000 CAD per trip",
     };
 
     public Func<string, string>? Fault { get; set; }   // the self-test injects failures here
 
-    [Description("Returns the reimbursement limit for a category: meals, lodging or travel.")]
+    [Description("Returns the reimbursement limit for a category: meals, client_meals (a meal with a client), lodging or travel.")]
     public string GetReimbursementLimit([Description("The expense category")] string category)
     {
         try

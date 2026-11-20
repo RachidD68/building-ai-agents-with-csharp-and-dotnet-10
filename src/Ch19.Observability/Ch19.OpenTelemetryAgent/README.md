@@ -22,8 +22,10 @@ re-run the self-test after every package upgrade.
 `EnableSensitiveData` is set to `false` in code on both layers. Left unset, it follows the
 `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` environment variable.
 
-Exporters come from the hosting chapter's `Ch17.AspireOrchestration.ServiceDefaults` (console,
-or OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, as the Aspire dashboard does). Azure Monitor
+Exporters come from the hosting chapter's `Ch17.AspireOrchestration.ServiceDefaults`: the console
+exporter is always on, and OTLP is added when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (as the Aspire
+AppHost does). Outside development, stdout is a telemetry store too: whatever collects it must meet
+the same access rules as your traces, or drop the console exporter there. Azure Monitor
 is used when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set; that path is compiled but was not
 run here.
 

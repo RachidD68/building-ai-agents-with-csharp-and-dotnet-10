@@ -2,11 +2,12 @@
 // OpenTelemetry for an agent: traces, bounded metrics, logs without content
 // ----------------------------------------------------------------------------
 // Two UseOpenTelemetry calls instrument the Contoso assistant:
-//   - on the ChatClientBuilder: one "chat" span per model call and one
-//     "execute_tool" span per tool call, plus the gen_ai.client.* metrics;
-//   - on the AIAgentBuilder: one "invoke_agent" span per run.
-// The exporter wiring is the hosting chapter's ServiceDefaults (console, or
-// OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set, as the Aspire dashboard does).
+//   - on the ChatClientBuilder: one "chat" span per model call, plus the
+//     gen_ai.client.* metrics;
+//   - on the AIAgentBuilder: one "invoke_agent" span per run and one
+//     "execute_tool" span per tool call (both under the agent's source).
+// The exporter wiring is the hosting chapter's ServiceDefaults: console always,
+// plus OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set, as the Aspire AppHost does.
 // This project adds the sources and meters that wiring does not know about.
 //
 // The names are read from what MAF 1.28 and Microsoft.Extensions.AI 10.11
@@ -28,6 +29,7 @@ using Ch17.AspireOrchestration.ServiceDefaults;
 using Ch19.Observability;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,7 +45,8 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddOpenTelemetry().WithTracing(t => t.AddProcessor(new StatusDescriptionRedactor()));
 builder.AddServiceDefaults();
 
-double ratio = double.TryParse(builder.Configuration["Otel:TraceSampleRatio"], out double r) ? r : 1.0;
+// GetValue parses with the invariant culture ("0.1" under fr-CA too) and throws on a typo.
+double ratio = Math.Clamp(builder.Configuration.GetValue("Otel:TraceSampleRatio", 1.0), 0.0, 1.0);
 SpanCapture spans = new();   // a copy of every exported span, to print the tree at the end
 builder.Services.AddOpenTelemetry()
     .WithTracing(t => t
@@ -74,7 +77,7 @@ using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 Console.WriteLine("=== OpenTelemetry agent ===");
-const string Question = "What is the meals limit for a client dinner?";
+const string Question = "What is the limit for a client dinner?";
 Console.WriteLine($"You: {Question}");
 AgentResponse response = await ContosoAssistant.AskAsync(agent, telemetry,
     loggers.CreateLogger("Contoso.Assistant"), "conv-" + Guid.NewGuid().ToString("N")[..8], Question, cts.Token);
