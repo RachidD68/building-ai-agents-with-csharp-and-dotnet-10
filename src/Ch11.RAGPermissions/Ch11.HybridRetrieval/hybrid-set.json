@@ -1,0 +1,21 @@
+{
+  "comment": "Fixed vectors for the hybrid-retrieval self-test. Chunk text comes from ../corpus; the vectors are hand-set on eight concept axes so the test does not depend on an embedding model: [ground transport, night, lodging, review/approval, forms/receipts, budget, flights, meals]. An identifier such as EXP-7 has no meaning to an embedding model, which the q1 vector imitates.",
+  "k": 2,
+  "candidates": 5,
+  "vectors": {
+    "contoso-taxi@v2#0":           [1.0, 0.9, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0],
+    "contoso-taxi@v2#1":           [0.2, 0.0, 0.0, 1.0, 0.2, 0.0, 0.0, 0.0],
+    "contoso-hotel@v1#0":          [0.0, 0.0, 1.0, 0.0, 0.5, 0.0, 0.0, 0.0],
+    "contoso-supplier-annex@v1#0": [0.8, 0.0, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0],
+    "contoso-meals@v1#0":          [0.0, 0.0, 0.0, 0.0, 0.4, 0.0, 0.0, 1.0],
+    "contoso-lost-receipt@v1#0":   [0.0, 0.0, 0.0, 0.3, 1.0, 0.0, 0.0, 0.0]
+  },
+  "queries": [
+    { "id": "q1", "text": "Which form is EXP-7?",                                  "vector": [0.1, 0.0, 0.0, 0.3, 0.6, 0.0, 0.0, 0.7], "relevant": ["contoso-hotel@v1#0"] },
+    { "id": "q2", "text": "cab home late after a client dinner",                     "vector": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.4], "relevant": ["contoso-taxi@v2#0"] },
+    { "id": "q3", "text": "Does a 64.80 EUR night taxi need a reviewer?",            "vector": [0.7, 0.6, 0.0, 0.7, 0.0, 0.0, 0.0, 0.0], "relevant": ["contoso-taxi@v2#0", "contoso-taxi@v2#1"] },
+    { "id": "q4", "text": "hotel booked outside the travel desk, and a customer meal", "vector": [0.0, 0.0, 0.9, 0.0, 0.3, 0.0, 0.0, 0.8], "relevant": ["contoso-hotel@v1#0", "contoso-meals@v1#0"] },
+    { "id": "q5", "text": "I lost the receipt",                                      "vector": [0.0, 0.0, 0.0, 0.3, 1.0, 0.0, 0.0, 0.0], "relevant": ["contoso-lost-receipt@v1#0"] },
+    { "id": "q6", "text": "how much for a customer lunch",                           "vector": [0.0, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0, 1.0], "relevant": ["contoso-meals@v1#0"] }
+  ]
+}

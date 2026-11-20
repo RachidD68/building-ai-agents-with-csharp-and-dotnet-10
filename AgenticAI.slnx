@@ -62,6 +62,12 @@
     <Project Path="src/Ch10.RAGBaseline/Ch10.HostedFilesRag/Ch10.HostedFilesRag.csproj" />
     <Project Path="src/Ch10.RAGBaseline/Ch10.RagPipeline/Ch10.RagPipeline.csproj" />
   </Folder>
+  <Folder Name="/src/Ch11.RAGPermissions/">
+    <Project Path="src/Ch11.RAGPermissions/Ch11.AuthorizedSearch/Ch11.AuthorizedSearch.csproj" />
+    <Project Path="src/Ch11.RAGPermissions/Ch11.HybridRetrieval/Ch11.HybridRetrieval.csproj" />
+    <Project Path="src/Ch11.RAGPermissions/Ch11.ScopedCache/Ch11.ScopedCache.csproj" />
+    <Project Path="src/Ch11.RAGPermissions/Ch11.VersionedIngestion/Ch11.VersionedIngestion.csproj" />
+  </Folder>
   <Folder Name="/src/Ch12.MultimodalDocuments/">
     <Project Path="src/Ch12.MultimodalDocuments/Ch12.ImageToTypedData/Ch12.ImageToTypedData.csproj" />
     <Project Path="src/Ch12.MultimodalDocuments/Ch12.Multimodal.Tests/Ch12.Multimodal.Tests.csproj" />

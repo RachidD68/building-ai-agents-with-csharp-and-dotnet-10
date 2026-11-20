@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Scoped cache: chunk and answer caches keyed by authorization scope and versions,
+       with dependency tracking, immediate revocation and a delivery-time check.
+       Uses the chapter's authorized search as it is. No model, no network. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
+    <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The search boundary of Ch11.AuthorizedSearch, compiled in as linked files. -->
+    <Compile Include="../Ch11.AuthorizedSearch/Corpus.cs" Link="Shared/Corpus.cs" />
+    <Compile Include="../Ch11.AuthorizedSearch/HashingEmbedder.cs" Link="Shared/HashingEmbedder.cs" />
+    <Compile Include="../Ch11.AuthorizedSearch/AuthorizedSearch.cs" Link="Shared/AuthorizedSearch.cs" />
+    <Content Include="../corpus/**" LinkBase="corpus" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

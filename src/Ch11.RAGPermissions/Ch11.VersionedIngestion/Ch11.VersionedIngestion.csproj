@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Versioned ingestion in one SQLite file: discovered -> validated -> indexed ->
+       active -> superseded | deleted, atomic activation, idempotent re-ingestion,
+       effective-date queries, tombstones and index versions. No model, no network. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The corpus model and the offline embedder of Ch11.AuthorizedSearch, compiled in as linked files. -->
+    <Compile Include="../Ch11.AuthorizedSearch/Corpus.cs" Link="Shared/Corpus.cs" />
+    <Compile Include="../Ch11.AuthorizedSearch/HashingEmbedder.cs" Link="Shared/HashingEmbedder.cs" />
+    <Content Include="../corpus/**" LinkBase="corpus" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
