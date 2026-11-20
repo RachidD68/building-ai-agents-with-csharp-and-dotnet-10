@@ -14,7 +14,11 @@
   With a session store registered, `MapAGUI` finds the session by that id
   alone: the self-test reproduces another user reading the thread. This host
   binds each thread id to the first validated (tid, sub) that uses it; anyone
-  else gets 404.
+  else gets 404. The guard reads the id the way MAF does: MAF's parser matches
+  `threadId` case-insensitively and keeps the last duplicate, so a body with a
+  second `ThreadId`/`THREADID`, or a lone one not spelled `threadId`, gets 400.
+  Production gap: a claimed id is never released or expired, so thread ids
+  should be unguessable (or issued by the server) and expire.
 - **One agent instance.** `MapAGUI` 1.5 builds the agent once, when the route
   is mapped, even when it is registered Transient (the self-test counts it).
   So the tools hold no identity: each call reads the caller from the request.

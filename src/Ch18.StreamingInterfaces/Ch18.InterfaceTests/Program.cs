@@ -10,7 +10,8 @@
 //   4 slow client     a stalled subscriber stays at its bound, is dropped, and
 //                     resyncs from a snapshot
 //   5 revoked         a reviewer loses the role mid-review: agent, screen, POST
-//   6 wrong identity  a valid thread id or proposal id under another identity
+//   6 wrong identity  a valid thread id or proposal id under another identity,
+//                     and a body that names a second thread id in another case
 //
 //   dotnet run -- --self-test   (dotnet run alone does the same)
 // Fake model, TestServer, minted tokens. AG-UI 1.5.0-preview.
@@ -120,6 +121,13 @@ int bobEvents = await Status(bob, "/conversations/t-replay/events"), bobSnap = a
 int bobReview = await Status(bob, $"/reviews/{slowId}");
 Check($"bob with alice's thread id: AG-UI {bobAgui}, events {bobEvents}, snapshot {bobSnap}; with her proposal id: review {bobReview}",
     bobAgui == 404 && bobEvents == 404 && bobSnap == 404 && bobReview == 404);
+long replayCursor = log.Cursor("t-replay");
+int bobCased = (await AguiWire.RunAsync(http, "/agui/assistant", bob,
+    AguiWire.WithProperty(AguiWire.Body("t-bob-cased", "r9", ("m9", "submit a taxi receipt of 30 EUR")), "ThreadId", "t-replay"))).Status;
+int bobUpper = (await AguiWire.RunAsync(http, "/agui/assistant", bob,
+    AguiWire.WithProperty(AguiWire.Body("t-bob-upper", "r9", ("m9", "submit a taxi receipt of 30 EUR")), "THREADID", "t-replay"))).Status;
+Check($"bob's own thread id plus a 'ThreadId' / 'THREADID' naming alice's: {bobCased} / {bobUpper}; her thread's log unchanged (cursor {log.Cursor("t-replay")})",
+    bobCased == 400 && bobUpper == 400 && log.Cursor("t-replay") == replayCursor);
 int fabAgui = (await AguiWire.RunAsync(http, "/agui/assistant", fabrikamAlice, AguiWire.Body("t-replay", "r9", ("m9", "hello")))).Status;
 int fabSnap = await Status(fabrikamAlice, "/conversations/t-replay/snapshot");
 Check($"fabrikam/E-1001 (alice's subject, another tenant): AG-UI {fabAgui}, snapshot {fabSnap}", fabAgui == 403 && fabSnap == 404);

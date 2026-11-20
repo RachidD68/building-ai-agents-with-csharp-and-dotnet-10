@@ -39,6 +39,25 @@ internal static class AguiSelfTest
         (int sameSubject, _) = await AguiWire.RunAsync(http, "/agui/assistant", fabrikamAlice, AguiWire.Body("t-alice", "r3", ("m3", "hello")));
         Check($"fabrikam/E-1001 (same subject, other tenant) on it: {sameSubject}, refused before the thread is looked up", sameSubject == 403);
 
+        Console.WriteLine("\n-- 1b. The guard reads the thread id the way MAF does");
+        await using (TestHost loose = await TestHost.StartAsync(new ToolScriptChatClient(), readThreadIdLikeMaf: false))
+        {
+            await AguiWire.RunAsync(loose.Http, "/agui/assistant", loose.Token("contoso", "E-1001"),
+                AguiWire.Body("t-alice", "r1", ("m1", "My hotel receipt: 412 EUR, room 18")));
+            (int status, List<JsonElement> smuggled) = await AguiWire.RunAsync(loose.Http, "/agui/assistant", loose.Token("contoso", "E-2002"),
+                AguiWire.WithProperty(AguiWire.Body("t-bob-1", "r2", ("m2", "hello")), "ThreadId", "t-alice"));
+            Check($"DEFECT REPRODUCED: a case-sensitive guard checks 'threadId' (bob's t-bob-1), MAF reads the later 'ThreadId' (t-alice): {status}, \"{AguiWire.Text(smuggled).Trim()}\"",
+                status == 200 && AguiWire.Text(smuggled).Contains("412 EUR", StringComparison.Ordinal));
+        }
+        int[] spelled = [.. await Task.WhenAll(new[] { "ThreadId", "THREADID" }.Select(async name =>
+            (await AguiWire.RunAsync(http, "/agui/assistant", bob,
+                AguiWire.WithProperty(AguiWire.Body($"t-bob-{name}", "r2", ("m2", "hello")), name, "t-alice"))).Status))];
+        (int onlyCased, _) = await AguiWire.RunAsync(http, "/agui/assistant", bob,
+            AguiWire.Body("t-alice", "r2", ("m2", "hello")).Replace("\"threadId\"", "\"ThreadId\"", StringComparison.Ordinal));
+        (_, List<JsonElement> own) = await AguiWire.RunAsync(http, "/agui/assistant", alice, AguiWire.Body("t-alice", "r4", ("m4", "hello")));
+        Check($"guarded: a second 'ThreadId' / 'THREADID' naming alice's thread: {spelled[0]} / {spelled[1]}; a lone 'ThreadId': {onlyCased}; alice's thread still holds only her messages: \"{AguiWire.Text(own).Trim()}\"",
+            spelled.All(s => s == 400) && onlyCased == 400 && AguiWire.Text(own).Contains("I see 2 user message(s)", StringComparison.Ordinal));
+
         Console.WriteLine("\n-- 2. Selection only after authorization (rights loaded per request)");
         (int anon, _) = await AguiWire.RunAsync(http, "/agui/assistant", null, AguiWire.Body("t-x", "r1", ("m1", "hi")));
         (int bobReview, _) = await AguiWire.RunAsync(http, "/agui/review", bob, AguiWire.Body("t-bob-r", "r1", ("m1", "review")));

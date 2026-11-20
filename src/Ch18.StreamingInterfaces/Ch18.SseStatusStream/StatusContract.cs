@@ -30,14 +30,16 @@ public static class EventTypes
 }
 
 /// <summary>
-/// The event envelope. EventId identifies one event for ever; Cursor is its
+/// The event envelope. EventId identifies one event forever; Cursor is its
 /// place in the conversation's log (the SSE id, sent back as Last-Event-ID);
 /// RunId says which run it belongs to; Version is the envelope's schema
-/// version. A snapshot carries the whole text and state at its cursor.
+/// version; Epoch names the log instance, so a client can tell that a
+/// restarted server numbers from 1 again. A snapshot carries the text and the
+/// operation state at its cursor.
 /// </summary>
 public sealed record StatusEvent(
     string EventId, string ConversationId, string RunId, string Type, int Version, long Cursor,
-    string? Text = null, OperationState? State = null, string? Reason = null)
+    string? Text = null, OperationState? State = null, string? Reason = null, string? Epoch = null)
 {
     public const int SchemaVersion = 1;
 }

@@ -79,7 +79,8 @@ public sealed class TestHost : IAsyncDisposable
     public Rights Rights => App.Services.GetRequiredService<Rights>();
     public ClaimOperations Claims => App.Services.GetRequiredService<ClaimOperations>();
 
-    public static async Task<TestHost> StartAsync(IChatClient model, bool guardThreads = true, Action<string>? agentBuilt = null)
+    public static async Task<TestHost> StartAsync(IChatClient model, bool guardThreads = true, Action<string>? agentBuilt = null,
+        bool readThreadIdLikeMaf = true)
     {
         string db = Path.Combine(Path.GetTempPath(), $"ch18-agui-{Guid.NewGuid():N}.db");
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
@@ -93,7 +94,10 @@ public sealed class TestHost : IAsyncDisposable
             ["Authentication:Schemes:Bearer:SigningKeys:0:Issuer"] = Issuer,
             ["Authentication:Schemes:Bearer:SigningKeys:0:Value"] = Convert.ToBase64String(key),
         });
-        AguiHost.Configure(builder, new AguiHostOptions { ChatClient = model, GuardThreads = guardThreads, DatabasePath = db, AgentBuilt = agentBuilt });
+        AguiHost.Configure(builder, new AguiHostOptions
+        {
+            ChatClient = model, GuardThreads = guardThreads, ReadThreadIdLikeMaf = readThreadIdLikeMaf, DatabasePath = db, AgentBuilt = agentBuilt,
+        });
         WebApplication app = builder.Build();
         AguiHost.Map(app);
         await app.StartAsync();
@@ -126,6 +130,10 @@ public static class AguiWire
             messages = userMessages.Select(m => new { id = m.Id, role = "user", content = m.Text }),
             tools = Array.Empty<object>(), context = Array.Empty<object>(), state = new { }, forwardedProps = new { },
         });
+
+    /// <summary>The same body with one more root property at the end (a JSON parser that keeps the last duplicate sees it).</summary>
+    public static string WithProperty(string body, string name, string value) =>
+        body[..^1] + "," + System.Text.Json.JsonSerializer.Serialize(name) + ":" + System.Text.Json.JsonSerializer.Serialize(value) + "}";
 
     /// <summary>POSTs one run; returns the status code and the events (type and the raw JSON).</summary>
     public static async Task<(int Status, List<System.Text.Json.JsonElement> Events)> RunAsync(HttpClient http, string path,

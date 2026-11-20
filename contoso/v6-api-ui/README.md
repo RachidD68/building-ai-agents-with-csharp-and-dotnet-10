@@ -50,8 +50,9 @@ because v5's worker runs in another process.
   API reads and decides, it does not run the workflow.
 - v5's identities are one tenant (`contoso`); a `fabrikam` token is valid but
   holds no rights there, so it sees nothing.
-- The event log is in memory. A restarted API starts new runs and cursors;
-  a client then reloads the snapshot.
+- The event log is in memory. A restarted API starts new runs and cursors
+  under a new epoch: a client that comes back with an old cursor gets a
+  snapshot, and `StatusView` resets its cursor when the epoch changes.
 - No AG-UI route: the only cached AG-UI hosting build needs
   `Microsoft.Agents.AI.Hosting` 1.5, and this host runs 1.28 (see
   `src/Ch18.StreamingInterfaces/Ch18.AguiServer`). The SSE status stream is

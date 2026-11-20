@@ -127,21 +127,24 @@ public sealed class ApprovalDesk
         if (StoredDecision(proposalId, p.Version) is { } existing) return Replay(existing, subject, request);
         if (_clock() >= p.ExpiresAt) return new(410, "expired");
 
+        // One statement: the version must still be the latest when the row goes in (a Revise may have run since the Load).
         int inserted = Execute("""
             INSERT INTO decisions (proposal_id, version, reviewer, decision, digest, note, decided_at)
-            VALUES ($id, $v, $reviewer, $decision, $digest, $note, $at)
+            SELECT $id, $v, $reviewer, $decision, $digest, $note, $at
+            WHERE $v = (SELECT MAX(version) FROM proposals WHERE proposal_id = $id)
             ON CONFLICT (proposal_id, version) DO NOTHING
             """, ("$id", proposalId.ToString("D")), ("$v", p.Version), ("$reviewer", subject), ("$decision", request.Decision),
             ("$digest", request.Digest), ("$note", (object?)request.Note ?? DBNull.Value), ("$at", _clock().ToString("O")));
-        if (inserted == 0) return Replay(StoredDecision(proposalId, p.Version)!, subject, request);   // lost the race
+        if (inserted == 0)   // lost the race to another click, or to a revision
+            return StoredDecision(proposalId, p.Version) is { } winner ? Replay(winner, subject, request) : new(409, "stale_version");
         ProposalStatus status = request.Decision switch
         {
             "approve" => ProposalStatus.Approved,
             "reject" => ProposalStatus.Rejected,
             _ => ProposalStatus.RevisionRequested,
         };
-        Execute("UPDATE proposals SET status = $s WHERE proposal_id = $id AND version = $v",
-            ("$s", status.ToString()), ("$id", proposalId.ToString("D")), ("$v", p.Version));
+        Execute("UPDATE proposals SET status = $s WHERE proposal_id = $id AND version = $v AND status <> $superseded",
+            ("$s", status.ToString()), ("$id", proposalId.ToString("D")), ("$v", p.Version), ("$superseded", nameof(ProposalStatus.Superseded)));
         return new(200, status.ToString());
     }
 

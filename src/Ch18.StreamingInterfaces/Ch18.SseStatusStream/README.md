@@ -18,18 +18,22 @@ OutcomeUnknown. Only Completed, Failed, Cancelled and Expired are terminal;
 OutcomeUnknown is not (reconciliation decides).
 
 The envelope (`StatusEvent`) carries an event id, the conversation, the run,
-the type, a schema version and the cursor. The SSE `id:` is the cursor, so a
+the type, a schema version, the cursor and the log's epoch (a restarted
+server's in-memory log numbers from 1 again under a new epoch). The SSE `id:` is the cursor, so a
 browser's EventSource sends it back as `Last-Event-ID`.
 
 - `OperationLog`: append-only per conversation, the last `retain` events
   kept for replay, a bounded queue per client (`Channel.CreateBounded`; a
-  full queue drops the client, which gets `resync`).
+  full queue drops the client, which gets `resync`). A cursor older than the
+  window, or past the log's end, gets a snapshot. A terminal state is final:
+  `SetState` refuses a later state for that run. The log is in memory and
+  never evicts a conversation; production needs eviction or durable storage.
 - `StatusEndpoints.MapStatusStream`: `GET {prefix}/{id}/events` with
   `TypedResults.ServerSentEvents` and `SseItem<T>` (.NET 10), and
   `GET {prefix}/{id}/snapshot`. The host says who may read; anyone else gets 404.
 - `StatusView`: the client's rules (an event id once, older cursors
   discarded, a skipped cursor means resync, another run's events ignored,
-  "done" only for a terminal state). `NaiveView` is the first version, kept
+  a new epoch resets the cursor, "done" only for a terminal state). `NaiveView` is the first version, kept
   to reproduce the failures.
 - `StatusStreamClient`: a C# reader built on `SseParser`.
 

@@ -8,6 +8,7 @@ namespace Ch18.SseStatusStream;
 /// a cursor that skips one means a gap (resync from a snapshot); an event of
 /// another run than the current one never changes the view. "Done" is shown
 /// only for a terminal state of the current run, never for response.done.
+/// An event from another epoch (a restarted log) resets the cursor first.
 /// </summary>
 public sealed class StatusView
 {
@@ -28,11 +29,23 @@ public sealed class StatusView
 
     public bool ShowsDone => OperationStates.IsTerminal(State);
 
+    /// <summary>The log instance the view's cursor belongs to.</summary>
+    public string? Epoch { get; private set; }
+
     public void Apply(StatusEvent e)
     {
+        if (e.Epoch is { } epoch && epoch != Epoch)
+        {
+            // Another instance of the log (the server restarted): its cursors start again at 1,
+            // so the view's cursor and applied ids mean nothing there. Start over.
+            if (Epoch is not null) Cursor = 0;
+            _applied.Clear();
+            Epoch = epoch;
+        }
         if (e.Type == EventTypes.Snapshot)
         {
             if (e.Cursor < Cursor) { Discarded++; return; }   // an older snapshot than what we have
+            if (e.RunId != RunId) (ToolStatus, CancelPending, ResponseDone) = (null, false, false);   // not in a snapshot
             (Cursor, RunId, State, Reason, NeedsResync) = (e.Cursor, e.RunId, e.State, e.Reason, false);
             _text.Clear().Append(e.Text);
             return;
@@ -73,7 +86,7 @@ public sealed class StatusView
 }
 
 /// <summary>
-/// The first version every team writes, kept to reproduce the failures: it
+/// The obvious first version, kept to reproduce the failures: it
 /// appends every delta it receives, treats response.done or any Completed as
 /// done, and shows Cancelled as soon as the user clicks.
 /// </summary>

@@ -23,6 +23,8 @@ internal static class SseSelfTest
         builder.Logging.ClearProviders();
         await using WebApplication app = builder.Build();
         app.MapStatusStream("/conversations", log, (_, id) => id != "c-hidden");
+        OperationLog restarted = new(retain: 32, clientQueue: 8);   // the same server after a restart: a new, empty log
+        app.MapStatusStream("/restarted", restarted, (_, _) => true);
         await app.StartAsync();
         HttpClient http = app.GetTestClient();
 
@@ -70,7 +72,7 @@ internal static class SseSelfTest
         Check($"DEFECT REPRODUCED: snapshot, then a replay from 0 doubles the text ({naive2.Text.Length} chars for {string.Concat(words).Length})",
             naive2.Text == string.Concat(words) + string.Concat(words));
 
-        Console.WriteLine("\n-- 3. A cursor older than the retained window gets a snapshot");
+        Console.WriteLine("\n-- 3. A cursor the log cannot replay gets a snapshot");
         string run3 = log.StartRun("c3");
         for (int i = 0; i < 80; i++) log.Delta("c3", run3, $"w{i} ");
         List<StatusEvent> afterGap = await ReadAsync(http, "c3", 3, _ => true);
@@ -83,6 +85,19 @@ internal static class SseSelfTest
         foreach (StatusEvent e in (await ReadAsync(http, "c2", 0, e => e.State == OperationState.AwaitingApproval)).Where(e => e.Cursor != 3))
             holed.Apply(e);
         Check("a hole in the cursors (3 missing) sets NeedsResync instead of applying past it", holed.NeedsResync && holed.Cursor == 2);
+        string run9 = log.StartRun("c9");
+        for (int i = 0; i < 39; i++) log.Delta("c9", run9, $"w{i} ");
+        StatusView before = new();
+        (await ReadAsync(http, "c9", 0, e => e.Cursor == 40)).ForEach(before.Apply);
+        string fresh = restarted.StartRun("c9");   // the server restarts: its log numbers from 1 again
+        restarted.Delta("c9", fresh, "Checking. ");
+        long stale = before.Cursor;
+        List<StatusEvent> resumedFirst = await ReadAsync(http, "c9", stale, _ => true, prefix: "/restarted");
+        resumedFirst.ForEach(before.Apply);
+        restarted.SetState("c9", fresh, OperationState.Completed, "paid");
+        (await ReadAsync(http, "c9", before.Cursor, _ => false, prefix: "/restarted")).ForEach(before.Apply);
+        Check($"after a restart (new epoch, log at cursor 2) the client sends cursor {stale}: a {resumedFirst[0].Type} at {resumedFirst[0].Cursor}, then cursor {before.Cursor}, {before.State}, done {before.ShowsDone}",
+            resumedFirst[0].Type == EventTypes.Snapshot && before.RunId == fresh && before.ShowsDone && before.Cursor == 3);
 
         Console.WriteLine("\n-- 4. An older run's outcome does not end the newer run");
         string runA = log.StartRun("c4");
@@ -102,6 +117,16 @@ internal static class SseSelfTest
         List<StatusEvent> ended = await open;
         Check("the server's stream ended on run B's Failed, not on run A's Completed",
             ended.Count == 1 && ended[0].RunId == runB && ended[0].State == OperationState.Failed);
+        string runC = log.StartRun("c4b");
+        log.Delta("c4b", runC, "Paid. ");
+        log.SetState("c4b", runC, OperationState.Completed, "low_value");
+        string runD = log.StartRun("c4b");   // the next claim on the same conversation
+        log.Delta("c4b", runD, "Waiting for a reviewer. ");
+        List<StatusEvent> replay = await ReadAsync(http, "c4b", 0, e => e.Cursor == log.Cursor("c4b"));
+        StatusView view4b = new();
+        replay.ForEach(view4b.Apply);
+        Check($"a replay from 0 across two runs: {replay.Count} of {log.Cursor("c4b")} events, the first run's Completed does not end it; the view is on the second run, {view4b.State}",
+            replay.Count == log.Cursor("c4b") && view4b.RunId == runD && !view4b.ShowsDone);
 
         Console.WriteLine("\n-- 5. A slow client: the queue is bounded");
         string run5 = log.StartRun("c5");
@@ -142,23 +167,42 @@ internal static class SseSelfTest
         (await ReadAsync(http, "c6", view6.Cursor, _ => false)).ForEach(view6.Apply);
         Check($"DEFECT REPRODUCED: the naive UI shows {naive6.Shown}; the payment committed", naive6.Shown == "Cancelled");
         Check($"the view shows {view6.State} ({view6.Reason})", view6.State == OperationState.Completed && view6.Reason == "committed_before_cancel");
+        StatusEvent? reopened = log.SetState("c6", run6, OperationState.Running, "reopened");
+        Check($"a terminal state is final: a later Running for the same run is {(reopened is null ? "refused" : "accepted")}; the snapshot stays {log.Snapshot("c6").State}",
+            reopened is null && log.Snapshot("c6").State == OperationState.Completed);
         string run7 = log.StartRun("c6");
         log.CancelRequested("c6", run7);
         log.SetState("c6", run7, OperationState.OutcomeUnknown, "provider_timeout");
         StatusView view7 = new();
         view7.Apply(log.Snapshot("c6"));
         Check("a provider timeout after the request: OutcomeUnknown, still not done", view7.State == OperationState.OutcomeUnknown && !view7.ShowsDone);
+        StatusView pending = new();
+        (await ReadAsync(http, "c6", 0, e => e.Type == EventTypes.CancelRequested && e.RunId == run7)).ForEach(pending.Apply);
+        bool wasPending = pending.CancelPending;
+        string run7b = log.StartRun("c6");
+        pending.Apply(log.Snapshot("c6"));
+        Check($"a snapshot of a newer run clears the older run's 'cancel requested' (before: {wasPending}, after: {pending.CancelPending})",
+            wasPending && !pending.CancelPending && pending.RunId == run7b);
 
         Console.WriteLine("\n-- 7. Concurrent writers, one order");
-        string run8 = log.StartRun("c8");
-        long before = log.Cursor("c8");
+        OperationLog wide = new(retain: 2048, clientQueue: 2048);   // room for every event, so none is dropped
+        string run8 = wide.StartRun("c8");
+        long start = wide.Cursor("c8");
+        Subscription watcher = wide.Subscribe("c8", start);   // subscribed before the first write
+        using Barrier gate = new(4);
         Task[] writers = [.. Enumerable.Range(0, 4).Select(w => Task.Run(() =>
         {
-            for (int i = 0; i < 250; i++) log.Delta("c8", run8, $"{w}");
+            gate.SignalAndWait();   // all four start together
+            for (int i = 0; i < 250; i++) wide.Delta("c8", run8, $"{w}");
         }))];
         await Task.WhenAll(writers);
-        Check($"4 writers on Task.Run, 1000 deltas: cursors {before + 1}..{log.Cursor("c8")}, each once",
-            log.Cursor("c8") - before == 1000 && log.Snapshot("c8").Text!.Length == 1000);
+        List<long> seen = [];
+        while (watcher.Queue.Reader.TryRead(out StatusEvent? ev)) seen.Add(ev.Cursor);
+        watcher.Close();
+        string text = wide.Snapshot("c8").Text!;
+        Check($"4 writers on Task.Run behind a barrier, 1000 deltas: the subscriber saw cursors {seen[0]}..{seen[^1]}, each once, in order",
+            seen.SequenceEqual(Enumerable.Range((int)start + 1, 1000).Select(i => (long)i))
+            && text.Length == 1000 && "0123".All(d => text.Count(ch => ch == d) == 250));
 
         Console.WriteLine("\n-- 8. The host decides who reads");
         using HttpResponseMessage hidden = await http.GetAsync("/conversations/c-hidden/events");
@@ -172,13 +216,13 @@ internal static class SseSelfTest
 
     // Reads until the predicate holds or the server ends the stream; a timeout is a cut connection.
     private static async Task<List<StatusEvent>> ReadAsync(HttpClient http, string conversation, long after,
-        Func<StatusEvent, bool> stop, TimeSpan? timeout = null)
+        Func<StatusEvent, bool> stop, TimeSpan? timeout = null, string prefix = "/conversations")
     {
         List<StatusEvent> got = [];
         using CancellationTokenSource cts = new(timeout ?? TimeSpan.FromSeconds(2));
         try
         {
-            await foreach (StatusEvent e in StatusStreamClient.ReadAsync(http, $"/conversations/{conversation}/events", after, ct: cts.Token))
+            await foreach (StatusEvent e in StatusStreamClient.ReadAsync(http, $"{prefix}/{conversation}/events", after, ct: cts.Token))
             {
                 got.Add(e);
                 if (stop(e)) break;

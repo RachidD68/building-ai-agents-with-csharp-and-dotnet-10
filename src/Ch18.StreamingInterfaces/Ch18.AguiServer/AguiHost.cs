@@ -22,6 +22,12 @@ public sealed record AguiHostOptions
     /// <summary>false reproduces the defect: the AG-UI thread id alone finds a stored session.</summary>
     public bool GuardThreads { get; init; } = true;
 
+    /// <summary>
+    /// false reproduces the second defect: the guard reads "threadId" case-sensitively, while
+    /// MAF's AG-UI parser matches it case-insensitively and keeps the last duplicate.
+    /// </summary>
+    public bool ReadThreadIdLikeMaf { get; init; } = true;
+
     /// <summary>Called each time an agent instance is built (the self-test counts them).</summary>
     public Action<string>? AgentBuilt { get; init; }
 
@@ -106,7 +112,8 @@ public static class AguiHost
         app.UseAuthentication();
         app.UseAuthorization();
         ThreadOwners owners = app.Services.GetRequiredService<ThreadOwners>();
-        bool guard = app.Services.GetRequiredService<AguiHostOptions>().GuardThreads;
+        AguiHostOptions options = app.Services.GetRequiredService<AguiHostOptions>();
+        bool guard = options.GuardThreads;
 
         // The AG-UI thread id is chosen by the client: a locator, not an authorization.
         // The first caller to use one owns it; anyone else gets 404, as for an unknown id.
@@ -116,9 +123,7 @@ public static class AguiHost
                 && CallerKey.From(http.User) is { } who)
             {
                 http.Request.EnableBuffering();
-                string? thread;
-                using (JsonDocument doc = await JsonDocument.ParseAsync(http.Request.Body, cancellationToken: http.RequestAborted))
-                    thread = doc.RootElement.TryGetProperty("threadId", out JsonElement t) ? t.GetString() : null;
+                string? thread = options.ReadThreadIdLikeMaf ? await ThreadIdOf(http) : await FirstExactThreadId(http);
                 http.Request.Body.Position = 0;
                 if (string.IsNullOrEmpty(thread)) { http.Response.StatusCode = 400; return; }
                 if (guard && !owners.TryClaim(thread, who)) { http.Response.StatusCode = 404; return; }
@@ -139,6 +144,35 @@ public static class AguiHost
         app.MapReviews("/reviews", desk, http => CallerKey.From(http.User) is { } who ? new Reviewer(who.TenantId, who.SubjectId) : null,
             claims.OnDecided).RequireAuthorization();
         return app;
+    }
+
+    /// <summary>
+    /// The thread id as MAF will read it, or null (400). MAF's parser matches "threadId"
+    /// case-insensitively and keeps the last of duplicates, so the guard refuses any body
+    /// in which that could name another thread than the one checked here: two such
+    /// properties, or one not spelled exactly "threadId".
+    /// </summary>
+    private static async Task<string?> ThreadIdOf(HttpContext http)
+    {
+        try
+        {
+            using JsonDocument doc = await JsonDocument.ParseAsync(http.Request.Body, cancellationToken: http.RequestAborted);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
+            JsonProperty[] ids = [.. doc.RootElement.EnumerateObject()
+                .Where(p => string.Equals(p.Name, "threadId", StringComparison.OrdinalIgnoreCase))];
+            return ids is [{ Name: "threadId", Value.ValueKind: JsonValueKind.String } only] ? only.Value.GetString() : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    // The defect, kept for the self-test: an exact, case-sensitive lookup of the first "threadId".
+    private static async Task<string?> FirstExactThreadId(HttpContext http)
+    {
+        using JsonDocument doc = await JsonDocument.ParseAsync(http.Request.Body, cancellationToken: http.RequestAborted);
+        return doc.RootElement.TryGetProperty("threadId", out JsonElement t) ? t.GetString() : null;
     }
 }
 
@@ -188,7 +222,11 @@ public sealed class Rights
     }
 }
 
-/// <summary>Who owns each AG-UI thread id: the first validated caller to use it.</summary>
+/// <summary>
+/// Who owns each AG-UI thread id: the first validated caller to use it. A claim is never
+/// released or expired, so a guessable id can be taken first by someone else; a production
+/// host issues unguessable thread ids (or issues them itself) and expires them.
+/// </summary>
 public sealed class ThreadOwners
 {
     private readonly ConcurrentDictionary<string, CallerKey> _owners = new();

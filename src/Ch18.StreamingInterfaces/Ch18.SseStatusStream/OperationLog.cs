@@ -18,6 +18,9 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
 
     public int ClientQueue => clientQueue;
 
+    /// <summary>This log instance. The log is in memory: a restarted server numbers from 1 again, under a new epoch.</summary>
+    public string Epoch { get; } = "log_" + Guid.NewGuid().ToString("N")[..8];
+
     /// <summary>A new run: its own id, Running, an empty response text.</summary>
     public string StartRun(string conversationId)
     {
@@ -42,9 +45,20 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
     /// <summary>A request, not a result: the state changes only when the application reports what happened.</summary>
     public StatusEvent CancelRequested(string conversationId, string runId) => Add(conversationId, runId, EventTypes.CancelRequested);
 
-    /// <summary>The application's confirmed state of a run's operation. The only way to a terminal state.</summary>
-    public StatusEvent SetState(string conversationId, string runId, OperationState state, string reason) =>
-        Add(conversationId, runId, EventTypes.State, state: state, reason: reason);
+    /// <summary>
+    /// The application's confirmed state of a run's operation. The only way to a terminal
+    /// state, and a terminal state is final: a later state for that run is refused (null).
+    /// </summary>
+    public StatusEvent? SetState(string conversationId, string runId, OperationState state, string reason)
+    {
+        lock (_gate)
+        {
+            Conversation c = Get(conversationId);
+            if (c.Ended.Contains(runId)) return null;
+            if (OperationStates.IsTerminal(state)) c.Ended.Add(runId);
+            return Append(c, runId, EventTypes.State, state: state, reason: reason);
+        }
+    }
 
     /// <summary>The whole view at the current cursor: the current run's text and the operation's state.</summary>
     public StatusEvent Snapshot(string conversationId)
@@ -54,7 +68,8 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
 
     /// <summary>
     /// Everything after <paramref name="after"/>, then live events, in one step.
-    /// A cursor older than the retained window gets a snapshot instead of a replay.
+    /// A cursor older than the retained window, or past the log's end (the client
+    /// read an earlier instance of this log), gets a snapshot instead of a replay.
     /// </summary>
     public Subscription Subscribe(string conversationId, long after)
     {
@@ -62,7 +77,7 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
         {
             Conversation c = Get(conversationId);
             long oldest = c.Events.Count == 0 ? c.Next : c.Events[0].Cursor;
-            IReadOnlyList<StatusEvent> backlog = after >= oldest - 1
+            IReadOnlyList<StatusEvent> backlog = after >= oldest - 1 && after < c.Next
                 ? [.. c.Events.Where(e => e.Cursor > after)]
                 : [SnapshotOf(c)];
             Subscription s = new(this, c, clientQueue) { Backlog = backlog, RunId = c.RunId };
@@ -92,7 +107,7 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
     private StatusEvent Append(Conversation c, string runId, string type, string? text = null,
         OperationState? state = null, string? reason = null)
     {
-        StatusEvent e = new($"{c.Id}:{c.Next}", c.Id, runId, type, StatusEvent.SchemaVersion, c.Next, text, state, reason);
+        StatusEvent e = new($"{c.Id}:{Epoch}:{c.Next}", c.Id, runId, type, StatusEvent.SchemaVersion, c.Next, text, state, reason, Epoch);
         c.Next++;
         if (runId == c.RunId && type == EventTypes.State) (c.State, c.Reason) = (state, reason);
         c.Events.Add(e);
@@ -110,10 +125,12 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
         return e;
     }
 
-    private static StatusEvent SnapshotOf(Conversation c) =>
-        new($"{c.Id}:snapshot:{c.Next - 1}", c.Id, c.RunId ?? "", EventTypes.Snapshot, StatusEvent.SchemaVersion,
-            c.Next - 1, c.Text.ToString(), c.State, c.Reason);
+    private StatusEvent SnapshotOf(Conversation c) =>
+        new($"{c.Id}:{Epoch}:snapshot:{c.Next - 1}", c.Id, c.RunId ?? "", EventTypes.Snapshot, StatusEvent.SchemaVersion,
+            c.Next - 1, c.Text.ToString(), c.State, c.Reason, Epoch);
 
+    // Never evicted: memory grows with the number of conversations. A production log
+    // needs eviction or durable storage.
     private Conversation Get(string id)
     {
         if (!_conversations.TryGetValue(id, out Conversation? c)) _conversations[id] = c = new Conversation(id);
@@ -135,6 +152,7 @@ public sealed class OperationLog(int retain = 256, int clientQueue = 64)
         public string? RunId { get; set; }
         public OperationState? State { get; set; }
         public string? Reason { get; set; }
+        public HashSet<string> Ended { get; } = [];   // runs that reached a terminal state
     }
 }
 

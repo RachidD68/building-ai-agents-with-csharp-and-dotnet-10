@@ -40,13 +40,14 @@ public static class StatusEndpoints
         Subscription sub = log.Subscribe(id, after);
         try
         {
-            string? run = sub.RunId;
+            // The backlog may hold earlier runs and their outcomes: only the run that was
+            // current when the client subscribed can end the stream.
             foreach (StatusEvent e in sub.Backlog)
             {
-                run = e.Type == EventTypes.Snapshot || IsRunStart(e) ? e.RunId : run;
                 yield return Item(e);
-                if (e.RunId == run && (e.Type is EventTypes.State or EventTypes.Snapshot) && OperationStates.IsTerminal(e.State)) yield break;
+                if (e.RunId == sub.RunId && (e.Type is EventTypes.State or EventTypes.Snapshot) && OperationStates.IsTerminal(e.State)) yield break;
             }
+            string? run = sub.RunId;
             await foreach (StatusEvent e in sub.Queue.Reader.ReadAllAsync(ct))
             {
                 run = IsRunStart(e) ? e.RunId : run;
@@ -55,7 +56,7 @@ public static class StatusEndpoints
             }
             if (sub.Overflowed)
                 yield return Item(new StatusEvent($"{id}:resync:{log.Cursor(id)}", id, run ?? "", EventTypes.Resync,
-                    StatusEvent.SchemaVersion, log.Cursor(id) + 1, Reason: "client_queue_full"));
+                    StatusEvent.SchemaVersion, log.Cursor(id) + 1, Reason: "client_queue_full", Epoch: log.Epoch));
         }
         finally
         {
