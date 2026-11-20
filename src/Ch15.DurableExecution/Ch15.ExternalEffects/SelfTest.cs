@@ -39,11 +39,11 @@ internal static class ExternalEffectsSelfTest
             t.Defect("the naive step replayed with a fresh operation id pays twice (two references)",
                 twice?.Status == "Paid" && paidTwice.Count == 2 && paidTwice[0].Reference != paidTwice[1].Reference);
 
-            Console.WriteLine("\n-- 2. Cancel: before the effect, after it, and during an uncertain call");
+            Console.WriteLine("\n-- 2. Cancel: before the commit, after the payout, and during an uncertain call");
             PayoutHost early = Host(root, "cancel-before", out PayoutRow earlyRow);
             PayoutResult? cancelled = await early.RunAsync(earlyRow.ClaimId, "worker-a", Lease,
                 new ActionHook(StepPoints.BeforeCommit, () => { early.Store.RequestCancel(earlyRow.ClaimId); return default; }));
-            t.Check("cancel before the effect -> Cancelled, nothing sent (0 effects)",
+            t.Check("cancel before the commit -> Cancelled, nothing sent (0 effects)",
                 cancelled?.Status == "Cancelled" && Journal(early).Count == 0);
             PayoutResult? afterCancel = await early.RunAsync(earlyRow.ClaimId, "worker-b", Lease, new NoHook());
             t.Check("a replay of a cancelled payout stays Cancelled", afterCancel?.Status == "Cancelled" && Journal(early).Count == 0);

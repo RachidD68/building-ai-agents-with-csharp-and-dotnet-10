@@ -74,7 +74,7 @@ internal sealed class PayoutExecutor(PayoutContext ctx) : Executor<PayoutOrder, 
         // 2. A cancel still stops a payout that has not begun (Approved). Once begun, the attempt is settled first.
         if (ctx.Store.Load(order.ClaimId)!.CancelRequested && row.State == "Approved")
             return ctx.Store.Cancel(order.ClaimId, ctx.Token, ctx.Clock())
-                ? Result(order, "Cancelled", "cancelled before the effect; nothing was sent", null)
+                ? Result(order, "Cancelled", "cancelled before the commit; nothing was sent", null)
                 : Stale(order);
 
         // 3. Fenced: only the current lease holder may begin (or take over) the payout.

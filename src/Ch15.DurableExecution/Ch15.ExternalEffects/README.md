@@ -19,7 +19,7 @@ A worker that dies anywhere in the payout step restarts from the checkpoint take
 - reconciles an attempt Ch08's delivery worker left `Sending` or `OutcomeUnknown` instead of sending it blind;
 - commits only under the current lease: every write repeats the fencing-token check in its own statement.
 
-Cancelling is not undoing: a cancel before the effect stops the payout (`Cancelled`); a cancel after it leaves `Paid` and says that a refund would be a new, approved operation; a cancel during a call whose reply is lost leaves `Unknown`, and reconciliation finds the payment.
+Cancelling is not undoing: a cancel before the commit, while the payout is still `Approved`, stops it (`Cancelled`); a cancel after it leaves `Paid` and says that a refund would be a new, approved operation; a cancel during a call whose reply is lost leaves `Unknown`, and reconciliation finds the payment.
 
 `SqliteCheckpointStore` (a `JsonCheckpointStore` over its own SQLite file) stands in for a shared production store: unlike `FileSystemJsonCheckpointStore`, it lets several workers open it at once, so only the lease and its fencing token keep two of them apart. The run uses `InProcessExecution.Lockstep`, so the restart point is stored before the payout step starts.
 
