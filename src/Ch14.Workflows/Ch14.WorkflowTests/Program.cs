@@ -1,146 +1,97 @@
 // ============================================================================
-// Workflow Tests (design principle #6: cover every branch)
+// Workflow Tests: one case per branch, no model
 // ----------------------------------------------------------------------------
-// Workflows are testable: build the graph, run it in-process with inputs that
-// exercise each branch, and assert on the streamed events and the final output.
-// No live model is involved — the analyzer is a deterministic keyword classifier,
-// so the tests are fast and repeatable, exactly what a unit test should be.
+// Build the graph, run it in-process with inputs that reach each branch, and
+// assert on the streamed events and the outcome. The claim-review graph is the
+// one Ch14.ApprovalWorkflow runs (its ClaimReview.cs is compiled into this
+// project); a scripted IChatClient stands in for the model and a scripted
+// reviewer stands in for the person.
 //
-// This is a plain console assertion harness rather than an xUnit project so it
-// drops into the solution with no extra test packages. The pattern — run the
-// graph, collect events, assert — transfers directly to xUnit or NUnit: move
-// each Case into a [Fact] and replace Check(...) with Assert.
+// "DEFECT REPRODUCED" lines show a failure the chapter fixes: the check passes
+// when the broken behaviour really happens.
 //
-// Exit code 0 means every assertion passed; non-zero means a failure.
+// A plain console harness rather than an xUnit project: move each case into a
+// [Fact] and Check(...) into Assert to port it. Exit code 0 = every check passed.
+// Accepts --self-test (same run) so the repository's self-test sweep finds it.
 // ============================================================================
 
+using Ch14.ApprovalWorkflow;
+using Ch14.WorkflowTests;
 using Microsoft.Agents.AI.Workflows;
 
-int failures = 0;
+_ = args.Contains("--self-test");   // the harness always runs everything offline
+Console.WriteLine("=== Workflow Tests (offline) ===\n");
 
-Console.WriteLine("=== Workflow Tests ===\n");
+ExpenseClaim meals = new("CLM-T1", "meals", 40m, HasReceipt: true, "Team lunch");
 
-// --- Branch 1: positive sentiment routes to the thank-you handler ---
-await Case("positive routes to thank-you",
-    input: "I love this, it's great!",
-    expectExecutor: "thank-you",
-    expectContains: "Thank you");
+Console.WriteLine("-- Sentiment router: one case per branch");
+await Sentiment.CaseAsync("positive routes to thank-you", "I love this, it's great!", "thank-you", "Thank you");
+await Sentiment.CaseAsync("negative routes to escalation", "This is terrible and broken.", "escalation", "ESCALATION");
+await Sentiment.CaseAsync("neutral routes to acknowledgement", "It arrived on Tuesday.", "neutral", "Acknowledged");
 
-// --- Branch 2: negative sentiment routes to escalation ---
-await Case("negative routes to escalation",
-    input: "This is terrible and broken.",
-    expectExecutor: "escalation",
-    expectContains: "ESCALATION");
+Console.WriteLine("\n-- Claim review: every branch");
+ReviewRun approve = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Approve));
+Harness.Check("approve -> approved, one review request",
+    approve.Outcome?.Status == "approved" && approve.Requests.Count == 1);
+Harness.Check("both checks ran in parallel and met at the barrier",
+    approve.Requests[0].Checks.Select(c => c.Check).SequenceEqual(["policy", "receipt"]));
 
-// --- Branch 3: neutral sentiment routes to the default handler ---
-await Case("neutral routes to acknowledgement",
-    input: "It arrived on Tuesday.",
-    expectExecutor: "neutral",
-    expectContains: "Acknowledged");
+ReviewRun revise = await Review.RunAsync(meals, r => r.Revision == 0
+    ? new ReviewReply(ReviewDecision.Revise, "Say who attended.") : new ReviewReply(ReviewDecision.Approve));
+Harness.Check("revise then approve -> approved, revision 1 rewritten by the agent",
+    revise.Outcome?.Status == "approved" && revise.Requests.Count == 2 && revise.Requests[1].Revision == 1 &&
+    revise.Requests[0].Summary != revise.Requests[1].Summary);
 
-Console.WriteLine();
-if (failures == 0)
+ReviewRun reject = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Reject, "Personal expense."));
+Harness.Check("reject -> rejected, distinct from revise", reject.Outcome?.Status == "rejected" && reject.Requests.Count == 1);
+
+ReviewRun returned = await Review.RunAsync(meals with { Category = "gym" }, _ => new ReviewReply(ReviewDecision.Approve));
+Harness.Check("uncovered category -> switch default -> returned, nobody asked",
+    returned.Outcome?.Status == "returned" && returned.Requests.Count == 0);
+
+foreach ((string label, string? line) in new[] { ("empty line", ""), ("end of input", null), ("unknown word \"approved\"", "approved") })
 {
-    Console.WriteLine("All workflow branch tests passed.");
-    return 0;
+    ReviewRun run = await Review.RunAsync(meals, _ => ReviewDecisions.TryParse(line, out ReviewDecision d) ? new ReviewReply(d) : null);
+    Harness.Check($"{label} -> no reply sent, run PendingRequests, no outcome",
+        run.Outcome is null && run.Status == RunStatus.PendingRequests);
 }
 
-Console.WriteLine($"{failures} test(s) FAILED.");
-return 1;
+ReviewRun capped = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Revise), maxRevisions: 2);
+Harness.Check("always revise, cap 2 -> not-approved after 3 requests (cap is not success)",
+    capped.Outcome?.Status == "not-approved" && capped.Requests.Count == 3);
 
-// ---------------------------------------------------------------
-// One test case: run the graph and assert which branch fired and
-// what it produced.
-// ---------------------------------------------------------------
-async Task Case(string name, string input, string expectExecutor, string expectContains)
-{
-    Workflow workflow = BuildSentimentWorkflow();
+ReviewRun typed = await Review.RunAsync(meals, _ => null);
+string? refused = await Review.SendWrongTypeAsync(meals);
+Harness.Check("typed port refuses a string reply; the run stays pending",
+    refused?.Contains("does not match expected response type") == true && typed.Status == RunStatus.PendingRequests);
 
-    string? output = null;
-    HashSet<string> completedExecutors = [];
+Console.WriteLine("\n-- Where it fails, reproduced");
+string[] v1Inputs = ["", "aprove", "reject"];
+Harness.Defect("(a) v1 rule: empty line, typo, \"reject\" and end of input all became approve",
+    v1Inputs.All(i => Review.V1Rule(i) == "approve") && Review.V1Rule(null) == "approve");
+Harness.Check("(a) fixed: empty, typo and end of input are no decision; \"reject\" is Reject",
+    !ReviewDecisions.TryParse("", out _) && !ReviewDecisions.TryParse("aprove", out _) && !ReviewDecisions.TryParse(null, out _) &&
+    ReviewDecisions.TryParse("reject", out ReviewDecision rejected) && rejected == ReviewDecision.Reject);
 
-    StreamingRun run = await InProcessExecution.RunStreamingAsync(
-        workflow, input, sessionId: Guid.NewGuid().ToString(), CancellationToken.None);
+string? duplicate = await Review.SendTwiceAsync(meals);
+Harness.Check("(b) the same reply sent twice: MAF reports no pending request for that id",
+    duplicate?.Contains("No pending request with ID") == true);
 
-    await foreach (WorkflowEvent evt in run.WatchStreamAsync(CancellationToken.None))
-    {
-        switch (evt)
-        {
-            case ExecutorCompletedEvent completed:
-                completedExecutors.Add(completed.ExecutorId);
-                break;
-            case WorkflowOutputEvent workflowOutput:
-                output = workflowOutput.Data?.ToString();
-                break;
-        }
-    }
+Harness.Defect("(c) one graph with a stateful executor, run twice: run 2 sees run 1's state",
+    await Reuse.SharedCounterAsync() is ("seen 1", "seen 2"));
+Harness.Check("(c) fixed: a fresh graph per run gives the same output twice",
+    await Reuse.FreshCounterAsync() is ("seen 1", "seen 1"));
+Harness.Check("(c) fixed: IResettableExecutor resets between runs of one graph",
+    await Reuse.ResettableCounterAsync() is ("seen 1", "seen 1"));
+string? concurrent = await Reuse.ConcurrentRunAsync(meals);
+Harness.Check("(c) a second, concurrent run of one graph is refused (Task.Run while run 1 is paused)",
+    concurrent?.Contains("already owned by another runner") == true);
 
-    bool ranExpectedBranch = completedExecutors.Contains(expectExecutor);
-    bool producedExpectedText = output is not null && output.Contains(expectContains, StringComparison.Ordinal);
+ReviewRun unbounded = await Review.RunAsync(meals, _ => new ReviewReply(ReviewDecision.Revise), maxRevisions: int.MaxValue, maxRounds: 10);
+Harness.Defect("(d) no cap, a reviewer who always says revise: 10 rounds, still no outcome",
+    unbounded.Outcome is null && unbounded.Requests.Count == 10);
 
-    Check(name, ranExpectedBranch && producedExpectedText,
-        detail: $"branch '{expectExecutor}' ran={ranExpectedBranch}, " +
-                $"output contains '{expectContains}'={producedExpectedText} " +
-                $"(output: {output})");
-}
+Console.WriteLine("\n-- Declarative workflow (YAML)");
+await DeclarativeCases.RunAllAsync();
 
-void Check(string name, bool passed, string detail)
-{
-    if (passed)
-    {
-        Console.WriteLine($"  PASS  {name}");
-    }
-    else
-    {
-        Console.WriteLine($"  FAIL  {name}  [{detail}]");
-        failures++;
-    }
-}
-
-// ---------------------------------------------------------------
-// The graph under test: a keyword sentiment router with three branches.
-// ---------------------------------------------------------------
-static Workflow BuildSentimentWorkflow()
-{
-    ExecutorBinding analyzer = new SentimentAnalyzer().BindExecutor();
-    ExecutorBinding thankYou = new ResponderExecutor("thank-you", "Thank you for the kind words!").BindExecutor();
-    ExecutorBinding escalation = new ResponderExecutor("escalation", "ESCALATION: routing to support.").BindExecutor();
-    ExecutorBinding neutral = new ResponderExecutor("neutral", "Acknowledged.").BindExecutor();
-
-    return new WorkflowBuilder(analyzer)
-        .AddEdge<Sentiment>(analyzer, thankYou, s => s == Sentiment.Positive)
-        .AddEdge<Sentiment>(analyzer, escalation, s => s == Sentiment.Negative)
-        .AddEdge<Sentiment>(analyzer, neutral, s => s == Sentiment.Neutral)
-        .WithOutputFrom(thankYou, escalation, neutral)
-        .Build();
-}
-
-internal enum Sentiment { Positive, Negative, Neutral }
-
-/// <summary>Deterministic keyword sentiment classifier.</summary>
-internal sealed class SentimentAnalyzer() : Executor<string, Sentiment>("analyzer")
-{
-    public override ValueTask<Sentiment> HandleAsync(
-        string text, IWorkflowContext context, CancellationToken ct)
-    {
-        string lower = text.ToLowerInvariant();
-        Sentiment sentiment =
-            lower.Contains("love") || lower.Contains("great") || lower.Contains("excellent")
-                ? Sentiment.Positive
-            : lower.Contains("terrible") || lower.Contains("broken") || lower.Contains("hate")
-                ? Sentiment.Negative
-            : Sentiment.Neutral;
-        return ValueTask.FromResult(sentiment);
-    }
-}
-
-/// <summary>A branch handler that yields a fixed response as the workflow output.</summary>
-[YieldsOutput(typeof(string))]
-internal sealed class ResponderExecutor(string id, string response) : Executor<Sentiment>(id)
-{
-    private readonly string _response = response;
-
-    public override async ValueTask HandleAsync(
-        Sentiment sentiment, IWorkflowContext context, CancellationToken ct)
-        => await context.YieldOutputAsync(_response, ct);
-}
+return Harness.Finish();

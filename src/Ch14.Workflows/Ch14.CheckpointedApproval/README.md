@@ -1,8 +1,8 @@
 # Checkpointed Approval
 
-A **durable** human-in-the-loop approval workflow. The workflow runs with a `CheckpointManager`; it pauses on a `RequestPort` for human approval, captures a checkpoint at that superstep, "crashes," then resumes from the checkpoint in a second run and completes. A stateful `RevisionTracker` executor persists its counter across the restart.
+The checkpoint mechanism behind a paused human review. The workflow runs with a `CheckpointManager`; it pauses on a `RequestPort`, captures a checkpoint at that superstep, drops the first run, then resumes a fresh workflow instance from the checkpoint and completes. A stateful `RevisionTracker` executor writes its counter into the checkpoint and reads it back.
 
-Run without arguments, both runs happen in one process against an in-memory checkpoint manager. Nobody is at the keyboard in that demo, so the approval is **simulated**: a fixed, typed `ApprovalDecision.Approve`, printed as `SIMULATED human decision: approve`. The `prepare` and `resume` modes do it for real: two separate processes that share nothing but a checkpoint folder written by `FileSystemJsonCheckpointStore`.
+Run without arguments, both runs happen in one process against an in-memory checkpoint manager: a **same-process simulation** that shows the mechanism and proves nothing about a crash. Nobody is at the keyboard in that demo, so the approval is **simulated**: a fixed, typed `ApprovalDecision.Approve`, printed as `SIMULATED human decision: approve`. The `prepare` and `resume` modes do it for real: two separate processes that share nothing but a checkpoint folder written by `FileSystemJsonCheckpointStore`.
 
 ## Key Concepts
 

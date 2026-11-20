@@ -146,10 +146,11 @@ internal sealed record AnalysisResult(string Label, string Finding);
 /// <summary>
 /// Collects the analyzer results delivered by the fan-in barrier and yields a
 /// combined report once all expected branches have reported. The barrier
-/// delivers one message per branch, so this executor counts.
+/// delivers one message per branch, so this executor counts. The list is
+/// per-run state, so the executor is resettable: a reused graph starts empty.
 /// </summary>
 [YieldsOutput(typeof(string))]
-internal sealed class ReportAggregator(int expected) : Executor<AnalysisResult>("aggregator")
+internal sealed class ReportAggregator(int expected) : Executor<AnalysisResult>("aggregator"), IResettableExecutor
 {
     private readonly List<AnalysisResult> _results = new();
     private readonly int _expected = expected;
@@ -170,5 +171,11 @@ internal sealed class ReportAggregator(int expected) : Executor<AnalysisResult>(
             report.AppendLine($"{r.Label,-10}: {r.Finding}");
         }
         await context.YieldOutputAsync(report.ToString().TrimEnd(), ct);
+    }
+
+    public ValueTask ResetAsync()
+    {
+        _results.Clear();
+        return ValueTask.CompletedTask;
     }
 }

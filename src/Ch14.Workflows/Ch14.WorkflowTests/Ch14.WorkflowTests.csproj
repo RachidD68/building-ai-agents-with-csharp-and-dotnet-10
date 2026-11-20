@@ -5,8 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
     <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows.Declarative" />
     <PackageReference Include="OpenTelemetry.Api" />
+  </ItemGroup>
+
+  <!-- The graph under test is the one Ch14.ApprovalWorkflow runs: compile its
+       source here instead of referencing an executable. -->
+  <ItemGroup>
+    <Compile Include="../Ch14.ApprovalWorkflow/ClaimReview.cs" Link="Linked/ClaimReview.cs" />
+    <Compile Include="../Ch14.ApprovalWorkflow/ScriptedChatClient.cs" Link="Linked/ScriptedChatClient.cs" />
   </ItemGroup>
 
 </Project>

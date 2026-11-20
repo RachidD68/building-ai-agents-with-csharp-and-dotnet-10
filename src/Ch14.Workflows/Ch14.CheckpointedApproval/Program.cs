@@ -1,21 +1,21 @@
 // ============================================================================
-// Checkpointed Approval: durable human-in-the-loop
+// Checkpointed Approval: the checkpoint mechanism behind a paused review
 // ----------------------------------------------------------------------------
 // Ch14.ApprovalWorkflow paused on a RequestPort and waited for a human decision
-// in the same process. That is fine for a CLI, but a real approval can take
-// hours or days — long enough for the host to restart. This version makes the
-// pause durable.
+// in the same process. A real approval can take hours or days, long enough for
+// the host to restart, so the pause has to be written down somewhere.
 //
 // The workflow runs with a CheckpointManager. At the end of every superstep the
-// runtime captures a checkpoint: every executor's state, the pending messages,
-// and — crucially — the pending human request. We run until the workflow pauses
-// for approval, grab that checkpoint, then throw the first run away to simulate
-// a process restart. A *second* run resumes from the checkpoint, re-emits the
-// same approval request, takes the decision, and finishes.
+// runtime captures a checkpoint: every executor's state, the pending messages
+// and the pending human request. The default demo runs until the workflow
+// pauses, keeps that checkpoint, drops the first run, and resumes a fresh
+// workflow instance from the checkpoint in the SAME process. That is a
+// same-process simulation: it shows the mechanism and proves nothing about a
+// crash. The restart-safe version lives in Ch15.DurableReview.
 //
-// A stateful RevisionTracker executor persists its revision counter across the
-// checkpoint via OnCheckpointingAsync / OnCheckpointRestoredAsync, proving that
-// executor state — not just framework plumbing — survives the restart.
+// A stateful RevisionTracker executor writes its revision counter into the
+// checkpoint via OnCheckpointingAsync / OnCheckpointRestoredAsync, so executor
+// state, not just framework plumbing, comes back on restore.
 //
 // Modes:
 //   dotnet run                       in-memory demo: both runs in one process;
@@ -125,7 +125,7 @@ switch (mode)
         return 2;
 }
 
-Console.WriteLine("=== Checkpointed Approval (durable HITL) ===\n");
+Console.WriteLine("=== Checkpointed Approval (same-process simulation) ===\n");
 
 // One CheckpointManager, shared by both the first run and the resumed run.
 CheckpointManager checkpoints = CheckpointManager.CreateInMemory();
@@ -541,7 +541,7 @@ internal static class CrossProcessSelfTest
     public static int Run()
     {
         Console.WriteLine("=== Checkpointed Approval — cross-process self-test ===\n");
-        string root = Path.Combine(Path.GetTempPath(), $"ch13-checkpoint-selftest-{Guid.NewGuid():N}");
+        string root = Path.Combine(Path.GetTempPath(), $"checkpointed-approval-selftest-{Guid.NewGuid():N}");
 
         try
         {

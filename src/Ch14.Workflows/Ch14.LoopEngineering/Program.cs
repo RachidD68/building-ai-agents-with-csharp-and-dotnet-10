@@ -23,6 +23,10 @@
 // needs a capable coding model. The default is Ollama + llama3.2 (offline, per
 // the repo convention); point appsettings.json at a stronger model — a hosted
 // GPT/Claude, or a local qwen3-coder — for a crisper run.
+//
+// Offline check of the stopping rules and the diagnostics parser, no model and
+// no SDK needed: dotnet run -- --self-test. The process exits 0 only on SUCCESS:
+// a loop that stops on its cap, or on no progress, has not succeeded.
 // ============================================================================
 
 using System.ComponentModel;
@@ -36,6 +40,8 @@ using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
 
 const int MaxIterations = 6;
+
+if (args.Contains("--self-test")) return LoopSelfTest.Run();
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -115,18 +121,19 @@ ChatClientAgent agent = new(chatClient, new ChatClientAgentOptions
 // ── The loop. The harness owns it; the model fills one step per turn. ────────
 List<string> workingMemory = [];   // compact attempt summaries — NOT raw logs
 string outcome;
+LoopOutcome result;
 int iteration = 0;
 
 while (true)
 {
-    // EVALUATE — success stopping condition
-    if (lastBuild.Errors.Count == 0)
+    // EVALUATE — success, or the exhaustion stopping condition
+    result = LoopPolicy.BeforeTurn(lastBuild.Errors.Count, iteration, MaxIterations);
+    if (result == LoopOutcome.Success)
     {
         outcome = $"SUCCESS — the target compiles cleanly after {iteration} repair iteration(s).";
         break;
     }
-    // EVALUATE — exhaustion stopping condition
-    if (iteration >= MaxIterations)
+    if (result == LoopOutcome.CapReached)
     {
         outcome = $"ESCALATE — still {lastBuild.Errors.Count} error(s) after {MaxIterations} iterations. Hand off to a human.";
         break;
@@ -156,6 +163,7 @@ while (true)
         // Ctrl+C means STOP the loop, not "log and try again" — swallowing
         // it here would defeat the CancelKeyPress wiring above.
         outcome = $"CANCELLED — stopped by the user on iteration {iteration}.";
+        result = LoopOutcome.Cancelled;
         break;
     }
     catch (Exception ex)
@@ -173,7 +181,8 @@ while (true)
 
     // EVALUATE — no-progress stopping condition. A stuck loop is a failure, not a
     // reason to retry forever.
-    if (errorsAfter >= errorsBefore)
+    result = LoopPolicy.AfterTurn(errorsBefore, errorsAfter);
+    if (result == LoopOutcome.NoProgress)
     {
         outcome = $"ESCALATE — no progress on iteration {iteration} ({errorsBefore} → {errorsAfter}). Stopping.";
         break;
@@ -191,6 +200,7 @@ Console.WriteLine(
     "from becoming a runaway bill.");
 
 try { Directory.Delete(workDir, recursive: true); } catch { /* best-effort cleanup */ }
+return LoopPolicy.ExitCode(result);   // only SUCCESS exits 0
 
 // ── The VERIFIER: compile the target, parse diagnostics into structure. ──────
 BuildResult RunBuild()
@@ -205,17 +215,7 @@ BuildResult RunBuild()
     using Process proc = Process.Start(psi)!;
     string output = proc.StandardOutput.ReadToEnd() + "\n" + proc.StandardError.ReadToEnd();
     proc.WaitForExit();
-
-    List<Diag> errors = [];
-    HashSet<string> seen = [];
-    foreach (Match m in Regex.Matches(
-        output, @"\((\d+),\d+\):\s*error\s+(CS\d+):\s*(.+?)(?:\s*\[|$)", RegexOptions.Multiline))
-    {
-        Diag d = new(int.Parse(m.Groups[1].Value), m.Groups[2].Value, m.Groups[3].Value.Trim());
-        if (seen.Add($"{d.Code}@{d.Line}"))
-            errors.Add(d);
-    }
-    return new BuildResult(proc.ExitCode, errors);
+    return new BuildResult(proc.ExitCode, LoopPolicy.ParseErrors(output));
 }
 
 static string Format(List<Diag> errors)
@@ -228,3 +228,93 @@ static string Format(List<Diag> errors)
 
 record Diag(int Line, string Code, string Message);
 record BuildResult(int ExitCode, List<Diag> Errors);
+
+enum LoopOutcome { Continue, Success, CapReached, NoProgress, Cancelled }
+
+/// <summary>The harness's stopping rules and its verifier parser, kept pure so they can be tested.</summary>
+static class LoopPolicy
+{
+    /// <summary>Before a turn: done when the build is clean, stop when the cap is used up.</summary>
+    public static LoopOutcome BeforeTurn(int errors, int iteration, int maxIterations) =>
+        errors == 0 ? LoopOutcome.Success
+        : iteration >= maxIterations ? LoopOutcome.CapReached
+        : LoopOutcome.Continue;
+
+    /// <summary>After a turn: the same or more errors is no progress, so stop.</summary>
+    public static LoopOutcome AfterTurn(int errorsBefore, int errorsAfter) =>
+        errorsAfter >= errorsBefore ? LoopOutcome.NoProgress : LoopOutcome.Continue;
+
+    /// <summary>A cap or a stall is not success.</summary>
+    public static int ExitCode(LoopOutcome outcome) => outcome == LoopOutcome.Success ? 0 : 2;
+
+    /// <summary>Compiler output to structured diagnostics, one per code and line.</summary>
+    public static List<Diag> ParseErrors(string output)
+    {
+        List<Diag> errors = [];
+        HashSet<string> seen = [];
+        foreach (Match m in Regex.Matches(
+            output, @"\((\d+),\d+\):\s*error\s+(CS\d+):\s*(.+?)(?:\s*\[|$)", RegexOptions.Multiline))
+        {
+            Diag d = new(int.Parse(m.Groups[1].Value), m.Groups[2].Value, m.Groups[3].Value.Trim());
+            if (seen.Add($"{d.Code}@{d.Line}"))
+                errors.Add(d);
+        }
+        return errors;
+    }
+
+    /// <summary>Drives the rules over a scripted verifier: the error count after each turn.</summary>
+    public static (LoopOutcome Outcome, int Turns) Simulate(int initialErrors, IEnumerable<int> afterEachTurn, int maxIterations)
+    {
+        using IEnumerator<int> next = afterEachTurn.GetEnumerator();
+        int errors = initialErrors;
+        for (int turn = 0; ; turn++)
+        {
+            LoopOutcome before = BeforeTurn(errors, turn, maxIterations);
+            if (before != LoopOutcome.Continue) return (before, turn);
+            int after = next.MoveNext() ? next.Current : errors;
+            if (AfterTurn(errors, after) == LoopOutcome.NoProgress) return (LoopOutcome.NoProgress, turn + 1);
+            errors = after;
+        }
+    }
+}
+
+/// <summary>Offline checks: dotnet run -- --self-test</summary>
+static class LoopSelfTest
+{
+    public static int Run()
+    {
+        Console.WriteLine("=== Loop Engineering self-test (offline) ===\n");
+        int passed = 0, total = 0;
+        void Check(string name, bool ok)
+        {
+            total++; passed += ok ? 1 : 0;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+        }
+
+        // A scripted verifier stands in for dotnet build; the model is not involved.
+        Check("2 -> 1 -> 0 errors: SUCCESS after 2 turns, exit 0",
+            LoopPolicy.Simulate(2, [1, 0], 6) is (LoopOutcome.Success, 2) && LoopPolicy.ExitCode(LoopOutcome.Success) == 0);
+        Check("already clean: SUCCESS with no turn", LoopPolicy.Simulate(0, [], 6) is (LoopOutcome.Success, 0));
+        Check("2 -> 2 errors: NO PROGRESS after 1 turn, exit 2",
+            LoopPolicy.Simulate(2, [2], 6) is (LoopOutcome.NoProgress, 1) && LoopPolicy.ExitCode(LoopOutcome.NoProgress) == 2);
+        Check("2 -> 3 errors (worse): NO PROGRESS", LoopPolicy.Simulate(2, [3], 6) is (LoopOutcome.NoProgress, 1));
+        Check("9 -> 8 -> 7 -> 6 with cap 3: CAP REACHED with 6 errors left, exit 2 (cap is not success)",
+            LoopPolicy.Simulate(9, [8, 7, 6], 3) is (LoopOutcome.CapReached, 3) && LoopPolicy.ExitCode(LoopOutcome.CapReached) == 2);
+        Check("cancelled is not success", LoopPolicy.ExitCode(LoopOutcome.Cancelled) != 0);
+
+        // A canned log in the compiler's format; MSBuild repeats an error, the parser keeps one.
+        const string log =
+            "Program.cs(2,42): error CS1002: ; expected [target.csproj]\n" +
+            "Program.cs(3,9): error CS0117: 'Console' does not contain a definition for 'WriteLin' [target.csproj]\n" +
+            "Program.cs(3,9): error CS0117: 'Console' does not contain a definition for 'WriteLin' [target.csproj]\n" +
+            "Build FAILED.\n";
+        List<Diag> diags = LoopPolicy.ParseErrors(log);
+        Check("verifier parser: 2 structured errors, duplicate dropped, project suffix stripped",
+            diags.Count == 2 && diags[0] == new Diag(2, "CS1002", "; expected") && diags[1].Code == "CS0117" &&
+            diags[1].Line == 3 && !diags[1].Message.Contains('['));
+        Check("verifier parser: a clean log has no errors", LoopPolicy.ParseErrors("Build succeeded.\n    0 Error(s)\n").Count == 0);
+
+        Console.WriteLine($"\nRESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
+    }
+}

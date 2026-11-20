@@ -5,6 +5,7 @@
 //   Input → LengthClassifier → [QuickReview | StandardReview | DeepReview]
 // Mirrors the AddSwitch usage in src/Ch14.Workflows/Ch14.ConditionalWorkflow.
 // FULLY STANDALONE.
+// Acceptance check (offline): dotnet run -- --self-test
 // ============================================================================
 
 using Microsoft.Agents.AI.Workflows;
@@ -42,6 +43,25 @@ string[] submissions =
     """
 ];
 
+if (args.Contains("--self-test"))
+{
+    // One case per branch: which handler ran, read from ExecutorCompletedEvent.
+    string[] expected = ["quick", "standard", "deep"];
+    int passed = 0;
+    foreach ((int i, string submission) in submissions.Index())
+    {
+        Run run = await InProcessExecution.RunAsync(
+            BuildLengthRoutedWorkflow($"T{i}"), submission, sessionId: Guid.NewGuid().ToString(), cts.Token);
+        string[] handlers = [.. run.OutgoingEvents.OfType<ExecutorCompletedEvent>()
+            .Select(e => e.ExecutorId.Split('-')[0]).Where(id => id != "classifier").Distinct()];
+        bool ok = handlers.SequenceEqual([expected[i]]) && run.OutgoingEvents.OfType<WorkflowOutputEvent>().Count() == 1;
+        passed += ok ? 1 : 0;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  submission {i + 1} -> {expected[i]} (ran: {string.Join(",", handlers)})");
+    }
+    Console.WriteLine($"\nRESULT {passed}/{expected.Length}");
+    return passed == expected.Length ? 0 : 1;
+}
+
 foreach ((int i, string submission) in submissions.Index())
 {
     Console.WriteLine($"--- Submission {i + 1} ---");
@@ -66,6 +86,7 @@ foreach ((int i, string submission) in submissions.Index())
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
 // Workflow builder (fresh instance per run)

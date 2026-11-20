@@ -3,6 +3,7 @@
 // Workflow with 3 executors: CleanText → CountWords → FormatReport.
 // Uses class-based executors (Executor<TInput, TOutput>) from
 // Microsoft.Agents.AI.Workflows. FULLY STANDALONE.
+// Acceptance check (offline): dotnet run -- --self-test
 // ============================================================================
 
 using Microsoft.Agents.AI.Workflows;
@@ -15,17 +16,30 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 // ---------------------------------------------------------------
 // Build the workflow
 // ---------------------------------------------------------------
-ExecutorBinding cleanNode = new CleanTextExecutor().BindExecutor();
-ExecutorBinding countNode = new CountWordsExecutor().BindExecutor();
-ExecutorBinding formatNode = new FormatReportExecutor().BindExecutor();
+// A fresh graph (and fresh executors) for every run.
+static Workflow BuildWorkflow()
+{
+    ExecutorBinding cleanNode = new CleanTextExecutor().BindExecutor();
+    ExecutorBinding countNode = new CountWordsExecutor().BindExecutor();
+    ExecutorBinding formatNode = new FormatReportExecutor().BindExecutor();
 
-Workflow workflow = new WorkflowBuilder(cleanNode)
-    .AddEdge(cleanNode, countNode)
-    .AddEdge(countNode, formatNode)
-    .WithOutputFrom(formatNode)
-    .WithName("TextProcessingWorkflow")
-    .WithDescription("Cleans text, counts words, and formats a report")
-    .Build();
+    return new WorkflowBuilder(cleanNode)
+        .AddEdge(cleanNode, countNode)
+        .AddEdge(countNode, formatNode)
+        .WithOutputFrom(formatNode)
+        .WithName("TextProcessingWorkflow")
+        .WithDescription("Cleans text, counts words, and formats a report")
+        .Build();
+}
+
+// The report is read from the WorkflowOutputEvent, never from console text.
+static async Task<string?> RunOnceAsync(string text, CancellationToken ct)
+{
+    Run run = await InProcessExecution.RunAsync(BuildWorkflow(), text, sessionId: Guid.NewGuid().ToString(), ct);
+    return run.OutgoingEvents.OfType<WorkflowOutputEvent>().Select(o => o.Data?.ToString()).LastOrDefault();
+}
+
+Workflow workflow = BuildWorkflow();
 
 Console.WriteLine($"Workflow: {workflow.Name}");
 Console.WriteLine($"Graph:\n{WorkflowVisualizer.ToMermaidString(workflow)}\n");
@@ -38,6 +52,19 @@ string sampleText = """
     It has multiple sentences. Some are short. Others are a bit longer and more descriptive.
     The   workflow   should   clean   this   up   nicely!
     """;
+
+if (args.Contains("--self-test"))
+{
+    string? first = await RunOnceAsync(sampleText, cts.Token);
+    string? second = await RunOnceAsync(sampleText, cts.Token);
+    bool fromEvent = first?.Contains("=== Text Analysis Report ===") == true;
+    bool same = first is not null && first == second;
+    Console.WriteLine($"  {(fromEvent ? "PASS" : "FAIL")}  the report comes from the WorkflowOutputEvent");
+    Console.WriteLine($"  {(same ? "PASS" : "FAIL")}  a fresh workflow per run gives identical output twice");
+    int passed = (fromEvent ? 1 : 0) + (same ? 1 : 0);
+    Console.WriteLine($"\nRESULT {passed}/2");
+    return passed == 2 ? 0 : 1;
+}
 
 Console.WriteLine("--- Input ---");
 Console.WriteLine(sampleText);
@@ -55,6 +82,7 @@ foreach (WorkflowEvent evt in run.OutgoingEvents)
 }
 
 Console.WriteLine("\n=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
 // Executors
