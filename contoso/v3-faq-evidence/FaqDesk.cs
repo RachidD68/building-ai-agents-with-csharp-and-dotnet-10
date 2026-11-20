@@ -21,7 +21,7 @@ public enum FaqOutcome
     Uncited,
     /// <summary>The model cited a source that was not retrieved for this question: withheld.</summary>
     UnsupportedCitation,
-    /// <summary>The caller is not an employee of the handbook's tenant: nothing searched.</summary>
+    /// <summary>The caller's tenant is not the handbook's (a tenant check only): nothing searched.</summary>
     NotPermitted,
 }
 

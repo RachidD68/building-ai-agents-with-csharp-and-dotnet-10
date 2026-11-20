@@ -184,6 +184,13 @@ internal static partial class SelfTest
         Scenario.Check(embeddings.RendezvousReached, $"all {Concurrent.Length} searches were in flight at the same time");
         Scenario.Check(own == Concurrent.Length, $"each reply holds only its own evidence and citation ({own}/{Concurrent.Length})");
 
+        // The detector itself, on a second desk so the log below is unchanged: one after the other is not concurrent.
+        FaqDesk sequential = new(new ScriptedModel(ScriptedModel.Mode.Honest), search, directory, Scenario.Tenant);
+        embeddings.Reset(rendezvous: 2);
+        foreach ((string question, _) in Concurrent.Take(2))
+            await sequential.AskAsync(Scenario.Tenant, "E-1001", question);
+        Scenario.Check(!embeddings.RendezvousReached, "detector: 2 questions asked one after the other are not reported as in flight together");
+
         Console.WriteLine("\n-- 6. The evidence log --");
         Scenario.Check(desk.EvidenceLog.Count == 3 + Concurrent.Length
                        && desk.EvidenceLog.Select(r => r.QuestionId).Distinct().Count() == desk.EvidenceLog.Count,
@@ -200,19 +207,23 @@ internal static partial class SelfTest
         new() { Id = "benefits-6", Source = "benefits", Topic = "Benefits", Content = "Birth parents receive 16 weeks of fully paid parental leave." },
     ];
 
-    /// <summary>One axis per keyword plus an "anything else" axis; can hold searches until N are in flight.</summary>
+    /// <summary>
+    /// One axis per keyword plus an "anything else" axis; can hold searches until N are in flight.
+    /// A search that gives up waiting marks the rendezvous as missed.
+    /// </summary>
     private sealed partial class Keywords : IEmbeddingGenerator<string, Embedding<float>>
     {
         private static readonly string[] Axes = ["pto", "expense", "remote", "parental"];
         private TaskCompletionSource _all = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int _rendezvous, _arrived;
+        private int _rendezvous, _arrived, _timedOut;
 
-        public bool RendezvousReached => _all.Task.IsCompletedSuccessfully;
+        public bool RendezvousReached => _all.Task.IsCompletedSuccessfully && Volatile.Read(ref _timedOut) == 0;
 
         public void Reset(int rendezvous)
         {
             _rendezvous = rendezvous;
             _arrived = 0;
+            _timedOut = 0;
             _all = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
@@ -223,7 +234,8 @@ internal static partial class SelfTest
             if (texts.Length == 1 && _rendezvous > 0)
             {
                 if (Interlocked.Increment(ref _arrived) >= _rendezvous) _all.TrySetResult();
-                await Task.WhenAny(_all.Task, Task.Delay(TimeSpan.FromSeconds(10), cancellationToken));
+                if (await Task.WhenAny(_all.Task, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken)) != _all.Task)
+                    Interlocked.Exchange(ref _timedOut, 1);
             }
             return [.. texts.Select(Embed)];
         }

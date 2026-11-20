@@ -175,6 +175,13 @@ internal static partial class FaqSelfTest
             Check(own == Concurrent.Length, $"{mode}: each call saw only its own chunks ({own}/{Concurrent.Length})");
         }
 
+        // The detector itself: the same calls one after the other must not pass as concurrent.
+        ChatClientAgent sequential = FaqAgentFactory.Create(model, search, RetrievalMode.Custom);
+        embeddings.Reset(rendezvous: 2);
+        foreach ((string question, _) in Concurrent.Take(2))
+            await sequential.RunAsync(question, await sequential.CreateSessionAsync());
+        Check(!embeddings.RendezvousReached, "detector: 2 searches run one after the other are not reported as in flight together");
+
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
     }
@@ -229,7 +236,9 @@ internal static partial class FaqSelfTest
     /// One axis per topic keyword, plus an "anything else" axis: cosine is 1 on
     /// topic and 0 off it. Text in square brackets (citations) is ignored.
     /// Records each single-text request (a search) and can hold searches until
-    /// N are in flight, so a concurrency check really overlaps.
+    /// N are in flight, so a concurrency check really overlaps. A search that
+    /// gives up waiting marks the rendezvous as missed: arrivals one after the
+    /// other do not count as being in flight together.
     /// </summary>
     private sealed partial class KeywordEmbeddings(int dimensions = FaqChunk.Dimensions)
         : IEmbeddingGenerator<string, Embedding<float>>
@@ -237,16 +246,17 @@ internal static partial class FaqSelfTest
         private static readonly string[] Keywords = ["pto", "remote", "expense", "parental"];
         private readonly ConcurrentQueue<string> _queries = new();
         private TaskCompletionSource _all = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int _rendezvous, _arrived;
+        private int _rendezvous, _arrived, _timedOut;
 
         public IReadOnlyList<string> Queries => [.. _queries];
-        public bool RendezvousReached => _all.Task.IsCompletedSuccessfully;
+        public bool RendezvousReached => _all.Task.IsCompletedSuccessfully && Volatile.Read(ref _timedOut) == 0;
 
         public void Reset(int rendezvous = 0)
         {
             _queries.Clear();
             _rendezvous = rendezvous;
             _arrived = 0;
+            _timedOut = 0;
             _all = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
@@ -260,7 +270,8 @@ internal static partial class FaqSelfTest
                 if (_rendezvous > 0)
                 {
                     if (Interlocked.Increment(ref _arrived) >= _rendezvous) _all.TrySetResult();
-                    await Task.WhenAny(_all.Task, Task.Delay(TimeSpan.FromSeconds(10), cancellationToken));
+                    if (await Task.WhenAny(_all.Task, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken)) != _all.Task)
+                        Interlocked.Exchange(ref _timedOut, 1);
                 }
             }
             return [.. texts.Select(Embed)];

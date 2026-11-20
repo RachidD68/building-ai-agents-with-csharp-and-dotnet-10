@@ -34,8 +34,8 @@ public sealed class FaqChunk
     /// <summary>
     /// Vector size, part of the collection schema. 768 matches nomic-embed-text,
     /// the local default; text-embedding-3-small (OpenAI/Azure) produces 1536.
-    /// The in-memory store does not check this, but a real vector database
-    /// rejects vectors of the wrong size, so the sample checks it at startup.
+    /// Many vector databases validate the declared size; the in-memory store
+    /// does not, so the sample checks it at startup.
     /// </summary>
     public const int Dimensions = 768;
 
