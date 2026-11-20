@@ -1,4 +1,4 @@
-# code 1e910d2 | SDK 11.0.100 | Windows 11 | provider ollama, model llama3.2 | console exporter
+# code 5d217d8 | SDK 11.0.100 | Windows 11 | provider ollama, model llama3.2 | console exporter | content root masked as <repo>
 $ dotnet run
 
 info: Microsoft.Hosting.Lifetime[0]
@@ -6,9 +6,9 @@ info: Microsoft.Hosting.Lifetime[0]
 info: Microsoft.Hosting.Lifetime[0]
       Hosting environment: Production
 info: Microsoft.Hosting.Lifetime[0]
-      Content root path: L:\Documents\Agentic AI with .NET - Second Edition\CodeSample\src\Ch19.Observability\Ch19.OpenTelemetryAgent
+      Content root path: <repo>\src\Ch19.Observability\Ch19.OpenTelemetryAgent
 === OpenTelemetry agent ===
-You: What is the meals limit for a client dinner?
+You: What is the limit for a client dinner?
 Resource associated with Metrics:
 	telemetry.sdk.name: opentelemetry
 	telemetry.sdk.language: dotnet
@@ -19,22 +19,22 @@ Resource associated with Metrics:
 Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1426815Z, 2026-11-20T17:19:04.2076318Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:09.1788725Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
 Value: 1
 
 Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1434006Z, 2026-11-20T17:19:04.2076354Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:09.1788768Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
 Value: 0
-(2026-11-20T17:18:56.1434006Z, 2026-11-20T17:19:04.2076354Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:09.1788768Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
 Value: 1
 
 Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1436023Z, 2026-11-20T17:19:04.2078692Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
-Value: Sum: 2.142374 Count: 1 Min: 2.142374 Max: 2.142374 
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:09.1791090Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
 (-Infinity,0.005]:0
 (0.005,0.01]:0
 (0.01,0.025]:0
@@ -55,12 +55,12 @@ Value: Sum: 2.142374 Count: 1 Min: 2.142374 Max: 2.142374
 Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: System.Net.NameResolution
-(2026-11-20T17:18:56.4207224Z, 2026-11-20T17:19:04.2078720Z] dns.question.name: localhost 
-Value: Sum: 0.0206033 Count: 1 Min: 0.0206033 Max: 0.0206033 
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:09.1791117Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
 (-Infinity,0.005]:0
 (0.005,0.01]:0
-(0.01,0.025]:1
-(0.025,0.05]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
 (0.05,0.075]:0
 (0.075,0.1]:0
 (0.1,0.25]:0
@@ -73,14 +73,270 @@ Value: Sum: 0.0206033 Count: 1 Min: 0.0206033 Max: 0.0206033
 (7.5,10]:0
 (10,+Infinity]:0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             db212f4986ecb79d
+Resource associated with Metrics:
+	telemetry.sdk.name: opentelemetry
+	telemetry.sdk.language: dotnet
+	telemetry.sdk.version: 1.19.1
+	service.name: unknown_service:dotnet
+	Schema URL: https://opentelemetry.io/schemas/1.44.0
+
+Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:19.1783219Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:19.1783255Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 0
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:19.1783255Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:19.1783302Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:0
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:1
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+
+Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.NameResolution
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:19.1783348Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:0
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+Resource associated with Metrics:
+	telemetry.sdk.name: opentelemetry
+	telemetry.sdk.language: dotnet
+	telemetry.sdk.version: 1.19.1
+	service.name: unknown_service:dotnet
+	Schema URL: https://opentelemetry.io/schemas/1.44.0
+
+Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:29.1766358Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:29.1766390Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 0
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:29.1766390Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:29.1766449Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:0
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:1
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+
+Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.NameResolution
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:29.1766507Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:0
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+Resource associated with Metrics:
+	telemetry.sdk.name: opentelemetry
+	telemetry.sdk.language: dotnet
+	telemetry.sdk.version: 1.19.1
+	service.name: unknown_service:dotnet
+	Schema URL: https://opentelemetry.io/schemas/1.44.0
+
+Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:39.2005313Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:39.2005358Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 0
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:39.2005358Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:39.2005421Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:0
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:1
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+
+Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.NameResolution
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:39.2005448Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:0
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+Resource associated with Metrics:
+	telemetry.sdk.name: opentelemetry
+	telemetry.sdk.language: dotnet
+	telemetry.sdk.version: 1.19.1
+	service.name: unknown_service:dotnet
+	Schema URL: https://opentelemetry.io/schemas/1.44.0
+
+Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:49.1816177Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:49.1816209Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 0
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:49.1816209Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: 1
+
+Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.Http
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:49.1816251Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:0
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:1
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+
+Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
+Instrumentation scope (Meter):
+	Name: System.Net.NameResolution
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:49.1816269Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
+(-Infinity,0.005]:0
+(0.005,0.01]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
+(0.05,0.075]:0
+(0.075,0.1]:0
+(0.1,0.25]:0
+(0.25,0.5]:0
+(0.5,0.75]:0
+(0.75,1]:0
+(1,2.5]:0
+(2.5,5]:0
+(5,7.5]:0
+(7.5,10]:0
+(10,+Infinity]:0
+
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             65a554cb0f9a8678
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       09a3ece25ad04c5a
+Activity.ParentSpanId:       efdb0190afe6574f
 Activity.DisplayName:        POST
 Activity.Kind:               Client
-Activity.StartTime:          2026-11-20T17:18:56.1502859Z
-Activity.Duration:           00:00:10.9682677
+Activity.StartTime:          2026-11-20T19:52:00.0433703Z
+Activity.Duration:           00:00:49.7356593
 Activity.Tags:
     http.request.method: POST
     server.address: localhost
@@ -97,14 +353,14 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             09a3ece25ad04c5a
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             efdb0190afe6574f
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       c91dec697baa0e79
+Activity.ParentSpanId:       f1f1c4c99ece356f
 Activity.DisplayName:        chat llama3.2
 Activity.Kind:               Client
-Activity.StartTime:          2026-11-20T17:18:55.5507176Z
-Activity.Duration:           00:00:11.6993980
+Activity.StartTime:          2026-11-20T19:51:59.6972740Z
+Activity.Duration:           00:00:50.3973962
 Activity.Tags:
     gen_ai.operation.name: chat
     gen_ai.request.model: llama3.2
@@ -118,9 +374,9 @@ Activity.Tags:
   }
 ]
     gen_ai.response.finish_reasons: ["stop"]
-    gen_ai.response.id: 2026-11-20T17:19:07.1088233Z
+    gen_ai.response.id: 2026-11-20T19:52:49.7638027Z
     gen_ai.response.model: llama3.2
-    gen_ai.usage.input_tokens: 197
+    gen_ai.usage.input_tokens: 206
     gen_ai.usage.output_tokens: 18
 Instrumentation scope (ActivitySource):
     Name: Experimental.Microsoft.Extensions.AI
@@ -131,20 +387,20 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             38c4968602c6dac8
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             a849210f87d735c3
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       c91dec697baa0e79
+Activity.ParentSpanId:       f1f1c4c99ece356f
 Activity.DisplayName:        execute_tool get_reimbursement_limit
 Activity.Kind:               Internal
-Activity.StartTime:          2026-11-20T17:19:07.2728923Z
-Activity.Duration:           00:00:00.0076973
+Activity.StartTime:          2026-11-20T19:52:50.1472667Z
+Activity.Duration:           00:00:00.0084176
 Activity.Tags:
     gen_ai.operation.name: execute_tool
     gen_ai.tool.type: function
-    gen_ai.tool.call.id: d7e8a130
+    gen_ai.tool.call.id: dc1672b8
     gen_ai.tool.name: get_reimbursement_limit
-    gen_ai.tool.description: Returns the reimbursement limit for a category: meals, lodging or travel.
+    gen_ai.tool.description: Returns the reimbursement limit for a category: meals, client_meals (a meal with a client), lodging or travel.
 Instrumentation scope (ActivitySource):
     Name: Experimental.Microsoft.Agents.AI
 Resource associated with Activity:
@@ -154,14 +410,14 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             98874238d9f339d2
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             4e7892d2f5f0c19e
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       ef3db2c5f9bb58bb
+Activity.ParentSpanId:       16402ca403b4280a
 Activity.DisplayName:        POST
 Activity.Kind:               Client
-Activity.StartTime:          2026-11-20T17:19:07.2943768Z
-Activity.Duration:           00:00:05.3795622
+Activity.StartTime:          2026-11-20T19:52:50.1757727Z
+Activity.Duration:           00:00:04.7766458
 Activity.Tags:
     http.request.method: POST
     server.address: localhost
@@ -178,14 +434,14 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             ef3db2c5f9bb58bb
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             16402ca403b4280a
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       c91dec697baa0e79
+Activity.ParentSpanId:       f1f1c4c99ece356f
 Activity.DisplayName:        chat llama3.2
 Activity.Kind:               Client
-Activity.StartTime:          2026-11-20T17:19:07.2862776Z
-Activity.Duration:           00:00:05.3888898
+Activity.StartTime:          2026-11-20T19:52:50.1640802Z
+Activity.Duration:           00:00:04.7902291
 Activity.Tags:
     gen_ai.operation.name: chat
     gen_ai.request.model: llama3.2
@@ -199,10 +455,10 @@ Activity.Tags:
   }
 ]
     gen_ai.response.finish_reasons: ["stop"]
-    gen_ai.response.id: 2026-11-20T17:19:12.6610724Z
+    gen_ai.response.id: 2026-11-20T19:52:54.9373924Z
     gen_ai.response.model: llama3.2
-    gen_ai.usage.input_tokens: 142
-    gen_ai.usage.output_tokens: 19
+    gen_ai.usage.input_tokens: 141
+    gen_ai.usage.output_tokens: 15
 Instrumentation scope (ActivitySource):
     Name: Experimental.Microsoft.Extensions.AI
 Resource associated with Activity:
@@ -212,14 +468,14 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             c91dec697baa0e79
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             f1f1c4c99ece356f
 Activity.TraceFlags:         Recorded
-Activity.ParentSpanId:       1e99af51ee15d63a
+Activity.ParentSpanId:       be3e0e49939ac569
 Activity.DisplayName:        invoke_agent ContosoAssistant(contoso-assistant)
 Activity.Kind:               Client
-Activity.StartTime:          2026-11-20T17:18:55.4845303Z
-Activity.Duration:           00:00:17.2132841
+Activity.StartTime:          2026-11-20T19:51:59.6551344Z
+Activity.Duration:           00:00:55.3526173
 Activity.Tags:
     gen_ai.operation.name: invoke_agent
     gen_ai.request.model: llama3.2
@@ -229,10 +485,10 @@ Activity.Tags:
     gen_ai.agent.id: contoso-assistant
     gen_ai.agent.name: ContosoAssistant
     gen_ai.response.finish_reasons: ["stop"]
-    gen_ai.response.id: 2026-11-20T17:19:12.6610724Z
+    gen_ai.response.id: 2026-11-20T19:52:54.9373924Z
     gen_ai.response.model: llama3.2
-    gen_ai.usage.input_tokens: 339
-    gen_ai.usage.output_tokens: 37
+    gen_ai.usage.input_tokens: 347
+    gen_ai.usage.output_tokens: 33
 Instrumentation scope (ActivitySource):
     Name: Experimental.Microsoft.Agents.AI
 Resource associated with Activity:
@@ -243,16 +499,16 @@ Resource associated with Activity:
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
 info: Contoso.Assistant[0]
-      Answered in 17227 ms, 37 output tokens
-Activity.TraceId:            53c92c99df7c1590a4d608e7d1c1bad7
-Activity.SpanId:             1e99af51ee15d63a
+      Answered in 55378 ms, 33 output tokens
+Activity.TraceId:            fb520eb62b7b0de2057ece9390aff496
+Activity.SpanId:             be3e0e49939ac569
 Activity.TraceFlags:         Recorded
 Activity.DisplayName:        contoso.request
 Activity.Kind:               Internal
-Activity.StartTime:          2026-11-20T17:18:55.4696105Z
-Activity.Duration:           00:00:17.2303760
+Activity.StartTime:          2026-11-20T19:51:59.6454910Z
+Activity.Duration:           00:00:55.3800692
 Activity.Tags:
-    contoso.conversation_id: conv-1641a884
+    contoso.conversation_id: conv-29f6890f
 Instrumentation scope (ActivitySource):
     Name: Contoso.Assistant
 Resource associated with Activity:
@@ -262,17 +518,17 @@ Resource associated with Activity:
     service.name: unknown_service:dotnet
     Schema URL: https://opentelemetry.io/schemas/1.44.0
 
-ContosoAssistant: Unfortunately, no limit is defined for 'client dinner' in Contoso's reimbursement policy.
+ContosoAssistant: The reimbursement limit for a client dinner is 120 CAD per person.
 info: Microsoft.Hosting.Lifetime[0]
       Application is shutting down...
 
 --- trace tree (from the exported spans) ---
 contoso.request 
-  invoke_agent ContosoAssistant(contoso-assistant) gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=339 gen_ai.usage.output_tokens=37 gen_ai.response.finish_reasons=["stop"]
-    chat llama3.2 gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=197 gen_ai.usage.output_tokens=18 gen_ai.response.finish_reasons=["stop"]
+  invoke_agent ContosoAssistant(contoso-assistant) gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=347 gen_ai.usage.output_tokens=33 gen_ai.response.finish_reasons=["stop"]
+    chat llama3.2 gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=206 gen_ai.usage.output_tokens=18 gen_ai.response.finish_reasons=["stop"]
       POST 
     execute_tool get_reimbursement_limit gen_ai.tool.name=get_reimbursement_limit
-    chat llama3.2 gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=142 gen_ai.usage.output_tokens=19 gen_ai.response.finish_reasons=["stop"]
+    chat llama3.2 gen_ai.provider.name=ollama gen_ai.request.model=llama3.2 gen_ai.usage.input_tokens=141 gen_ai.usage.output_tokens=15 gen_ai.response.finish_reasons=["stop"]
       POST 
 Resource associated with Metrics:
 	telemetry.sdk.name: opentelemetry
@@ -284,20 +540,20 @@ Resource associated with Metrics:
 Metric Name: contoso.assistant.requests, Description: Requests by outcome, Unit: {request}, Metric Type: LongSum
 Instrumentation scope (Meter):
 	Name: Contoso.Assistant
-(2026-11-20T17:18:54.5308903Z, 2026-11-20T17:19:12.7424819Z] contoso.outcome: ok 
+(2026-11-20T19:51:59.3896963Z, 2026-11-20T19:52:55.0922668Z] contoso.outcome: ok 
 Value: 1
 
 Metric Name: contoso.assistant.duration, Description: End-to-end request time, Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: Contoso.Assistant
-(2026-11-20T17:18:54.5373070Z, 2026-11-20T17:19:12.7470127Z] contoso.outcome: ok 
-Value: Sum: 17.226629 Count: 1 Min: 17.226629 Max: 17.226629 
+(2026-11-20T19:51:59.3992995Z, 2026-11-20T19:52:55.0958131Z] contoso.outcome: ok 
+Value: Sum: 55.3780045 Count: 1 Min: 55.3780045 Max: 55.3780045 
 (-Infinity,0]:0
 (0,5]:0
 (5,10]:0
-(10,25]:1
+(10,25]:0
 (25,50]:0
-(50,75]:0
+(50,75]:1
 (75,100]:0
 (100,250]:0
 (250,500]:0
@@ -313,14 +569,14 @@ Value: Sum: 17.226629 Count: 1 Min: 17.226629 Max: 17.226629
 Metric Name: contoso.assistant.tool_calls, Description: Tool calls by tool and result, Unit: {call}, Metric Type: LongSum
 Instrumentation scope (Meter):
 	Name: Contoso.Assistant
-(2026-11-20T17:18:54.5374519Z, 2026-11-20T17:19:12.7470268Z] contoso.result: ok gen_ai.tool.name: get_reimbursement_limit 
+(2026-11-20T19:51:59.3994353Z, 2026-11-20T19:52:55.0958249Z] contoso.result: ok gen_ai.tool.name: get_reimbursement_limit 
 Value: 1
 
 Metric Name: gen_ai.client.token.usage, Description: Measures number of input and output tokens used, Unit: {token}, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: Experimental.Microsoft.Extensions.AI
-(2026-11-20T17:18:55.3431500Z, 2026-11-20T17:19:12.7470325Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 gen_ai.token.type: input server.address: localhost server.port: 11434 
-Value: Sum: 339 Count: 2 Min: 142 Max: 197 
+(2026-11-20T19:51:59.5162753Z, 2026-11-20T19:52:55.0958291Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 gen_ai.token.type: input server.address: localhost server.port: 11434 
+Value: Sum: 347 Count: 2 Min: 141 Max: 206 
 (-Infinity,1]:0
 (1,4]:0
 (4,16]:0
@@ -337,12 +593,12 @@ Value: Sum: 339 Count: 2 Min: 142 Max: 197
 (16777216,67108864]:0
 (67108864,+Infinity]:0
 
-(2026-11-20T17:18:55.3431500Z, 2026-11-20T17:19:12.7470325Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 gen_ai.token.type: output server.address: localhost server.port: 11434 
-Value: Sum: 37 Count: 2 Min: 18 Max: 19 
+(2026-11-20T19:51:59.5162753Z, 2026-11-20T19:52:55.0958291Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 gen_ai.token.type: output server.address: localhost server.port: 11434 
+Value: Sum: 33 Count: 2 Min: 15 Max: 18 
 (-Infinity,1]:0
 (1,4]:0
-(4,16]:0
-(16,64]:2
+(4,16]:1
+(16,64]:1
 (64,256]:0
 (256,1024]:0
 (1024,4096]:0
@@ -359,8 +615,8 @@ Value: Sum: 37 Count: 2 Min: 18 Max: 19
 Metric Name: gen_ai.client.operation.duration, Description: Measures the duration of a GenAI operation, Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: Experimental.Microsoft.Extensions.AI
-(2026-11-20T17:18:55.3464857Z, 2026-11-20T17:19:12.7470344Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 server.address: localhost server.port: 11434 
-Value: Sum: 17.0514024 Count: 2 Min: 5.3887513 Max: 11.6626511 
+(2026-11-20T19:51:59.5201854Z, 2026-11-20T19:52:55.0958304Z] gen_ai.operation.name: chat gen_ai.provider.name: ollama gen_ai.request.model: llama3.2 gen_ai.response.model: llama3.2 server.address: localhost server.port: 11434 
+Value: Sum: 55.163865099999995 Count: 2 Min: 4.7900024 Max: 50.3738627 
 (-Infinity,0.01]:0
 (0.01,0.02]:0
 (0.02,0.04]:0
@@ -370,25 +626,25 @@ Value: Sum: 17.0514024 Count: 2 Min: 5.3887513 Max: 11.6626511
 (0.32,0.64]:0
 (0.64,1.28]:0
 (1.28,2.56]:0
-(2.56,5.12]:0
-(5.12,10.24]:1
-(10.24,20.48]:1
+(2.56,5.12]:1
+(5.12,10.24]:0
+(10.24,20.48]:0
 (20.48,40.96]:0
-(40.96,81.92]:0
+(40.96,81.92]:1
 (81.92,+Infinity]:0
 
 
 Metric Name: http.client.active_requests, Description: Number of outbound HTTP requests that are currently active on the client., Unit: {request}, Metric Type: LongSumNonMonotonic
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1426815Z, 2026-11-20T17:19:12.7470366Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0361512Z, 2026-11-20T19:52:55.0958324Z] http.request.method: POST server.address: localhost server.port: 11434 url.scheme: http 
 Value: 0
 
 Metric Name: http.client.request.duration, Description: Duration of HTTP client requests., Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1433034Z, 2026-11-20T17:19:12.7470407Z] http.request.method: POST http.response.status_code: 200 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
-Value: Sum: 16.3195099 Count: 2 Min: 5.3793971 Max: 10.9401128 
+(2026-11-20T19:52:00.0367098Z, 2026-11-20T19:52:55.0958350Z] http.request.method: POST http.response.status_code: 200 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 54.4980628 Count: 2 Min: 4.7764625 Max: 49.7216003 
 (-Infinity,0.005]:0
 (0.005,0.01]:0
 (0.01,0.025]:0
@@ -400,8 +656,8 @@ Value: Sum: 16.3195099 Count: 2 Min: 5.3793971 Max: 10.9401128
 (0.5,0.75]:0
 (0.75,1]:0
 (1,2.5]:0
-(2.5,5]:0
-(5,7.5]:1
+(2.5,5]:1
+(5,7.5]:0
 (7.5,10]:0
 (10,+Infinity]:1
 
@@ -409,16 +665,16 @@ Value: Sum: 16.3195099 Count: 2 Min: 5.3793971 Max: 10.9401128
 Metric Name: http.client.open_connections, Description: Number of outbound HTTP connections that are currently active or idle on the client., Unit: {connection}, Metric Type: LongSumNonMonotonic
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1434006Z, 2026-11-20T17:19:12.7470462Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:55.0958423Z] http.connection.state: idle network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
 Value: 1
-(2026-11-20T17:18:56.1434006Z, 2026-11-20T17:19:12.7470462Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+(2026-11-20T19:52:00.0367792Z, 2026-11-20T19:52:55.0958423Z] http.connection.state: active network.peer.address: ::ffff:127.0.0.1 network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
 Value: 0
 
 Metric Name: http.client.request.time_in_queue, Description: The amount of time requests spent on a queue waiting for an available connection., Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: System.Net.Http
-(2026-11-20T17:18:56.1436023Z, 2026-11-20T17:19:12.7470525Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
-Value: Sum: 2.142374 Count: 1 Min: 2.142374 Max: 2.142374 
+(2026-11-20T19:52:00.0369103Z, 2026-11-20T19:52:55.0958498Z] http.request.method: POST network.protocol.version: 1.1 server.address: localhost server.port: 11434 url.scheme: http 
+Value: Sum: 2.1509388 Count: 1 Min: 2.1509388 Max: 2.1509388 
 (-Infinity,0.005]:0
 (0.005,0.01]:0
 (0.01,0.025]:0
@@ -439,12 +695,12 @@ Value: Sum: 2.142374 Count: 1 Min: 2.142374 Max: 2.142374
 Metric Name: dns.lookup.duration, Description: Measures the time taken to perform a DNS lookup., Unit: s, Metric Type: Histogram
 Instrumentation scope (Meter):
 	Name: System.Net.NameResolution
-(2026-11-20T17:18:56.4207224Z, 2026-11-20T17:19:12.7470566Z] dns.question.name: localhost 
-Value: Sum: 0.0206033 Count: 1 Min: 0.0206033 Max: 0.0206033 
+(2026-11-20T19:52:00.1457217Z, 2026-11-20T19:52:55.0958525Z] dns.question.name: localhost 
+Value: Sum: 0.0351101 Count: 1 Min: 0.0351101 Max: 0.0351101 
 (-Infinity,0.005]:0
 (0.005,0.01]:0
-(0.01,0.025]:1
-(0.025,0.05]:0
+(0.01,0.025]:0
+(0.025,0.05]:1
 (0.05,0.075]:0
 (0.075,0.1]:0
 (0.1,0.25]:0

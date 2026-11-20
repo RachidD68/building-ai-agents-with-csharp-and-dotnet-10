@@ -1,4 +1,4 @@
-# code 1e910d2 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
+# code 5d217d8 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
 $ dotnet run -- --self-test
 
 === Incident diagnosis: self-test (offline) ===
@@ -12,6 +12,7 @@ $ dotnet run -- --self-test
   PASS  ToolException: diagnosed as tool (execute_tool get_reimbursement_limit: error.type=System.TimeoutException)
     WrongValue      answer: "The limit is 150 CAD."
   PASS  WrongValue: diagnosed as model (contoso.answer.check: contoso.answer.reason=amount_mismatch)
+  PASS  WrongValue with the flag written "false": diagnosed as model (the reason code decides, not the spelling)
 
 -- The same faults with framework spans only (no step spans) --
     EmptyRetrieval  -> undetermined (no step span tells the steps apart)
@@ -23,4 +24,4 @@ $ dotnet run -- --self-test
   PASS  DEFECT REPRODUCED: without the redactor, execute_tool get_reimbursement_limit exports the exception message as its status description ("limits service did not answer"), sensitive data off
   PASS  none of the 6 seeded strings appears in 475 exported values (spans, metric tags, logs) over 7 runs
 
-RESULT 7/7
+RESULT 8/8

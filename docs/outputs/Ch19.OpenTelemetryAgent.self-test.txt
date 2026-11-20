@@ -1,4 +1,4 @@
-# code 1e910d2 | SDK 11.0.100 | Windows 11 (Linux aspnet:10.0-noble: identical once span/trace ids are masked)
+# code 5d217d8 | SDK 11.0.100 | Windows 11 (Linux aspnet:10.0-noble: identical once span/trace ids are masked)
 $ dotnet run -- --self-test
 
 === OpenTelemetry agent: self-test (offline) ===
@@ -22,7 +22,7 @@ $ dotnet run -- --self-test
     gen_ai.client.token.usage tags: gen_ai.operation.name, gen_ai.provider.name, gen_ai.request.model, gen_ai.response.model, gen_ai.token.type
 
 -- Which sources the tracer provider must subscribe to --
-    sources seen by a listen-to-everything listener: Contoso.Assistant, Experimental.Microsoft.Agents.AI, Experimental.Microsoft.Extensions.AI, Microsoft.Agents.AI.Workflows
+    sources seen by a listener on every non-System source: Contoso.Assistant, Experimental.Microsoft.Agents.AI, Experimental.Microsoft.Extensions.AI, Microsoft.Agents.AI.Workflows
   PASS  DEFECT REPRODUCED: subscribed to the app's own source only, 1 of 9 spans reach the exporter
   PASS  fixed: the four sources in ContosoTelemetry.Sources cover every source that emitted
   PASS  the MAF agent and workflow sources are the ones ContosoTelemetry names (no sourceName passed)
