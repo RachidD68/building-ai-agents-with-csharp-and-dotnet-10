@@ -1,14 +1,16 @@
-# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 20/20 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
+# code b07b4f8 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 23/23 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
 $ dotnet run -- --self-test
 === Cost model: self-test ===
 
 -- Price table as data --
   PASS  a table without a currency is refused
+  PASS  a currency that isn't three capital letters ('123') and a negative rate are refused
   PASS  a table without an effective date is refused
   PASS  a table in another unit is refused
   PASS  usage dated before the table takes effect is refused
   PASS  an unknown model is refused, not priced at zero
+  PASS  an unknown model is refused even when its call reported no usage
   PASS  the same usage on table B gives another total (the formula holds no price)
 
 -- Cost from UsageDetails --
@@ -34,5 +36,6 @@ $ dotnet run -- --self-test
   PASS  reconciliation books the measured cost and releases the rest
   PASS  a cost above its reservation is booked and recorded as an overrun
   PASS  a reservation cannot be reconciled twice
+  PASS  a negative measured cost is refused: it would credit the budget
 
-RESULT 20/20
+RESULT 23/23

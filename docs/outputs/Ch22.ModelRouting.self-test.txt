@@ -1,5 +1,5 @@
-# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 18/18 on Linux (runtime:10.0-noble, --network none)
+# code b07b4f8 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 21/21 on Linux (runtime:10.0-noble, --network none)
 $ dotnet run -- --self-test
 === Routing and failover: self-test ===
 
@@ -27,6 +27,9 @@ $ dotnet run -- --self-test
   PASS  GA: a caller's cancellation is not failed over
   PASS  MEAI001: MaximumAttemptsPerRequest = 1 stops after the first failure
   PASS  MEAI001: once streamed output is exposed, a failure propagates; no second generation is spliced in
+  PASS  GA: streaming, a failure before any output fails over to the fallback
+  PASS  GA: once streamed output is exposed, a failure propagates; no second generation is spliced in
+  PASS  router: a streaming call it calls easy goes to the cheap tier, and the decision is recorded
 
 -- One retry owner --
     primary attempts per request: retry in the tier + failover = 4, failover only = 1
@@ -39,4 +42,4 @@ $ dotnet run -- --self-test
   PASS  pass 2 is served from the cache: no model attempt, p95 0 ms
   PASS  and accepts exactly as many as pass 1: the cache repeats the wrong answers too
 
-RESULT 18/18
+RESULT 21/21

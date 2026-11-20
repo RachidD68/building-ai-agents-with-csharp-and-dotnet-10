@@ -1,0 +1,741 @@
+{
+  "workload": "contoso-claims-triage/1 live",
+  "date": "2026-11-20",
+  "calls": [
+    {
+      "task": "s0-0-W01",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 77,
+        "outputTokenCount": 4,
+        "totalTokenCount": 81,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-1-W02",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-2-W03",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-3-W04",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 70,
+        "outputTokenCount": 4,
+        "totalTokenCount": 74,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-4-W05",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-5-W06",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 76,
+        "outputTokenCount": 4,
+        "totalTokenCount": 80,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-6-W07",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s0-7-W08",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 71,
+        "outputTokenCount": 4,
+        "totalTokenCount": 75,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-0-W02",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-1-W01",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 77,
+        "outputTokenCount": 4,
+        "totalTokenCount": 81,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-2-W03",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-3-W04",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 70,
+        "outputTokenCount": 4,
+        "totalTokenCount": 74,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-4-W05",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-5-W06",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 76,
+        "outputTokenCount": 4,
+        "totalTokenCount": 80,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-6-W07",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s1-7-W08",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 71,
+        "outputTokenCount": 4,
+        "totalTokenCount": 75,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-0-W01",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 77,
+        "outputTokenCount": 4,
+        "totalTokenCount": 81,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-1-W02",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-2-W03",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-3-W04",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 70,
+        "outputTokenCount": 4,
+        "totalTokenCount": 74,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-4-W06",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 76,
+        "outputTokenCount": 4,
+        "totalTokenCount": 80,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-5-W05",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-6-W07",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s2-7-W08",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 71,
+        "outputTokenCount": 4,
+        "totalTokenCount": 75,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-2-W02",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 74,
+        "outputTokenCount": 4,
+        "totalTokenCount": 78,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-3-W01",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 77,
+        "outputTokenCount": 4,
+        "totalTokenCount": 81,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-4-W03",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-5-W04",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 70,
+        "outputTokenCount": 4,
+        "totalTokenCount": 74,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-6-W05",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 75,
+        "outputTokenCount": 4,
+        "totalTokenCount": 79,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    },
+    {
+      "task": "s3-7-W06",
+      "model": "llama3.2",
+      "attempt": 1,
+      "usage": {
+        "inputTokenCount": 76,
+        "outputTokenCount": 4,
+        "totalTokenCount": 80,
+        "cachedInputTokenCount": null,
+        "reasoningTokenCount": null,
+        "inputAudioTokenCount": null,
+        "inputTextTokenCount": null,
+        "outputAudioTokenCount": null,
+        "outputTextTokenCount": null,
+        "additionalCounts": null
+      },
+      "tools": null,
+      "status": "accepted"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "s0-0-W01",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-1-W02",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-2-W03",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-3-W04",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-4-W05",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-5-W06",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-6-W07",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s0-7-W08",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-0-W02",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-1-W01",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-2-W03",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-3-W04",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-4-W05",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-5-W06",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-6-W07",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s1-7-W08",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-0-W01",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-1-W02",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-2-W03",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-3-W04",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-4-W06",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-5-W05",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-6-W07",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s2-7-W08",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-0-W07",
+      "outcome": "busy",
+      "accepted": false
+    },
+    {
+      "id": "s3-1-W08",
+      "outcome": "busy",
+      "accepted": false
+    },
+    {
+      "id": "s3-2-W02",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-3-W01",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-4-W03",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-5-W04",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-6-W05",
+      "outcome": "accepted",
+      "accepted": true
+    },
+    {
+      "id": "s3-7-W06",
+      "outcome": "accepted",
+      "accepted": true
+    }
+  ],
+  "runtimeHours": {
+    "workstation": 0.0133
+  }
+}

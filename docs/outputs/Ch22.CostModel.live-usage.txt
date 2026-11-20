@@ -1,0 +1,9 @@
+# code b07b4f8 | SDK 11.0.100 | Windows 11 | env: none
+# note: prices the usage log the live LoadProfile run wrote (Ch22.LoadProfile.live.usage.json, recorded at 1def3d3)
+$ dotnet run -- --usage Ch22.LoadProfile.live.usage.json
+=== Cost per accepted task ===
+
+Price table: artificial-a, XTS, effective 2026-11-01, per-million-tokens
+Workload                                   Calls  Accepted           Per call  Per accepted task
+contoso-claims-triage/1 live                  30     30/32       0.000000 XTS       0.000266 XTS
+                                           runtime 0.007980 XTS of total 0.007980 XTS

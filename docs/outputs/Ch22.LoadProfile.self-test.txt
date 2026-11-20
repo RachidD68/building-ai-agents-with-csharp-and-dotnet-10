@@ -1,5 +1,5 @@
-# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 16/16 on Linux (runtime:10.0-noble, --network none); the stepped-load timing rows are real time and vary between runs
+# code b07b4f8 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 17/17 on Linux (runtime:10.0-noble, --network none); the stepped-load timing rows are real time and vary between runs
 $ dotnet run -- --self-test
 === Load profile: self-test ===
 
@@ -19,10 +19,10 @@ $ dotnet run -- --self-test
   PASS  the queue depth never passed its capacity
 
 -- Stepped load (scripted model: 429 beyond 3 in flight; 4 service slots) --
-      1   24   24    0    0    0          0       122        44/121      208        185/447   4.16     0
-      2   24   24    0    0    0          0       138        55/132      139        191/338   9.91     0
-      4   24   15    0    0    9          0       367         46/91      366        157/462  14.78     0
-    declared limit: concurrency 2 (n=24); concurrency 4 crosses: error rate 38% > 5%
+      1   24   24    0    0    0          0        37         16/31       48         94/112  10.34     0
+      2   24   24    0    0    0          0        33         16/29       48         94/110  20.89     0
+      4   24   14    0    0   10          0        32         15/16       48          93/95  29.90     0
+    declared limit: concurrency 2 (n=24); concurrency 4 crosses: error rate 42% > 5%
   PASS  concurrency 1 and 2 never exceed the provider's 3: no 429, both steps hold
   PASS  the run stops at the first step that crosses the limit
   PASS  every scripted 429 is counted as a throttled error, none as accepted
@@ -31,11 +31,12 @@ $ dotnet run -- --self-test
 -- Where it fails --
     20 requests, the first one cold: mean 725 ms, p95 500 ms, max 5000 ms
   PASS  DEFECT REPRODUCED  a 5,000 ms cold start hides in the mean (725) and below p95's rank (500)
-    connector that ignores the token: Accepted after 394 ms (timeout 50 ms)
+    connector that ignores the token: Timeout after 308 ms (timeout 50 ms), slots in use at 150 ms: 1
   PASS  DEFECT REPRODUCED  a connector that ignores cancellation holds the slot past the 50 ms timeout, and the work is done
-    connector that honours it: Timeout after 80 ms
+  PASS  the late answer is recorded as a Timeout, not Accepted, so the error rate sees it
+    connector that honours it: Timeout after 66 ms, slots in use at 150 ms: 0
   PASS  a connector that honours the token: Timeout, slot freed, no completed work
   PASS  an empty sample has no percentile (null, not 0)
   PASS  a workload file without a version is refused
 
-RESULT 16/16
+RESULT 17/17
