@@ -12,9 +12,11 @@ namespace Ch12.ReceiptExtraction;
 /// </summary>
 public static partial class ReceiptValidator
 {
-    // An amount is digits with an optional two-digit decimal part. "64,8O",
+    // An amount is ASCII digits with an optional two-digit decimal part. "64,8O",
     // "64.80 EUR" and "about 65" are not amounts; a person reads them instead.
-    [GeneratedRegex(@"^\d{1,7}(\.\d{2})?$")]
+    // [0-9], not \d: in .NET \d also matches Arabic-Indic or full-width digits,
+    // which decimal.Parse then rejects with an exception.
+    [GeneratedRegex(@"^[0-9]{1,7}(\.[0-9]{2})?$")]
     private static partial Regex AmountPattern();
 
     /// <param name="pages">One reading per page image, in page order; null when the reply was not a reading.</param>
@@ -31,6 +33,8 @@ public static partial class ReceiptValidator
         {
             if (charged.State == FieldState.Present && charged.Value != total.Value)
                 total = total with { State = FieldState.ToVerify, Reason = "conflicting_totals" };
+            else if (charged.State is FieldState.Unreadable or FieldState.ToVerify)
+                total = total with { State = FieldState.ToVerify, Reason = "amount_charged_unchecked" };
             else if (linesSum is null)
                 total = total with { State = FieldState.ToVerify, Reason = "lines_not_checkable" };
             else if (linesSum != total.Value)
@@ -53,7 +57,8 @@ public static partial class ReceiptValidator
         for (int i = 0; i < pages.Count; i++)
         {
             ReadField? f = pages[i] is { } reading ? field(reading) : null;
-            string state = f?.State.Trim().ToLowerInvariant() ?? "unreadable";   // no reading: nothing was read
+            // No reading, no field or no state (valid JSON can leave any of them out): nothing was read.
+            string state = f?.State?.Trim().ToLowerInvariant() ?? "unreadable";
             if (state == "present" && !string.IsNullOrWhiteSpace(f!.Text)) present.Add((i + 1, f.Text.Trim()));
             else if (state != "absent") unreadablePage ??= i + 1;            // unknown states count as unreadable
         }
@@ -88,18 +93,22 @@ public static partial class ReceiptValidator
         return d > today ? t with { State = FieldState.ToVerify, Reason = "date_in_future" } : t;
     }
 
-    /// <summary>The sum of every line on every page, or null when any line amount is not a readable amount.</summary>
+    /// <summary>
+    /// The sum of every line on every page, or null when any line amount is not a
+    /// readable amount. A null line, amount, state or text counts as unreadable.
+    /// </summary>
     private static decimal? SumLines(IReadOnlyList<ReceiptReading?> pages)
     {
-        List<ReadLine> lines = [.. pages.SelectMany(p => p?.Lines ?? [])];
+        List<ReadLine?> lines = [.. pages.SelectMany(p => p?.Lines ?? [])];
         if (lines.Count == 0 || pages.Any(p => p is null)) return null;
         decimal sum = 0m;
-        foreach (ReadLine line in lines)
+        foreach (ReadLine? line in lines)
         {
-            if (line.Amount.State.Trim().ToLowerInvariant() != "present" ||
-                !AmountPattern().IsMatch(line.Amount.Text.Trim()))
+            string? text = line?.Amount?.Text?.Trim();
+            if (line?.Amount?.State?.Trim().ToLowerInvariant() != "present" ||
+                text is null || !AmountPattern().IsMatch(text))
                 return null;
-            sum += decimal.Parse(line.Amount.Text.Trim(), CultureInfo.InvariantCulture);
+            sum += decimal.Parse(text, CultureInfo.InvariantCulture);
         }
         return sum;
     }

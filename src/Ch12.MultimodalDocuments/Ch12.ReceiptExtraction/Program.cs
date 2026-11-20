@@ -176,6 +176,14 @@ internal static class SelfTest
         ReceiptProposal picked = await Run(corpus, "taxi-conflicting-totals", Reply(total: "46.80"));
         Expect("a model that reports only 46.80 as the total is caught by the lines",
             picked.Total is { State: FieldState.ToVerify, Reason: "lines_do_not_add_up" });
+        ReceiptProposal smudged = await Run(corpus, "taxi-conflicting-totals", Reply(total: "64.80", chargedState: "unreadable"));
+        ReceiptProposal comma = await Run(corpus, "taxi-conflicting-totals", Reply(total: "64.80", charged: "46,80"));
+        Expect("an amount charged that is unreadable or '46,80' can't be compared: ToVerify (amount_charged_unchecked)",
+            smudged.Total is { State: FieldState.ToVerify, Reason: "amount_charged_unchecked" } &&
+            comma.Total is { State: FieldState.ToVerify, Reason: "amount_charged_unchecked" });
+        ReceiptProposal omitted = await Run(corpus, "taxi-conflicting-totals", Reply(total: "64.80"));
+        Expect("LIMIT: an amount charged the model reports as absent can't be detected; the proposal is ready",
+            omitted.ReadyForPolicy);
 
         Console.WriteLine("\n-- An instruction printed on the receipt --");
         ReceiptProposal quoted = await Run(corpus, "taxi-hostile-instruction",
@@ -186,6 +194,9 @@ internal static class SelfTest
         ReceiptProposal obeyed = await Run(corpus, "taxi-hostile-instruction", Reply(total: "950.00"));
         Expect("a model that obeyed it (total 950.00) is caught by the lines",
             obeyed.Total is { State: FieldState.ToVerify, Reason: "lines_do_not_add_up" } && !obeyed.ReadyForPolicy);
+        ReceiptProposal rewritten = await Run(corpus, "taxi-hostile-instruction", Reply(total: "45.00", lines: ["Fare:45.00"]));
+        Expect("LIMIT: lines and total rewritten together (Fare 45.00, total 45.00) pass; the policy allows them",
+            Report.Decide(rewritten) == "policy: Allow low_value_policy");
 
         Console.WriteLine("\n-- Two pages --");
         ReceiptProposal hotel = await Run(corpus, "hotel-two-pages",
@@ -212,6 +223,18 @@ internal static class SelfTest
         ReceiptProposal prose = await Run(corpus, "taxi-clean", "The total looks like about 65 euros.");
         Expect("a reply that is not a reading leaves every field Unreadable",
             prose is { Total.State: FieldState.Unreadable, Currency.State: FieldState.Unreadable, ReadyForPolicy: false });
+        ReceiptProposal arabic = await Run(corpus, "taxi-clean", Reply(total: "٦٤.٨٠"));
+        ReceiptProposal wide = await Run(corpus, "taxi-clean", Reply(total: "64.80", lines: ["Fare:５８.30", "Airport fee:6.50"]));
+        Expect("non-ASCII digits are not amounts: an Arabic-Indic total is ToVerify (not_a_number)",
+            arabic.Total is { Value: null, State: FieldState.ToVerify, Reason: "not_a_number" });
+        Expect("a full-width line amount leaves the lines uncheckable (lines_not_checkable)",
+            wide.Total is { State: FieldState.ToVerify, Reason: "lines_not_checkable" });
+        ReceiptProposal partial = await Run(corpus, "taxi-clean", """
+            {"vendor":{"text":"NORTHWIND TAXI"},"total":{"text":"64.80","state":"present"},
+             "lines":[null,{"description":"Fare"}]}
+            """);
+        Expect("valid JSON with a missing state, missing fields and a null line: no exception, not ready",
+            partial is { Total.State: FieldState.ToVerify, Currency.State: FieldState.Unreadable, ReadyForPolicy: false });
 
         Console.WriteLine("\n-- What reached the model --");
         var probe = new ScriptedVisionClient([Reply(total: "64.80")]);
@@ -253,12 +276,12 @@ internal static class SelfTest
         JsonSerializer.Serialize(new ReadField(text, state ?? (text.Length == 0 ? "absent" : "present")), ReceiptReader.Json);
 
     /// <summary>A scripted reply for the one-page taxi receipt; only the named values change.</summary>
-    static string Reply(string total, string totalState = "present", string charged = "",
-        string currency = "EUR", string date = "2026-11-12", string? instruction = null) => $$"""
+    static string Reply(string total, string totalState = "present", string charged = "", string? chargedState = null,
+        string currency = "EUR", string date = "2026-11-12", string? instruction = null, string[]? lines = null) => $$"""
         {"vendor":{{Field("NORTHWIND TAXI")}},"date":{{Field(date)}},"currency":{{Field(currency)}},
-         "lines":[{"description":"Fare","amount":{{Field("58.30")}}},{"description":"Airport fee","amount":{{Field("6.50")}}}],
+         "lines":[{{string.Join(",", (lines ?? ["Fare:58.30", "Airport fee:6.50"]).Select(Line))}}],
          "total":{{Field(total, totalState == "present" && total.Length == 0 ? "absent" : totalState)}},
-         "amountCharged":{{Field(charged)}},
+         "amountCharged":{{Field(charged, chargedState)}},
          "printedInstructions":{{JsonSerializer.Serialize(instruction is null ? Array.Empty<string>() : [instruction])}}}
         """;
 

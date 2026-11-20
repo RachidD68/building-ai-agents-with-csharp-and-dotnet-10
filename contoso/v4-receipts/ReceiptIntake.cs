@@ -19,8 +19,8 @@ public sealed record IntakeStatus(Guid SubmissionId, string State, string Reason
 ///                                         -> blocked -> AwaitingVerification -> a reviewer types the value
 /// The desk is the v2 snapshot's, unchanged. It asks its IChatClient for a
 /// ProposalDraft; here that client is <see cref="VerifiedProposals"/>, which
-/// answers with the validated (or person-verified) values, so no model writes
-/// the amount the policy judges.
+/// answers with the validated (or person-verified) values, so the desk's model
+/// drafts nothing: the amount the policy judges is the validated reading or a person's.
 /// </summary>
 public sealed class ReceiptIntake
 {
@@ -57,24 +57,28 @@ public sealed class ReceiptIntake
 
     private async Task<IntakeStatus> IntakeAsync(Caller employee, Guid id, IReadOnlyList<byte[]> pages, CancellationToken ct)
     {
+        // The exact page bytes: this catches a resubmitted file, not a second photo of
+        // the same paper receipt (production also matches vendor, date and total).
         string hash = Convert.ToHexString(SHA256.HashData(pages.SelectMany(p => p).ToArray()));
         if (_receipts.GetOrAdd((employee.TenantId, hash), id) != id)
             return new(id, "Rejected", "duplicate_receipt");
 
-        IReadOnlyList<ReceiptReading?> readings;
+        ReceiptProposal receipt;
         try
         {
-            readings = await _reader.ReadAsync(pages, ct);
+            IReadOnlyList<ReceiptReading?> readings = await _reader.ReadAsync(pages, ct);
+            receipt = ReceiptValidator.Validate(id.ToString("D"), readings, _today());
         }
-        catch (Exception ex) when (ex is HttpRequestException or TimeoutException ||
-                                   (ex is OperationCanceledException && !ct.IsCancellationRequested))
+        catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
         {
-            // Nothing was read: forget the submission so that a resubmit tries again.
+            // Nothing was read or validated: forget the submission so that a
+            // resubmit tries again, instead of a hash and a cached fault that
+            // refuse every retry while no person ever sees the receipt.
             _receipts.TryRemove(new((employee.TenantId, hash), id));
             _submissions.TryRemove((employee.TenantId, id), out _);
-            return new(id, "Rejected", "reading_failed");
+            return new(id, "Rejected",
+                ex is HttpRequestException or TimeoutException or OperationCanceledException ? "reading_failed" : "intake_failed");
         }
-        ReceiptProposal receipt = ReceiptValidator.Validate(id.ToString("D"), readings, _today());
         if (!receipt.ReadyForPolicy)
         {
             _pending[(employee.TenantId, id)] = new(employee.TenantId, employee.SubjectId, receipt);

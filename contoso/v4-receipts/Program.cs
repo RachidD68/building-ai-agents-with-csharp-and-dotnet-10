@@ -8,11 +8,12 @@
 //     -> blocked -> AwaitingVerification -> a finance reviewer, not the requester,
 //                   types the total -> v2 ReimbursementDesk
 //
-// No model writes the amount the policy judges: it is the validated reading or
-// a person's. The self-test adds a concurrent double submit, the same receipt
-// under a new id, a requester who verifies her own receipt, a reviewer without
-// the role, an instruction printed on a receipt, and a submit right revoked
-// while a receipt waits for verification.
+// The amount the policy judges is the validated reading or a person's; the desk's
+// own model drafts nothing. The self-test adds a concurrent double submit, the same
+// receipt under a new id, a requester who verifies her own receipt, a reviewer
+// without the role, an instruction printed on a receipt, a submit right revoked
+// while a receipt waits for verification, a reply with missing parts, and a
+// reading that fails.
 //
 //   dotnet run                    the corpus receipts through the configured vision model
 //   dotnet run -- --self-test     scripted vision replies, no network; RESULT n/n
@@ -101,7 +102,9 @@ internal static class Scenario
             {
                 Guid id = Guid.NewGuid();
                 IntakeStatus s = await intake.SubmitAsync(alice, id, [.. doc.Select(page)], ct);
-                Console.WriteLine($"{string.Join(" + ", doc),-34} {s.State} ({s.Reason})  amount of record {Money.Show(desk.AmountOfRecord(Tenant, id))}");
+                decimal? amount = desk.AmountOfRecord(Tenant, id);
+                Console.WriteLine(string.Join(" + ", doc));
+                Console.WriteLine($"  {s.State} ({s.Reason}), amount of record {(amount is null ? "none" : Money.Show(amount))}");
             }
             return 0;
         }
@@ -172,6 +175,23 @@ internal static class Scenario
         Console.WriteLine($"  {approved.State} ({approved.Reason})");
         Expect("approved and paid once by the v2 desk", approved.State == ClaimState.Delivered && desk.Store.Count("operations") == 1);
 
+        Console.WriteLine("\n-- 9. A reply that is JSON but leaves out states, fields and a line --");
+        Guid partial = Guid.NewGuid();
+        IntakeStatus missing = await intake.SubmitAsync(alice, partial, [ScriptedVision.PartialReply], ct);
+        Show(missing);
+        Expect("no exception: it waits for a person like any unreadable receipt",
+            missing.State == "AwaitingVerification" && intake.IsPending(Tenant, partial));
+
+        Console.WriteLine("\n-- 10. A reading that fails --");
+        Guid failing = Guid.NewGuid();
+        IntakeStatus failed = await intake.SubmitAsync(alice, failing, [ScriptedVision.ReaderFails], ct);
+        IntakeStatus sameId = await intake.SubmitAsync(alice, failing, [ScriptedVision.ReaderFails], ct);
+        IntakeStatus newId = await intake.SubmitAsync(alice, Guid.NewGuid(), [ScriptedVision.ReaderFails], ct);
+        Show(failed); Show(sameId); Show(newId);
+        Expect("nothing is kept: the same pages are read again under the same id and a new one, never refused as a duplicate",
+            new[] { failed, sameId, newId }.All(s => s is { State: "Rejected", Reason: "intake_failed" }) &&
+            scripted.Calls("reader-fails") == 3);
+
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
     }
@@ -205,15 +225,27 @@ internal sealed class ScriptedVision(Func<string, byte[]> page) : IChatClient
     };
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _calls = new();
 
+    // Two pages that are not corpus images: one whose reply is valid JSON with
+    // states, fields and a line left out, one whose reading throws.
+    public static readonly byte[] PartialReply = "partial-reply"u8.ToArray();
+    public static readonly byte[] ReaderFails = "reader-fails"u8.ToArray();
+    const string PartialJson = """
+        {"vendor":{"text":"NORTHWIND TAXI"},"total":{"text":"64.80","state":"present"},"lines":[null,{"description":"Fare"}]}
+        """;
+
     public int Calls(string name) => _calls.GetValueOrDefault(name);
 
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         byte[] image = messages.SelectMany(m => m.Contents).OfType<DataContent>().Last().Data.ToArray();
-        string name = _replies.Keys.Single(k => page(k).AsSpan().SequenceEqual(image));
+        string name = image.AsSpan().SequenceEqual(PartialReply) ? "partial-reply"
+            : image.AsSpan().SequenceEqual(ReaderFails) ? "reader-fails"
+            : _replies.Keys.Single(k => page(k).AsSpan().SequenceEqual(image));
         _calls.AddOrUpdate(name, 1, (_, n) => n + 1);
-        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, _replies[name])));
+        if (name == "reader-fails") throw new InvalidOperationException("scripted reader failure");
+        string reply = name == "partial-reply" ? PartialJson : _replies[name];
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply)));
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
