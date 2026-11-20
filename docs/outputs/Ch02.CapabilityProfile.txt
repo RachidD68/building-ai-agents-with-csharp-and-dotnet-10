@@ -1,11 +1,11 @@
-# code a3d689a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code bba2144 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run
 
 Profiling local-json (ollama llama3.2), 3 trial(s) per task...
 Profiling local-reasoning (ollama llama3.2), 3 trial(s) per task...
 Profiling local-capped-text (ollama llama3.2), 3 trial(s) per task...
 
-# Capability profile, 2026-11-20 10:55 UTC
+# Capability profile, 2026-11-20 11:57 UTC
 
 Pins: .NET 10.0.15, Microsoft.Extensions.AI.Abstractions 10.11.0, OllamaSharp 5.4.25, OpenAI 2.14.0. Task set: 5 Contoso policy questions, 3 trial(s) each.
 
@@ -19,11 +19,11 @@ Pins: .NET 10.0.15, Microsoft.Extensions.AI.Abstractions 10.11.0, OllamaSharp 5.
 
 | Configuration | Option | Requested | Evidence |
 |---|---|---|---|
-| local-json | MaxOutputTokens | 64 | honored: max 6 output tokens, 0 truncated |
+| local-json | MaxOutputTokens | 64 | not exercised: max 6 of 64, none exceeded |
 | local-json | ResponseFormat | Json | 15/15 answered replies met the JSON contract |
 | local-json | Temperature | 0.0 | sent; not observable from the response |
 | local-reasoning | MaxOutputTokens | 64 | not observable: no usage reported |
-| local-reasoning | Reasoning | Effort=Low | rejected: every call failed |
+| local-reasoning | Reasoning | Effort=Low | rejected: every call was a provider error |
 | local-reasoning | ResponseFormat | Json | 0/0 answered replies met the JSON contract |
 | local-capped-text | MaxOutputTokens | 4 | honored: max 4 output tokens, 15 truncated |
 | local-capped-text | Temperature | 0.7 | sent; not observable from the response |
@@ -68,5 +68,5 @@ Pins: .NET 10.0.15, Microsoft.Extensions.AI.Abstractions 10.11.0, OllamaSharp 5.
 
 - cloud-json (openai): not run; pass --include-cloud with LlmProvider:OpenAI:ApiKey set
 
-Wrote C:\Temp\ch02-verify\src\Ch02.ModelsContext\Ch02.CapabilityProfile\profiles\capability-profile-2026-11-20.json
-Wrote C:\Temp\ch02-verify\src\Ch02.ModelsContext\Ch02.CapabilityProfile\profiles\capability-profile-2026-11-20.md
+Wrote L:\Documents\Agentic AI with .NET - Second Edition\CodeSample\src\Ch02.ModelsContext\Ch02.CapabilityProfile\profiles\capability-profile-2026-11-20.json
+Wrote L:\Documents\Agentic AI with .NET - Second Edition\CodeSample\src\Ch02.ModelsContext\Ch02.CapabilityProfile\profiles\capability-profile-2026-11-20.md

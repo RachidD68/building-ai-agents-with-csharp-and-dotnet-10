@@ -1,4 +1,4 @@
-# Capability profile, 2026-11-20 10:55 UTC
+# Capability profile, 2026-11-20 11:57 UTC
 
 Pins: .NET 10.0.15, Microsoft.Extensions.AI.Abstractions 10.11.0, OllamaSharp 5.4.25, OpenAI 2.14.0. Task set: 5 Contoso policy questions, 3 trial(s) each.
 
@@ -12,11 +12,11 @@ Pins: .NET 10.0.15, Microsoft.Extensions.AI.Abstractions 10.11.0, OllamaSharp 5.
 
 | Configuration | Option | Requested | Evidence |
 |---|---|---|---|
-| local-json | MaxOutputTokens | 64 | honored: max 6 output tokens, 0 truncated |
+| local-json | MaxOutputTokens | 64 | not exercised: max 6 of 64, none exceeded |
 | local-json | ResponseFormat | Json | 15/15 answered replies met the JSON contract |
 | local-json | Temperature | 0.0 | sent; not observable from the response |
 | local-reasoning | MaxOutputTokens | 64 | not observable: no usage reported |
-| local-reasoning | Reasoning | Effort=Low | rejected: every call failed |
+| local-reasoning | Reasoning | Effort=Low | rejected: every call was a provider error |
 | local-reasoning | ResponseFormat | Json | 0/0 answered replies met the JSON contract |
 | local-capped-text | MaxOutputTokens | 4 | honored: max 4 output tokens, 15 truncated |
 | local-capped-text | Temperature | 0.7 | sent; not observable from the response |

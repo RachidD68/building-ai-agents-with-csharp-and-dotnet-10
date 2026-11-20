@@ -1,4 +1,4 @@
-# code a3d689a | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
+# code bba2144 | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama
 $ dotnet run -- --self-test
 
   PASS  each trial lands in its own bucket: correct, wrong, transport, truncated, refused
@@ -16,13 +16,15 @@ $ dotnet run -- --self-test
   PASS  every call gets its own copy of the options, with the cap in it
   PASS  DEFECT REPRODUCED: the request still says MaxOutputTokens=8 while the reply used 40
   PASS  the profile reports the ignored cap from the usage
-  PASS  a cap the replies respect is reported as honored
+  PASS  a cap a reply reached (finish Length) is reported as honored
+  PASS  a cap no reply reached is 'not exercised', not honored
   PASS  requested reasoning with no reasoning tokens or content: NO EVIDENCE
   PASS  reasoning tokens in the usage: observed
   PASS  every call rejected: the option was refused, not ignored
+  PASS  every call failed in transport: not observable, not rejected
   PASS  the Markdown is dated and names the M.E.AI pin
   PASS  the table has separate Invalid, Refused, Truncated, Transport and Provider error columns
   PASS  failed trials and configurations not run are listed
   PASS  the files carry the run date in their names
 
-RESULT 23/23
+RESULT 25/25

@@ -1,5 +1,5 @@
 {
-  "RunAtUtc": "2026-11-20T10:55:19.1094436+00:00",
+  "RunAtUtc": "2026-11-20T11:57:19.4475148+00:00",
   "Pins": {
     ".NET": "10.0.15",
     "Microsoft.Extensions.AI.Abstractions": "10.11.0",
@@ -16,7 +16,7 @@
         {
           "Option": "MaxOutputTokens",
           "Requested": "64",
-          "Evidence": "honored: max 6 output tokens, 0 truncated"
+          "Evidence": "not exercised: max 6 of 64, none exceeded"
         },
         {
           "Option": "ResponseFormat",
@@ -219,7 +219,7 @@
         {
           "Option": "Reasoning",
           "Requested": "Effort=Low",
-          "Evidence": "rejected: every call failed"
+          "Evidence": "rejected: every call was a provider error"
         },
         {
           "Option": "ResponseFormat",
