@@ -68,7 +68,8 @@ ChatClientAgent maintainabilityReviewer = new(
 
 // ── The aggregator: merge → label each reviewer's findings ──────────
 // BuildConcurrent hands the aggregator the list of each agent's output
-// (one List<ChatMessage> per agent). We stitch them into a single merged
+// (one List<ChatMessage> per agent: the input message, then the agent's
+// reply). We keep the replies only and stitch them into a single merged
 // report, attributing each block to the reviewer who produced it. This is
 // the "merge" aggregation strategy; vote / rank / pick-best are alternatives.
 static List<ChatMessage> MergeReviews(IList<List<ChatMessage>> perAgentResults)
@@ -79,7 +80,7 @@ static List<ChatMessage> MergeReviews(IList<List<ChatMessage>> perAgentResults)
 
     foreach (List<ChatMessage> agentMessages in perAgentResults)
     {
-        foreach (ChatMessage message in agentMessages)
+        foreach (ChatMessage message in agentMessages.Where(m => m.Role == ChatRole.Assistant))
         {
             string author = string.IsNullOrWhiteSpace(message.AuthorName)
                 ? "Reviewer"
