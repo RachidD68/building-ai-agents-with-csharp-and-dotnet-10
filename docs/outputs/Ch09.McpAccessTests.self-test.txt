@@ -1,5 +1,5 @@
 # Ch09.McpAccessTests --self-test
-# code: CodeSample f189941, Release build (dotnet build -c Release -warnaserror, SDK 11.0.100)
+# code: CodeSample 4688a83, Release build (dotnet build -c Release -warnaserror, SDK 11.0.100)
 # platform: Windows 11, dotnet bin/Release/net10.0/Ch09.McpAccessTests.dll --self-test, exit 0
 
 === MCP access matrix: self-test ===
@@ -7,6 +7,10 @@
 -- 1. One tool set, two transports --
   PASS  stdio wiring and streamable HTTP list the same tools
         stdio: InventoryCheck, ProductLookup; http: InventoryCheck, ProductLookup
+  PASS  on the wire: the first request is server/discover, and no Mcp-Session-Id goes either way
+        _meta keys under io.modelcontextprotocol/
+        POST server/discover; _meta: protocolVersion=2026-07-28, clientInfo, clientCapabilities -> 200 text/event-stream; Mcp-Session-Id: none
+        POST tools/list; _meta: protocolVersion=2026-07-28, clientInfo, clientCapabilities -> 200 text/event-stream; Mcp-Session-Id: none
 
 -- 2. Unprotected HTTP server: who may call? --
   PASS  DEFECT REPRODUCED: a caller with no token discovers every tool
@@ -19,13 +23,13 @@
         200; resource=<this endpoint>: True; authorization_servers=https://issuer.invalid/local-test; scopes_supported=catalog.read inventory.read
   PASS  no token: 401, and WWW-Authenticate points to the resource metadata
         401; WWW-Authenticate: Bearer resource_metadata="http://127.0.0.1:<port>/.well-known/oauth-protected-resource/mcp"
-  PASS  wrong audience (a token minted for another server): 401 before any MCP handler runs
+  PASS  wrong audience (a token minted for another server): 401 before the MCP endpoint runs
         401
-  PASS  expired (10 min ago, past the 30 s clock skew): 401 before any MCP handler runs
+  PASS  expired (10 min ago, past the 30 s clock skew): 401 before the MCP endpoint runs
         401
-  PASS  signed with a key this server does not trust: 401 before any MCP handler runs
+  PASS  signed with a key this server does not trust: 401 before the MCP endpoint runs
         401
-  PASS  wrong issuer: 401 before any MCP handler runs
+  PASS  wrong issuer: 401 before the MCP endpoint runs
         401
   PASS  the same request with a valid token is not refused
         200
@@ -34,7 +38,8 @@
   PASS  catalog.read: discovery shows only ProductLookup
         listed: ProductLookup
   PASS  catalog.read: ProductLookup runs
-        ok: {"id":1003,"name":"Contoso 27\u0022 4K Monitor","sku":"MON-4K-003","category":"Electronics","price":449.99,"in...
+  PASS  ... and returns the price but no stock level (no inStock, no Units)
+        ok: {"id":1003,"name":"Contoso 27\u0022 4K Monitor","sku":"MON-4K-003","category":"Electronics","price":449.99}
   PASS  catalog.read: InventoryCheck called by name anyway is refused
         refused: McpProtocolException: Request failed (remote): Access forbidden: This tool requires authorization.
   PASS  ... on the wire: HTTP 200 carrying a JSON-RPC error, not a 403 and not a result
@@ -55,8 +60,12 @@
   PASS  allow-listed endpoint: transport options carry the bearer token
   PASS  endpoint not on the allow-list: refused before any request is sent
         MCP endpoint https://attacker.invalid/mcp is not on the allow-list; the token is not sent.
-  PASS  resource metadata names the endpoint we meant: accepted
+  PASS  resource metadata names the endpoint we meant: accepted, and the token works there
+  PASS  DEFECT REPRODUCED: a client without the guard hands its token to the decoy, which replays it
+        decoy saw: POST /mcp with a bearer token; replayed against the real endpoint: 200
   PASS  server whose metadata names another resource: refused, no token requested
         Resource metadata names 'https://catalog.contoso.invalid/mcp', not http://127.0.0.1:<port>/mcp; refusing to request a token for it.
+  PASS  ... and the decoy received no token: it saw only the public metadata request
+        decoy saw: GET /.well-known/oauth-protected-resource/mcp without a token
 
-RESULT 24/24
+RESULT 28/28
