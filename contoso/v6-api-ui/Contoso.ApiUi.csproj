@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Contoso snapshot v6, "API and interface". This chapter adds the API half:
+       v5's durable claims behind the hosting chapter's composition (validated
+       (tid, sub) identity key, owned conversations, per-caller quota, one retry
+       owner). The next chapter adds the interface to this same project.
+       Microsoft.Agents.AI.Hosting is a preview package (via Ch17.AspNetCoreHost);
+       TestHost is used by the self-test only. Simulated effects only. -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The previous snapshot, used as it is: DurableClaims, the v2 desk, v4's intake. -->
+    <ProjectReference Include="../v5-durable-resume/Contoso.DurableResume.csproj" />
+    <!-- The hosting chapter's composition: AgentHost, CallerIdentity, the owned store. -->
+    <ProjectReference Include="../../src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj" />
+  </ItemGroup>
+
+</Project>
