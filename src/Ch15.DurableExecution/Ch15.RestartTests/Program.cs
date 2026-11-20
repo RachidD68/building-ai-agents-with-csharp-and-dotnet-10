@@ -8,9 +8,9 @@
 // process, and then counts the simulated provider's journal rows.
 //
 //   1. Ch15.ExternalEffects: before-effect, after-accept, after-record;
-//      an Unknown outcome settled by a later process; a stale lease; a race
-//   2. Ch15.DurableReview: prepare exits, a fresh process resumes; no
-//      mutable static field in the assembly (no shared in-memory state)
+//      Unknown settled later; a stale lease; a race; a cancel after it began
+//   2. Ch15.DurableReview: prepare exits, a fresh process resumes; no static
+//      field that can be reassigned in the three entry assemblies
 //   3. Contoso v5: the same three kill points on the real claim flow
 //
 // Every model in these runs is scripted; nothing leaves the machine. The
@@ -134,6 +134,25 @@ try
             Read.Effects(after.Output) == 1);
     }
 
+    {
+        // Killed before-effect: the payout began (Paying), the journal is empty. A cancel now does not
+        // stop it: the next worker settles the attempt first and, finding nothing, sends the SAME reference.
+        string store = Path.Combine(root, "ee-cancel-begun");
+        using Worker victim = Worker.Start(ee, "start", Claim, "--store", store, "--pause-at", "before-effect", "--lease-seconds", LeaseSeconds);
+        bool reached = await victim.WaitForLineAsync("PAUSED at before-effect", pauseTimeout);
+        string? op = Read.Operation(victim.Output);
+        victim.Kill();
+        Exited cancel = Worker.Run(ee, "cancel", Claim, "--store", store);
+        Thread.Sleep(leaseGone);
+        Exited resume = Worker.Run(ee, "resume", Claim, "--store", store);
+        Exited after = Worker.Run(ee, "status", Claim, "--store", store);
+        Check("cancel after the payout began (killed before-effect, 0 effects): the resume settles it, \"not found; sent again\"",
+            reached && cancel.Output.Contains("the payout is Paying") && resume.ExitCode == 0 &&
+            resume.Output.Contains("not found; sent again") && resume.Output.Contains("too late to stop the payout"));
+        Check("... under the approval's reference: Paid, exactly one effect, no new id",
+            Read.Effects(after.Output) == 1 && Read.References(after.Output) is [var only] && only == $"contoso:{op}");
+    }
+
     // ------------------------------------------------------------------
     Console.WriteLine("\n-- 2. Durable review: two commands, no shared memory");
     string dr = Built.DurableReview;
@@ -149,7 +168,7 @@ try
         foreach (string dll in new[] { Built.DurableReview, Built.ExternalEffects, Built.ContosoV5 })
         {
             IReadOnlyList<string> statics = StaticFields.Mutable(dll);
-            Check($"{Path.GetFileName(dll)}: no mutable static field{(statics.Count == 0 ? "" : ": " + string.Join(", ", statics))}",
+            Check($"{Path.GetFileName(dll)}: no static field that can be reassigned{(statics.Count == 0 ? "" : ": " + string.Join(", ", statics))}",
                 statics.Count == 0);
         }
     }

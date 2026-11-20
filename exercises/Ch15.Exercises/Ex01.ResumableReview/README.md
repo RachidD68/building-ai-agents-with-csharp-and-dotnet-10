@@ -1,4 +1,4 @@
-# Exercise 01 -- Resumable Review (Challenge)
+# Exercise 01 -- Resumable Review (Basic)
 
 Takes the workflows chapter's `Ex02.ReviewPipeline` and makes it **durable**. The workflow runs an analyzer and a security scanner, then pauses on a `RequestPort` for a human sign-off. It captures a checkpoint at that pause, simulates a process crash, then resumes from the checkpoint in a second run and completes. FULLY STANDALONE (no model provider).
 

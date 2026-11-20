@@ -57,7 +57,7 @@ internal sealed class AuthorizeExecutor(PayoutStore store) : Executor<PayoutOrde
 internal sealed class PayoutExecutor(PayoutContext ctx) : Executor<PayoutOrder, PayoutResult>("payout")
 {
     private const string TooLate =
-        "; a cancel arrived after the payout: cancelling is not undoing, a refund is a new approved operation";
+        "; the cancel came too late to stop the payout: cancelling is not undoing, a refund is a new approved operation";
 
     public override async ValueTask<PayoutResult> HandleAsync(PayoutOrder order, IWorkflowContext context, CancellationToken ct)
     {
@@ -71,7 +71,7 @@ internal sealed class PayoutExecutor(PayoutContext ctx) : Executor<PayoutOrder, 
 
         await ctx.Hook.ReachAsync(StepPoints.BeforeCommit);
 
-        // 2. A cancel that arrives before anything was sent still stops the payout.
+        // 2. A cancel still stops a payout that has not begun (Approved). Once begun, the attempt is settled first.
         if (ctx.Store.Load(order.ClaimId)!.CancelRequested && row.State == "Approved")
             return ctx.Store.Cancel(order.ClaimId, ctx.Token, ctx.Clock())
                 ? Result(order, "Cancelled", "cancelled before the effect; nothing was sent", null)

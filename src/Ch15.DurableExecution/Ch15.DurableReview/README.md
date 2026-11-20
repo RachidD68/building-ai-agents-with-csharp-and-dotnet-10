@@ -36,4 +36,6 @@ dotnet run --project src/Ch15.DurableExecution/Ch15.DurableReview -- --self-test
 
 Other verbs: `amend <claim> <amount>` (a new claim version), `revoke <subject>`. Options: `--store <dir>`, `--offline` (scripted summary), `--now <ISO time>`, `--graph next`, `--rules next`, `--skip-version-check`. Exit codes: 0 done, 2 usage, 3 failed, 4 blocked or refused, 5 waiting.
 
+`--now` and `--skip-version-check` exist only to reproduce the failures (an expired decision, a resume across graph versions). A production resume takes the time from the server's clock and has no switch that skips the version check.
+
 The self-test runs every verb as a child process against temp stores (offline) and prints `RESULT n/n`, including three concurrent `review` processes (one decision stored) and two concurrent `resume` processes (one `[APPROVED]`).

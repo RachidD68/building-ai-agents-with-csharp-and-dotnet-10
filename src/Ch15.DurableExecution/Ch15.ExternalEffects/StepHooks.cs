@@ -17,7 +17,7 @@ public static class StepPoints
     /// <summary>The business record says Paid; the checkpoint after the payout step is not written yet.</summary>
     public const string AfterRecord = "after-record";
 
-    public static readonly string[] All = [BeforeCommit, BeforeEffect, AfterAccept, AfterRecord];
+    public static readonly IReadOnlyList<string> All = [BeforeCommit, BeforeEffect, AfterAccept, AfterRecord];
 }
 
 public interface IStepHook

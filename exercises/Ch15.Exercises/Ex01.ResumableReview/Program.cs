@@ -1,6 +1,6 @@
 // ============================================================================
-// Exercise 01 — Resumable Review (Challenge)
-// Extends the workflows chapter's Ex02.ReviewPipeline with a CheckpointManager so a run can
+// Exercise 01 — Resumable Review (Basic)
+// Builds on the workflows chapter's Ex02.ReviewPipeline with a CheckpointManager so a run can
 // be killed and resumed mid-way. The workflow analyzes code, then pauses on a
 // RequestPort for a human sign-off. We capture the checkpoint at that pause,
 // "crash," and resume from the checkpoint to finish. FULLY STANDALONE.
