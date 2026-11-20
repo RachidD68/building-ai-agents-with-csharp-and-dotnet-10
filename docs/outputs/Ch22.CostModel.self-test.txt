@@ -1,0 +1,38 @@
+# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 20/20 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
+$ dotnet run -- --self-test
+=== Cost model: self-test ===
+
+-- Price table as data --
+  PASS  a table without a currency is refused
+  PASS  a table without an effective date is refused
+  PASS  a table in another unit is refused
+  PASS  usage dated before the table takes effect is refused
+  PASS  an unknown model is refused, not priced at zero
+  PASS  the same usage on table B gives another total (the formula holds no price)
+
+-- Cost from UsageDetails --
+  PASS  quiet fixture: 0.001212 XTS per call, by hand
+  PASS  cached input is part of the input count, priced once
+  PASS  reasoning is part of the output count, priced at its own rate when the table has one
+  PASS  cached tokens above the input count are refused (a double count)
+  PASS  a call with no usage is counted as unmeasured, the total is marked incomplete
+
+-- The unit: cost per accepted task --
+    quiet: 12 calls, 11/12 accepted, per call 0.001212 XTS, per accepted 0.001322 XTS
+    busy:  22 calls, 9/12 accepted, per call 0.001212 XTS, per accepted 0.002963 XTS
+  PASS  DEFECT REPRODUCED  per-call cost is flat while retries and abandonment pile up
+  PASS  cost per accepted task shows it: busy >= 2x quiet
+  PASS  nothing accepted: cost per accepted task is undefined, not zero
+  PASS  local is not free: zero token rates, 0.25 h of workstation = 0.15 XTS
+
+-- Budget: reserve, then reconcile (16 concurrent tasks, 0.03 each, limit 0.30) --
+    check-then-spend: 16 calls ran, spent 0.48
+  PASS  DEFECT REPRODUCED  check-then-spend lets all 16 through and overspends the limit
+    reserve-then-reconcile: 10 calls ran, spent 0.250, reserved 0.000
+  PASS  reservations refuse 6 of the 16 before their call: 10 run, the limit holds
+  PASS  reconciliation books the measured cost and releases the rest
+  PASS  a cost above its reservation is booked and recorded as an overrun
+  PASS  a reservation cannot be reconciled twice
+
+RESULT 20/20

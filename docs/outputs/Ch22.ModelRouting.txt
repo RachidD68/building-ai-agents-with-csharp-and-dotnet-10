@@ -1,0 +1,19 @@
+# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
+$ dotnet run
+=== Routing and failover on the same tasks (offline, scripted tiers) ===
+
+Price table artificial-a (XTS, artificial). * = some attempts reported no usage.
+
+Candidate                                acc attempts failed  per accepted task    p95 ms misroutes
+baseline: model-large only            12/12        12      0       0.005136 XTS      1200         -
+model-small only                       7/12        12      0       0.000625 XTS       300         -
+difficulty router (GA)                11/12        12      0       0.002567 XTS      1200         2
+model-large, 429 on every 3rd call     8/12        12      4       0.005136 XTS*     1200         -
+failover large->small (MEAI001)       10/12        16      4       0.004255 XTS*     1200         -
+failover large->small (GA, by hand)   10/12        16      4       0.004255 XTS*     1200         -
+
+  model-small only                     vs baseline: model-large only: reject: 5 fewer accepted
+  difficulty router (GA)               vs baseline: model-large only: reject: 1 fewer accepted
+  model-large, 429 on every 3rd call   vs baseline: model-large only: reject: 4 fewer accepted
+  failover large->small (MEAI001)      vs model-large, 429 on every 3rd call: adopt
+  failover large->small (GA, by hand)  vs model-large, 429 on every 3rd call: adopt

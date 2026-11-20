@@ -1,0 +1,17 @@
+# code 1def3d3 | SDK 11.0.100 | Windows 11 | Ollama localhost:11434 (llama3.2); dead primary 127.0.0.1:9
+# note: do not compare the p95 column: n=8 and the baseline ran first
+$ dotnet run -- --live
+=== Failover on the same tasks (live: Ollama llama3.2) ===
+
+Price table artificial-a (XTS, artificial). * = some attempts reported no usage.
+
+Candidate                                acc attempts failed  per accepted task    p95 ms misroutes
+baseline: llama3.2 only                8/8          8      0       0.000325 XTS      4507         -
+dead primary -> llama3.2 (MEAI001)     8/8         16      8       0.000618 XTS*     3907         -
+dead primary -> llama3.2 (GA)          8/8         16      8       0.000609 XTS*     4138         -
+
+  dead primary -> llama3.2 (MEAI001)   vs baseline: llama3.2 only: reject: no cheaper per accepted task
+  dead primary -> llama3.2 (GA)        vs baseline: llama3.2 only: reject: no cheaper per accepted task
+
+  Token rates for llama3.2 are 0 in the table; the cost is workstation time (artificial rate).
+  Failed attempts: ["HttpRequestException"]

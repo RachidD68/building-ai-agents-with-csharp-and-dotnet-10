@@ -1,0 +1,78 @@
+{
+  "workload": "contoso-claims-triage/1",
+  "limit": {
+    "P95TotalMs": 10000,
+    "MaxErrorRate": 0.05,
+    "MaxBusyRate": 0.05,
+    "MinAcceptedRate": 0.75
+  },
+  "machine": [
+    "os: Microsoft Windows 10.0.26200 (X64), .NET 10.0.15",
+    "cpu: Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz, 8 logical processors",
+    "memory visible to the process: 23.9 GiB",
+    "ollama 0.40.16, model llama3.2: loaded, size 10123917392 bytes, in VRAM 0 bytes"
+  ],
+  "declared": "declared limit: concurrency 4 (n=8); concurrency 8 crosses: busy rate 25% \u003E 5%",
+  "steps": [
+    {
+      "concurrency": 1,
+      "n": 8,
+      "accepted": 8,
+      "rejected": 0,
+      "busy": 0,
+      "errors": 0,
+      "p50TotalMs": 1709.8806,
+      "p95TotalMs": 2249.1055,
+      "p95QueueMs": 0.007,
+      "p95TtftMs": 1611.8403,
+      "acceptedPerSecond": 0.587,
+      "acceptedRate": 1,
+      "crosses": null
+    },
+    {
+      "concurrency": 2,
+      "n": 8,
+      "accepted": 8,
+      "rejected": 0,
+      "busy": 0,
+      "errors": 0,
+      "p50TotalMs": 2854.286,
+      "p95TotalMs": 3782.2431,
+      "p95QueueMs": 0.0091,
+      "p95TtftMs": 3150.4738,
+      "acceptedPerSecond": 0.644,
+      "acceptedRate": 1,
+      "crosses": null
+    },
+    {
+      "concurrency": 4,
+      "n": 8,
+      "accepted": 8,
+      "rejected": 0,
+      "busy": 0,
+      "errors": 0,
+      "p50TotalMs": 5178.2302,
+      "p95TotalMs": 8102.314,
+      "p95QueueMs": 3573.0466,
+      "p95TtftMs": 3735.2048,
+      "acceptedPerSecond": 0.633,
+      "acceptedRate": 1,
+      "crosses": null
+    },
+    {
+      "concurrency": 8,
+      "n": 8,
+      "accepted": 6,
+      "rejected": 0,
+      "busy": 2,
+      "errors": 0,
+      "p50TotalMs": 4870.8369,
+      "p95TotalMs": 9056.0094,
+      "p95QueueMs": 6207.7902,
+      "p95TtftMs": 2761.2581,
+      "acceptedPerSecond": 0.663,
+      "acceptedRate": 0.75,
+      "crosses": "busy rate 25% \u003E 5%"
+    }
+  ]
+}

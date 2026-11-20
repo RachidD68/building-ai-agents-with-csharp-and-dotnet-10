@@ -1,0 +1,22 @@
+# code 1def3d3 | SDK 11.0.100 | Windows 11 | Ollama localhost:11434 (llama3.2), CPU only
+# note: n=8 per step: nearest-rank p95 is the slowest request of the step
+$ dotnet run -- --json-out Ch22.LoadProfile.live.steps.json --usage-out Ch22.LoadProfile.live.usage.json
+=== Stepped load ===
+
+  os: Microsoft Windows 10.0.26200 (X64), .NET 10.0.15
+  cpu: Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz, 8 logical processors
+  memory visible to the process: 23.9 GiB
+  ollama 0.40.16, model llama3.2: loaded, size 10123917392 bytes, in VRAM 0 bytes
+  workload contoso-claims-triage/1: 8 tasks, 8 requests per step, slots 2, queue 4, tool 150 ms
+  declared limit: p95 total <= 10000 ms, errors <= 5%, busy <= 5%, accepted >= 75%
+
+  first request: Accepted, total 3725 ms, ttft 3226 ms, usage reported: input 77, output 4, cached null, reasoning null
+
+  c    n  acc  rej busy  err  queue p95  tool p95  ttft p50/p95  gen p95  total p50/p95  acc/s  maxQ
+  1    8    8    0    0    0          0       217     1019/1612      596      1710/2249   0.59     0
+  2    8    8    0    0    0          0       278     2159/3150      549      2854/3782   0.64     0
+  4    8    8    0    0    0       3573       726     2117/3735      707      5178/8102   0.63     2
+  8    8    6    0    2    0       6208       330     2043/2761      548      4871/9056   0.66     4
+
+  declared limit: concurrency 4 (n=8); concurrency 8 crosses: busy rate 25% > 5%
+  ms; latency clocks over answered requests; wall time 47.8 s

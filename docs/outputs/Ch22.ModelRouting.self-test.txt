@@ -1,0 +1,42 @@
+# code 1def3d3 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 18/18 on Linux (runtime:10.0-noble, --network none)
+$ dotnet run -- --self-test
+=== Routing and failover: self-test ===
+
+-- Same tasks, same report (scripted tiers, manual clock) --
+    Candidate                                acc attempts failed  per accepted task    p95 ms misroutes
+    baseline: model-large only            12/12        12      0       0.005136 XTS      1200         -
+    model-small only                       7/12        12      0       0.000625 XTS       300         -
+    difficulty router (GA)                11/12        12      0       0.002567 XTS      1200         2
+    model-large, 429 on every 3rd call     8/12        12      4       0.005136 XTS*     1200         -
+    failover large->small (MEAI001)       10/12        16      4       0.004255 XTS*     1200         -
+    failover large->small (GA, by hand)   10/12        16      4       0.004255 XTS*     1200         -
+  PASS  every candidate ran the same 12 tasks
+  PASS  model-small alone is cheaper per call but accepts fewer (7/12): rejected
+  PASS  the router's 2 misroutes are counted (H08 sent cheap, H09 sent capable)
+  PASS  one misroute costs one accepted task: 11/12, so the router is rejected
+  PASS  without failover, the 429s become 4 lost tasks
+  PASS  both failovers: 16 attempts, 4 failed, the same accepted count and cost (one contract)
+  PASS  against the same 429s without it, each failover is adopted (10 vs 8 accepted, cheaper per accepted task)
+  PASS  a failed attempt with no usage marks the cost as a lower bound
+
+-- Failover contract (MEAI001 OrderedFailoverChatClient and the GA one) --
+  PASS  MEAI001: a failure before any output fails over (down, then up)
+  PASS  GA: a failure before any output fails over (down, then up)
+  PASS  MEAI001: a caller's cancellation is not failed over
+  PASS  GA: a caller's cancellation is not failed over
+  PASS  MEAI001: MaximumAttemptsPerRequest = 1 stops after the first failure
+  PASS  MEAI001: once streamed output is exposed, a failure propagates; no second generation is spliced in
+
+-- One retry owner --
+    primary attempts per request: retry in the tier + failover = 4, failover only = 1
+  PASS  DEFECT REPRODUCED  a tier retry under a failover sends 4 attempts to a provider that is down
+  PASS  with the failover as the only owner: 1 attempt, then the fallback
+
+-- A cache improves latency, not quality --
+    cached model-small, pass 1             7/12        12      0       0.000625 XTS       300         -
+    cached model-small, pass 2             7/12         0      0       0.000000 XTS         0         -
+  PASS  pass 2 is served from the cache: no model attempt, p95 0 ms
+  PASS  and accepts exactly as many as pass 1: the cache repeats the wrong answers too
+
+RESULT 18/18
