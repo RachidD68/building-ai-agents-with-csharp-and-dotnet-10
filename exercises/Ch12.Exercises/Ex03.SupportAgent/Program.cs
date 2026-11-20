@@ -65,7 +65,7 @@ try
     SupportAnswer answer = await Support.AskAsync(chatClient, question, bytes, cts.Token);
     foreach (string line in Support.Render(answer)) Console.WriteLine(line);
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.WriteLine("\n[Cancelled]");
 }
@@ -88,7 +88,8 @@ static IChatClient? BuildVisionClient(IConfiguration config)
         bool vision = model.Contains("llava", StringComparison.OrdinalIgnoreCase)
                    || model.Contains("vision", StringComparison.OrdinalIgnoreCase);
         return vision
-            ? new OllamaSharp.OllamaApiClient(new Uri(config["VisionModel:Ollama:Endpoint"] ?? "http://localhost:11434"), model)
+            ? new OllamaSharp.OllamaApiClient(
+                new HttpClient { BaseAddress = new Uri(config["VisionModel:Ollama:Endpoint"] ?? "http://localhost:11434"), Timeout = TimeSpan.FromMinutes(10) }, model)
             : null;
     }
     if (provider == "openai" && config["VisionModel:OpenAI:ApiKey"] is { Length: > 0 } key)

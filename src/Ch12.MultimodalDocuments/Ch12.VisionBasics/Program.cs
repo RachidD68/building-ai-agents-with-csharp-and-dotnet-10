@@ -139,7 +139,7 @@ try
 
     Console.WriteLine("=== Vision Basics demo complete! ===");
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.WriteLine("\n[Cancelled by user]");
 }
@@ -172,7 +172,8 @@ static IChatClient? BuildVisionClient(IConfiguration config)
                 || model.Contains("llama3.2-vision", StringComparison.OrdinalIgnoreCase))
             {
                 string endpoint = config["VisionModel:Ollama:Endpoint"] ?? "http://localhost:11434";
-                return new OllamaSharp.OllamaApiClient(new Uri(endpoint), model);
+                return new OllamaSharp.OllamaApiClient(
+                new HttpClient { BaseAddress = new Uri(endpoint), Timeout = TimeSpan.FromMinutes(10) }, model);
             }
             return null; // text-only model configured -> skip
         }

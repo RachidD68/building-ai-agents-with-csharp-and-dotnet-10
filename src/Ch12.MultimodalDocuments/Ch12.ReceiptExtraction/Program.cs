@@ -53,7 +53,8 @@ catch (HttpRequestException ex)
 }
 catch (OperationCanceledException)
 {
-    Console.WriteLine("[Cancelled]");
+    // Ctrl+C, or the HTTP timeout (10 minutes per page) expired.
+    Console.WriteLine(cts.IsCancellationRequested ? "[Cancelled]" : "[error] The vision call timed out.");
     return 1;
 }
 

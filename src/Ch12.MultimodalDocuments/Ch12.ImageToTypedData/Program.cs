@@ -123,7 +123,7 @@ try
     Console.WriteLine();
     Console.WriteLine("=== Invoice extraction complete! ===");
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.WriteLine("\n[Cancelled by user]");
 }
@@ -157,7 +157,8 @@ static IChatClient? BuildVisionClient(IConfiguration config)
                 || model.Contains("vision", StringComparison.OrdinalIgnoreCase))
             {
                 string endpoint = config["VisionModel:Ollama:Endpoint"] ?? "http://localhost:11434";
-                return new OllamaSharp.OllamaApiClient(new Uri(endpoint), model);
+                return new OllamaSharp.OllamaApiClient(
+                new HttpClient { BaseAddress = new Uri(endpoint), Timeout = TimeSpan.FromMinutes(10) }, model);
             }
             return null;
         }

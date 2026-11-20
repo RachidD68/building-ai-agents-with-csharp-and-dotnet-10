@@ -66,7 +66,8 @@ public sealed class ReceiptIntake
         {
             readings = await _reader.ReadAsync(pages, ct);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TimeoutException)
+        catch (Exception ex) when (ex is HttpRequestException or TimeoutException ||
+                                   (ex is OperationCanceledException && !ct.IsCancellationRequested))
         {
             // Nothing was read: forget the submission so that a resubmit tries again.
             _receipts.TryRemove(new((employee.TenantId, hash), id));
