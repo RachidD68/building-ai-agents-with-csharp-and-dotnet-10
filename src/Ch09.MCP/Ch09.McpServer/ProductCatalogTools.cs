@@ -24,6 +24,9 @@ public static class ProductCatalogTools
         [1008] = new(1008, "Contoso Noise-Cancelling Headphones", "HP-NC-008", "Electronics", 199.99m, 80),
     };
 
+    /// <summary>The catalog record, for servers that return less of it (no MCP tool).</summary>
+    public static ProductInfo? Find(int productId) => Products.GetValueOrDefault(productId);
+
     /// <summary>
     /// Looks up a product by its unique identifier.
     /// </summary>

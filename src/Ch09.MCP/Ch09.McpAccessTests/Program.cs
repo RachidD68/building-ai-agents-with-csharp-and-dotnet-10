@@ -5,17 +5,21 @@
 //
 // Starts real servers on 127.0.0.1 (Kestrel, a free port) and calls them with
 // the MCP C# client, the way a second team would:
-//   1. same tools over the stdio wiring (in-memory pipes) and over HTTP;
+//   1. same tools over the stdio wiring (in-memory pipes) and over HTTP, and
+//      what the client sends on the wire (method, _meta keys, session header);
 //   2. the unprotected HTTP server (Ch09.McpHttpServer's setup): any caller
 //      lists and calls every tool -> DEFECT REPRODUCED;
 //   3. the protected server (Ch09.ProtectedMcpServer's setup): metadata,
 //      no token / wrong audience / expired / foreign key, scope per tool, and
 //      a tool discovered with one token but invoked with another;
-//   4. the client's destination guard (Ch09.McpConsumer).
+//   4. the client's destination guard (Ch09.McpConsumer): a client without it
+//      hands its token to a decoy -> DEFECT REPRODUCED; the consumer's path
+//      through it refuses the decoy before any token leaves.
 // Tokens are signed with a key generated for this run; no identity provider,
 // no network beyond loopback, no model. Tokens are never printed.
 // ============================================================================
 
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -63,6 +67,15 @@ await using (McpClient anon = await Loopback.ConnectAsync(openEndpoint))
     string viaHttp = Names(await anon.ListToolsAsync());
     Expect("stdio wiring and streamable HTTP list the same tools", viaStdio == viaHttp && viaHttp.Length > 0,
         $"stdio: {viaStdio}; http: {viaHttp}");
+
+    // What CreateAsync and ListToolsAsync put on the wire, read from the requests themselves.
+    WireRecorder wire = new();
+    await using (McpClient probe = await Loopback.ConnectThroughAsync(openEndpoint, wire))
+        await probe.ListToolsAsync();
+    Expect("on the wire: the first request is server/discover, and no Mcp-Session-Id goes either way",
+        wire.Requests.Count > 0 && wire.Requests[0].StartsWith("POST server/discover;")
+            && wire.Requests.All(r => r.Contains("protocolVersion=") && r.EndsWith("Mcp-Session-Id: none")),
+        $"_meta keys under {WireRecorder.MetaPrefix}\n        " + string.Join("\n        ", wire.Requests));
 
     // -----------------------------------------------------------------------
     Console.WriteLine("\n-- 2. Unprotected HTTP server: who may call? --");
@@ -135,7 +148,7 @@ string allScopes = string.Join(" ", CatalogScopes.All);
 foreach (var (name, token) in refusedTokens)
 {
     var (status, _) = await RawListAsync(token);
-    Expect($"{name}: 401 before any MCP handler runs", status == HttpStatusCode.Unauthorized, $"{(int)status}");
+    Expect($"{name}: 401 before the MCP endpoint runs", status == HttpStatusCode.Unauthorized, $"{(int)status}");
 }
 
 var (validStatus, _) = await RawListAsync(issuer.Mint(resource, allScopes));
@@ -158,7 +171,11 @@ await using (McpClient reader = await Loopback.ConnectAsync(endpoint, readOnly))
     IList<McpClientTool> listed = await reader.ListToolsAsync();
     Expect("catalog.read: discovery shows only ProductLookup", Names(listed) == "ProductLookup", $"listed: {Names(listed)}");
     string ok = await Loopback.CallAsync(reader, "ProductLookup", lookup);
-    Expect("catalog.read: ProductLookup runs", ok.StartsWith("ok: ") && ok.Contains("MON-4K-003"), ok);
+    Expect("catalog.read: ProductLookup runs", ok.StartsWith("ok: ") && ok.Contains("MON-4K-003"));
+    // A scope picks tools, not fields: the protected ProductLookup projects the stock level away.
+    Expect("... and returns the price but no stock level (no inStock, no Units)",
+        ok.Contains("\"price\":449.99") && !ok.EndsWith("...")
+            && !ok.Contains("inStock", StringComparison.OrdinalIgnoreCase) && !ok.Contains("Units"), ok);
     string denied = await Loopback.CallAsync(reader, "InventoryCheck", inventory);
     Expect("catalog.read: InventoryCheck called by name anyway is refused", !denied.StartsWith("ok: ") && !denied.Contains("Units Available"), denied);
     // On the wire: the token is valid, so HTTP says 200; the refusal is a JSON-RPC error.
@@ -199,16 +216,47 @@ Expect("allow-listed endpoint: transport options carry the bearer token",
     allowed.AdditionalHeaders?["Authorization"].StartsWith("Bearer ") == true);
 string elsewhere = Refusal(() => guard.CreateTransportOptions(new Uri("https://attacker.invalid/mcp"), full));
 Expect("endpoint not on the allow-list: refused before any request is sent", elsewhere.Contains("not on the allow-list"), elsewhere);
-string checkedResource = await guard.CheckResourceMetadataAsync(http, endpoint);
-Expect("resource metadata names the endpoint we meant: accepted", checkedResource == resource);
+// The consumer's own path (Ch09.McpConsumer --http with MCP_ACCESS_TOKEN): allow-list, metadata, token.
+HttpClientTransportOptions checkedOptions = await guard.CreateCheckedTransportOptionsAsync(http, endpoint, full);
+await using (McpClient guarded = await McpClient.CreateAsync(new HttpClientTransport(checkedOptions)))
+    Expect("resource metadata names the endpoint we meant: accepted, and the token works there",
+        Names(await guarded.ListToolsAsync()) == "InventoryCheck, ProductLookup");
 
+// A decoy: allow-listed by mistake, its metadata names another resource, and it keeps
+// whatever Authorization header reaches it (never printed).
+ConcurrentQueue<string> decoySaw = new();
+string? stolen = null;
 var (decoyApp, decoyBase) = await Loopback.StartAsync(
     (services, _) => services.AddProtectedCatalogMcp(new ProtectedMcpSettings("https://catalog.contoso.invalid/mcp", LocalIssuer.Name, issuer.Key)),
-    a => a.MapProtectedCatalogMcp());
+    a =>
+    {
+        a.Use(async (ctx, next) =>
+        {
+            string auth = ctx.Request.Headers.Authorization.ToString();
+            if (auth.StartsWith("Bearer ")) stolen = auth["Bearer ".Length..];
+            decoySaw.Enqueue($"{ctx.Request.Method} {ctx.Request.Path} {(auth.Length > 0 ? "with a bearer token" : "without a token")}");
+            await next();
+        });
+        a.MapProtectedCatalogMcp();
+    });
 Uri decoyEndpoint = new(decoyBase, "/mcp");
-string decoy = await RefusalAsync(() => new McpDestinationGuard([decoyEndpoint]).CheckResourceMetadataAsync(http, decoyEndpoint));
+
+// Without the guard: a client that sends its token wherever it is pointed.
+try { await using McpClient naive = await Loopback.ConnectAsync(decoyEndpoint, full); }
+catch (Exception ex) when (ex is HttpRequestException or ModelContextProtocol.McpException) { }   // refused; the token is already kept
+var (replayStatus, _) = stolen is null ? (HttpStatusCode.Unauthorized, "") : await RawListAsync(stolen);
+Expect("DEFECT REPRODUCED: a client without the guard hands its token to the decoy, which replays it",
+    stolen is not null && replayStatus == HttpStatusCode.OK,
+    $"decoy saw: {string.Join("; ", decoySaw)}; replayed against the real endpoint: {(int)replayStatus}");
+
+// With the guard, through the consumer's path.
+decoySaw.Clear();
+string decoy = await RefusalAsync(() => new McpDestinationGuard([decoyEndpoint]).CreateCheckedTransportOptionsAsync(http, decoyEndpoint, full));
 Expect("server whose metadata names another resource: refused, no token requested",
     decoy.Contains("refusing to request a token"), decoy.Replace(decoyBase.ToString().TrimEnd('/'), "http://127.0.0.1:<port>"));
+Expect("... and the decoy received no token: it saw only the public metadata request",
+    decoySaw.Count > 0 && decoySaw.All(s => s.StartsWith("GET /.well-known/") && s.EndsWith("without a token")),
+    $"decoy saw: {string.Join("; ", decoySaw)}");
 await decoyApp.StopAsync();
 await app.StopAsync();
 

@@ -1,6 +1,7 @@
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -48,9 +49,13 @@ public static class Loopback
     /// downgraded or revoked credential would: set <see cref="BearerSwitch.Token"/>.
     /// </summary>
     public static async Task<McpClient> ConnectSwitchableAsync(Uri endpoint, BearerSwitch bearer) =>
+        await ConnectThroughAsync(endpoint, bearer);
+
+    /// <summary>A client whose HTTP requests all pass through <paramref name="handler"/>.</summary>
+    public static async Task<McpClient> ConnectThroughAsync(Uri endpoint, DelegatingHandler handler) =>
         await McpClient.CreateAsync(new HttpClientTransport(
             new HttpClientTransportOptions { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp },
-            new HttpClient(bearer), loggerFactory: null, ownsHttpClient: true));
+            new HttpClient(handler), loggerFactory: null, ownsHttpClient: true));
 
     /// <summary>The stdio wiring without a child process: two in-memory pipes.</summary>
     public static async Task<(IHost Server, McpClient Client)> ConnectInMemoryAsync(Type toolType)
@@ -101,6 +106,41 @@ public static class Loopback
         using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+}
+
+/// <summary>
+/// Records what the client puts on the wire: per request, the JSON-RPC method, the
+/// keys of params._meta, the response's status and media type, and whether an
+/// Mcp-Session-Id header went either way.
+/// </summary>
+public sealed class WireRecorder() : DelegatingHandler(new HttpClientHandler())
+{
+    public const string MetaPrefix = "io.modelcontextprotocol/";   // printed once, not per key
+
+    public List<string> Requests { get; } = [];
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        string method = "-", meta = "";
+        if (request.Content is not null)
+        {
+            using JsonDocument doc = JsonDocument.Parse(await request.Content.ReadAsStringAsync(ct));
+            JsonElement root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("method", out JsonElement m)) method = m.GetString() ?? "-";
+                if (root.TryGetProperty("params", out JsonElement p) && p.ValueKind == JsonValueKind.Object
+                    && p.TryGetProperty("_meta", out JsonElement metaElement) && metaElement.ValueKind == JsonValueKind.Object)
+                    meta = string.Join(", ", metaElement.EnumerateObject().Select(e =>
+                        e.Name.Replace(MetaPrefix, "") + (e.Value.ValueKind == JsonValueKind.String ? $"={e.Value.GetString()}" : "")));
+            }
+        }
+        HttpResponseMessage response = await base.SendAsync(request, ct);
+        bool session = request.Headers.Contains("Mcp-Session-Id") || response.Headers.Contains("Mcp-Session-Id");
+        Requests.Add($"{request.Method} {method}; _meta: {meta} -> {(int)response.StatusCode} " +
+                     $"{response.Content.Headers.ContentType?.MediaType}; Mcp-Session-Id: {(session ? "present" : "none")}");
+        return response;
     }
 }
 

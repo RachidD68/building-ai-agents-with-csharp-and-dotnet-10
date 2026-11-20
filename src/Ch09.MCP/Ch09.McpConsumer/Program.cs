@@ -10,8 +10,9 @@
 //   dotnet run -- --self-test           offline: the real stdio server as a child
 //                                       process, and a scripted model instead of an LLM
 //
-// With --http and MCP_ACCESS_TOKEN set, the token is sent only to an endpoint
-// listed in McpConsumer:AllowedServers (McpDestinationGuard).
+// With --http and a pre-issued MCP_ACCESS_TOKEN, the token is sent only to an
+// endpoint listed in McpConsumer:AllowedServers whose protected resource
+// metadata names that endpoint (McpDestinationGuard).
 // ============================================================================
 
 using Ch09.McpConsumer;
@@ -44,12 +45,21 @@ IClientTransport transport;
 if (httpIndex >= 0 && httpIndex + 1 < args.Length)
 {
     Uri endpoint = new(args[httpIndex + 1]);
-    string? token = Environment.GetEnvironmentVariable("MCP_ACCESS_TOKEN");
-    HttpClientTransportOptions options = token is null
-        ? new() { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp }
-        : new McpDestinationGuard(
-                builder.Configuration.GetSection("McpConsumer:AllowedServers").Get<Uri[]>() ?? [])
-            .CreateTransportOptions(endpoint, token);
+    string? token = Environment.GetEnvironmentVariable("MCP_ACCESS_TOKEN");   // pre-issued
+    HttpClientTransportOptions options;
+    if (token is null)
+    {
+        options = new() { Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp };
+    }
+    else
+    {
+        // Before the token leaves: the endpoint is on the allow-list, and its public
+        // metadata names that same endpoint. Either check failing throws here.
+        McpDestinationGuard guard = new(
+            builder.Configuration.GetSection("McpConsumer:AllowedServers").Get<Uri[]>() ?? []);
+        using HttpClient metadataClient = new();
+        options = await guard.CreateCheckedTransportOptionsAsync(metadataClient, endpoint, token, cts.Token);
+    }
     Console.WriteLine($"Connecting over streamable HTTP to: {endpoint}");
     transport = new HttpClientTransport(options);
 }

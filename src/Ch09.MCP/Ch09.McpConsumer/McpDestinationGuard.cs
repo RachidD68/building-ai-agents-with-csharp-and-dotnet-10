@@ -15,7 +15,9 @@ public sealed class McpDestinationGuard(IEnumerable<Uri> allowedEndpoints)
     private readonly HashSet<string> _allowed =
         [.. allowedEndpoints.Select(Normalize)];
 
-    public bool IsAllowed(Uri endpoint) => _allowed.Contains(Normalize(endpoint));
+    // An endpoint with a query string or a fragment is never allowed.
+    public bool IsAllowed(Uri endpoint) =>
+        endpoint.Query.Length == 0 && endpoint.Fragment.Length == 0 && _allowed.Contains(Normalize(endpoint));
 
     /// <summary>Transport options that carry the token, or an exception before any request is sent.</summary>
     public HttpClientTransportOptions CreateTransportOptions(Uri endpoint, string accessToken)
@@ -28,6 +30,14 @@ public sealed class McpDestinationGuard(IEnumerable<Uri> allowedEndpoints)
             TransportMode = HttpTransportMode.StreamableHttp,
             AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = $"Bearer {accessToken}" },
         };
+    }
+
+    /// <summary>The consumer's path: the allow-list, then the server's metadata, and only then the token.</summary>
+    public async Task<HttpClientTransportOptions> CreateCheckedTransportOptionsAsync(
+        HttpClient http, Uri endpoint, string accessToken, CancellationToken ct = default)
+    {
+        await CheckResourceMetadataAsync(http, endpoint, ct);   // throws before the token is used
+        return CreateTransportOptions(endpoint, accessToken);
     }
 
     /// <summary>
@@ -46,9 +56,9 @@ public sealed class McpDestinationGuard(IEnumerable<Uri> allowedEndpoints)
         return metadata.Resource;
     }
 
+    // Scheme, host and port compare case-insensitively; the path compares as written.
     private static string Normalize(Uri uri) =>
-        uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.Unescaped)
-           .TrimEnd('/').ToLowerInvariant();
+        uri.GetLeftPart(UriPartial.Authority).ToLowerInvariant() + uri.AbsolutePath.TrimEnd('/');
 
     private sealed record ResourceMetadata([property: JsonPropertyName("resource")] string? Resource);
 }

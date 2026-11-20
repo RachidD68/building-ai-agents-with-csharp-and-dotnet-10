@@ -16,7 +16,7 @@ The self-test runs the real stdio server as a child process and replaces the LLM
 
 ## Tokens: the destination guard
 
-With `--http` and the `MCP_ACCESS_TOKEN` environment variable set, `McpDestinationGuard` sends the token only to an endpoint listed in `McpConsumer:AllowedServers` (appsettings.json). `CheckResourceMetadataAsync` also checks that the server's protected resource metadata names that same endpoint. Both rules are tested offline in `Ch09.McpAccessTests`.
+With `--http` and a pre-issued token in the `MCP_ACCESS_TOKEN` environment variable, the consumer builds its transport with `McpDestinationGuard.CreateCheckedTransportOptionsAsync`: the endpoint must be listed in `McpConsumer:AllowedServers` (appsettings.json), and the server's protected resource metadata must name that same endpoint, before the token is put on any request. The consumer does not request tokens from an authorization server itself. Both rules are tested offline in `Ch09.McpAccessTests`. Outside loopback, use HTTPS for the endpoint, the metadata and the issuer.
 
 ## Key Concepts
 
