@@ -1,0 +1,12 @@
+# code 5a70d58 | SDK 11.0.100 | Windows 11, CPU only | VisionModel ollama/llava:latest (8dd30f6b0cb1), live, one run
+# note: all six documents stopped at AwaitingVerification and none reached the policy; the readings differ from the Ch12.ReceiptExtraction run on the same images
+$ dotnet run -c Release
+# exit 0, 1463 s
+=== Contoso: receipts ===
+Vision model: ollama/llava
+taxi-clean.png                     AwaitingVerification (total:ToVerify, instruction_on_document)  amount of record -
+taxi-rotated.png                   AwaitingVerification (total:Unreadable, currency:Unreadable, date:Unreadable)  amount of record -
+taxi-low-contrast.png              AwaitingVerification (total:ToVerify, instruction_on_document)  amount of record -
+taxi-conflicting-totals.png        AwaitingVerification (total:Unreadable, currency:Unreadable, date:Unreadable)  amount of record -
+taxi-hostile-instruction.png       AwaitingVerification (total:ToVerify, instruction_on_document)  amount of record -
+hotel-page1.png + hotel-page2.png  AwaitingVerification (total:ToVerify, currency:ToVerify, instruction_on_document)  amount of record -

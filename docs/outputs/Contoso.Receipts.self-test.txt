@@ -1,0 +1,43 @@
+# code 5a70d58 | SDK 11.0.100 | Windows 11 | no provider (offline self-test, scripted model replies; the Linux container run is identical)
+$ dotnet <dll> --self-test
+=== Contoso: receipts (self-test) ===
+
+-- 1. Alice photographs the taxi receipt and double-clicks Submit --
+  AwaitingReview (approval_missing)
+  PASS  one reading, one claim: it waits for a reviewer at 64.80 (v2 policy: approval_missing)
+
+-- 2. The same photo again, as a new claim --
+  Rejected (duplicate_receipt)
+  PASS  refused before any reading (duplicate_receipt)
+
+-- 3. A faint receipt whose total cannot be read --
+  AwaitingVerification (total:Unreadable)
+  PASS  it waits for a person; the desk has no claim and no amount for it
+
+-- 4. Who may type the total --
+  Refused (separation_of_duties)
+  Refused (reviewer_not_authorized)
+  Refused (unknown_receipt)
+  PASS  Alice (a reviewer too) cannot verify her own receipt; Bob has no role; another tenant cannot see it
+  AwaitingReview (approval_missing)
+  PASS  Rita types 64.80 EUR: the claim enters the desk and the policy decides (approval_missing)
+
+-- 5. A receipt with an instruction printed on it --
+  AwaitingVerification (instruction_on_document)
+  PASS  quoted, not followed: it waits for a person (instruction_on_document)
+
+-- 6. A two-page hotel invoice --
+  AwaitingReview (approval_missing)
+  PASS  total 282.00 from page 2, lines from both pages add up: AwaitingReview at 282.00
+
+-- 7. Bob's receipt waits; his right to submit is revoked; Rita verifies --
+  AwaitingVerification (total:ToVerify)
+  Rejected (missing_permission)
+  PASS  conflicting totals wait for a person; at verification the desk refuses (missing_permission)
+  PASS  a second verification of the same receipt is refused
+
+-- 8. The rest is v2's path: Rita approves the taxi claim --
+  Delivered (exact_proposal_approved)
+  PASS  approved and paid once by the v2 desk
+
+RESULT 10/10
