@@ -4,6 +4,7 @@
     <Project Path="src/Ch01.Agency/Ch01.FirstGlimpse/Ch01.FirstGlimpse.csproj" />
   </Folder>
   <Folder Name="/src/Ch02.ModelsContext/">
+    <Project Path="src/Ch02.ModelsContext/Ch02.CapabilityProfile/Ch02.CapabilityProfile.csproj" />
     <Project Path="src/Ch02.ModelsContext/Ch02.TokenExplorer/Ch02.TokenExplorer.csproj" />
   </Folder>
   <Folder Name="/src/Ch03.DevEnvironment/">

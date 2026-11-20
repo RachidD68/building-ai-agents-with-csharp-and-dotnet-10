@@ -1,204 +1,151 @@
 // ============================================================================
-// Exercise 02 — Prompt Template Engine (Intermediate)
-// A small prompt-template class with {placeholder} substitution from a
-// dictionary, an estimated token count for every rendered prompt, and a hard
-// token cap: if the rendered prompt exceeds the cap, Render throws.
-// Tested with three templates — a system prompt, a user question template,
-// and a few-shot classification template.
+// Exercise 02: Prompt Template Engine (Intermediate)
+// {placeholder} templates rendered under a token budget: a missing variable
+// fails loudly, a prompt that would not leave the output reserve free is
+// rejected before any model call, and the reserve becomes the output cap.
+//
+//   dotnet run                  three templates, then a blown budget
+//   dotnet run -- --self-test   the three rules, RESULT n/n
 // ============================================================================
 
 using System.Text.RegularExpressions;
+using Microsoft.ML.Tokenizers;
 
-Console.WriteLine("=== Exercise: Prompt Template Engine — Budgeted Rendering ===\n");
+Tokenizer tokenizer = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
-// ---------------------------------------------------------------
-// Step 1: Three templates — system, user question, few-shot
-// ---------------------------------------------------------------
-PromptTemplate systemPrompt = new(
-    "SystemPrompt",
-    """
-    You are {assistant_name}, a support assistant for {product}.
-    Rules:
-      - Answer only from the provided documentation.
-      - If you don't know, say so and offer to open a ticket.
-      - Never invent order numbers or prices.
-    """,
-    MaxTokens: 120);
-
-PromptTemplate userQuestion = new(
-    "UserQuestion",
-    """
-    Customer tier: {tier}
+PromptTemplate system = new("SystemPrompt", """
+    You are {assistant_name}, the expense-policy assistant for {company}.
+    Answer only from the policy text you are given. If it does not say, say so.
+    """);
+PromptTemplate question = new("UserQuestion", """
+    Employee tier: {tier}
     Question: {question}
-    """,
-    MaxTokens: 80);
+    """);
+PromptTemplate fewShot = new("FewShotClassifier", """
+    Classify the claim as allow, review or deny.
+    Claim: "Taxi, 42.00 EUR, EUR account" -> allow
+    Claim: "Taxi, 64.80 EUR, EUR account" -> review
+    Claim: "{claim}" ->
+    """);
 
-PromptTemplate fewShotClassifier = new(
-    "FewShotClassifier",
-    """
-    Classify the support message into exactly one category:
-    billing, bug, how-to, or feature-request.
+if (args.Contains("--self-test")) return SelfTest(tokenizer, question);
 
-    Message: "I was charged twice this month."
-    Category: billing
+// A small window on purpose, so the budget is easy to blow.
+PromptBudget budget = new(Window: 160, OutputReserve: 64);
+Console.WriteLine($"Budget: window {budget.Window}, output reserve {budget.OutputReserve}, prompt limit {budget.PromptLimit} (o200k_base)\n");
 
-    Message: "The export button crashes the app."
-    Category: bug
+Show(system.Render(new() { ["assistant_name"] = "Contoso Assistant", ["company"] = "Contoso" }, budget, tokenizer));
+Show(question.Render(new() { ["tier"] = "standard", ["question"] = "Can I claim a 42 EUR taxi?" }, budget, tokenizer));
+Show(fewShot.Render(new() { ["claim"] = "Hotel, 180.00 USD, EUR account" }, budget, tokenizer));
 
-    Message: "How do I invite a teammate to my workspace?"
-    Category: how-to
-
-    Message: "{message}"
-    Category:
-    """,
-    MaxTokens: 160);
-
-PromptTemplate[] templates = [systemPrompt, userQuestion, fewShotClassifier];
-
-Console.WriteLine("--- Templates ---\n");
-foreach (PromptTemplate template in templates)
-{
-    Console.WriteLine($"  {template.Name}:");
-    Console.WriteLine($"    Placeholders: {string.Join(", ", template.GetPlaceholders())}");
-    Console.WriteLine($"    Hard cap:     {template.MaxTokens} tokens");
-    Console.WriteLine();
-}
-
-// ---------------------------------------------------------------
-// Step 2: Render all three within budget
-// ---------------------------------------------------------------
-Console.WriteLine("--- Rendered Prompts ---\n");
-
-Display(systemPrompt, systemPrompt.Render(new Dictionary<string, string>
-{
-    ["assistant_name"] = "Contoso Assistant",
-    ["product"] = "Contoso Cloud",
-}));
-
-Display(userQuestion, userQuestion.Render(new Dictionary<string, string>
-{
-    ["tier"] = "pro",
-    ["question"] = "How do I rotate my API key?",
-}));
-
-Display(fewShotClassifier, fewShotClassifier.Render(new Dictionary<string, string>
-{
-    ["message"] = "Please add dark mode to the dashboard.",
-}));
-
-// ---------------------------------------------------------------
-// Step 3: Blow the budget — the hard cap throws
-// ---------------------------------------------------------------
-// A prompt blows its budget the moment someone pastes a wall of text into a
-// placeholder. The cap turns a silent cost overrun into a loud exception.
-Console.WriteLine("--- Hard Cap ---\n");
-
-string pastedWallOfText = string.Join(' ', Enumerable.Repeat(
-    "The app crashed again and here is the full stack trace I copied from the log viewer:", 20));
-
+string pasted = string.Join(' ', Enumerable.Repeat("Here is the whole receipt text I copied from the scan:", 12));
 try
 {
-    userQuestion.Render(new Dictionary<string, string>
-    {
-        ["tier"] = "free",
-        ["question"] = pastedWallOfText,
-    });
-
-    Console.WriteLine("  (unreachable — the render above must throw)");
+    question.Render(new() { ["tier"] = "standard", ["question"] = pasted }, budget, tokenizer);
 }
-catch (InvalidOperationException ex)
+catch (PromptOverBudgetException ex)
 {
-    Console.WriteLine($"  Caught: {ex.Message}");
+    Console.WriteLine($"Rejected before the call: {ex.Message}");
 }
-
-Console.WriteLine("\n=== Exercise complete! ===");
-
-// ---------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Prints a rendered prompt with its estimated token count and budget.
-/// </summary>
-/// <param name="template">The template that produced the prompt.</param>
-/// <param name="rendered">The rendered prompt text.</param>
-static void Display(PromptTemplate template, string rendered)
+try
 {
-    int tokens = PromptTemplate.EstimateTokens(rendered);
-    Console.WriteLine($"  [{template.Name}] ~{tokens}/{template.MaxTokens} tokens ({rendered.Length} chars):");
-    Console.WriteLine();
+    question.Render(new() { ["tier"] = "standard" }, budget, tokenizer);
+}
+catch (KeyNotFoundException ex)
+{
+    Console.WriteLine($"Rejected before the call: {ex.Message}");
+}
+return 0;
 
-    foreach (string line in rendered.Split('\n'))
+static void Show(RenderedPrompt p) =>
+    Console.WriteLine($"[{p.Name}] {p.Tokens} tokens, MaxOutputTokens {p.MaxOutputTokens}\n{p.Text}\n");
+
+static int SelfTest(Tokenizer tokenizer, PromptTemplate question)
+{
+    int passed = 0, total = 0;
+    void Expect(string name, bool ok)
     {
-        Console.WriteLine($"    {line.TrimEnd()}");
+        total++;
+        if (ok) passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
 
-    Console.WriteLine();
+    PromptBudget budget = new(Window: 160, OutputReserve: 64);
+    int calls = 0;
+    void Send(RenderedPrompt _) => calls++;   // stands in for the model call
+
+    RenderedPrompt ok = question.Render(new() { ["tier"] = "standard", ["question"] = "Can I claim a taxi?" }, budget, tokenizer);
+    Send(ok);
+    Expect("a prompt inside the limit renders and is sent", calls == 1 && ok.Tokens <= budget.PromptLimit);
+    Expect("the output reserve becomes MaxOutputTokens", ok.MaxOutputTokens == 64);
+    Expect("the count is the tokenizer's, not len/4", ok.Tokens == tokenizer.CountTokens(ok.Text));
+
+    bool missing = Throws<KeyNotFoundException>(() => Send(question.Render(new() { ["tier"] = "standard" }, budget, tokenizer)));
+    Expect("a missing variable throws and nothing is sent", missing && calls == 1);
+
+    string pasted = string.Join(' ', Enumerable.Repeat("Here is the whole receipt text I copied from the scan:", 12));
+    bool over = Throws<PromptOverBudgetException>(() => Send(question.Render(new() { ["tier"] = "standard", ["question"] = pasted }, budget, tokenizer)));
+    Expect("an over-budget prompt is rejected and nothing is sent", over && calls == 1);
+
+    // Fits the window on its own, but not with the reserve: still rejected.
+    string medium = string.Join(' ', Enumerable.Repeat("receipt line", 55));
+    int alone = tokenizer.CountTokens(question.Template.ReplaceLineEndings("\n").Replace("{tier}", "standard").Replace("{question}", medium));
+    bool reserve = Throws<PromptOverBudgetException>(() => question.Render(new() { ["tier"] = "standard", ["question"] = medium }, budget, tokenizer));
+    Expect("a prompt that fits the window but eats the reserve is rejected",
+        alone < budget.Window && alone > budget.PromptLimit && reserve);
+
+    Expect("a reserve as large as the window is refused", Throws<ArgumentOutOfRangeException>(() => _ = new PromptBudget(100, 100)));
+
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
 }
 
-// ---------------------------------------------------------------
-// Prompt template type
-// ---------------------------------------------------------------
-
-/// <summary>
-/// A reusable prompt template with <c>{placeholder}</c> variables and a hard
-/// token cap enforced at render time.
-/// </summary>
-/// <param name="Name">The template name.</param>
-/// <param name="Template">The template string with placeholders.</param>
-/// <param name="MaxTokens">The hard cap on the rendered prompt's estimated tokens.</param>
-sealed partial record PromptTemplate(string Name, string Template, int MaxTokens)
+static bool Throws<T>(Action action) where T : Exception
 {
-    /// <summary>
-    /// Extracts all unique placeholder names from the template.
-    /// </summary>
-    /// <returns>An array of placeholder names.</returns>
-    public string[] GetPlaceholders()
+    try { action(); return false; }
+    catch (T) { return true; }
+}
+
+/// <summary>The window and the part of it kept free for the reply.</summary>
+sealed record PromptBudget
+{
+    public PromptBudget(int Window, int OutputReserve)
     {
-        return [.. PlaceholderRegex().Matches(Template)
-            .Select(m => m.Groups[1].Value)
-            .Distinct()];
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(OutputReserve);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(OutputReserve, Window);
+        this.Window = Window;
+        this.OutputReserve = OutputReserve;
     }
 
-    /// <summary>
-    /// Renders the template by substituting every placeholder from the
-    /// dictionary — the one-line Regex.Replace trick — then enforces the hard
-    /// cap: if the rendered prompt's estimated token count exceeds
-    /// <see cref="MaxTokens"/>, this method throws.
-    /// </summary>
-    /// <param name="values">A dictionary mapping placeholder names to values.</param>
-    /// <returns>The rendered prompt.</returns>
-    /// <exception cref="KeyNotFoundException">A placeholder has no value in the dictionary.</exception>
-    /// <exception cref="InvalidOperationException">The rendered prompt exceeds the hard token cap.</exception>
-    public string Render(IReadOnlyDictionary<string, string> values)
+    public int Window { get; }
+    public int OutputReserve { get; }
+    public int PromptLimit => Window - OutputReserve;
+}
+
+sealed record RenderedPrompt(string Name, string Text, int Tokens, int MaxOutputTokens);
+
+sealed class PromptOverBudgetException(string message) : Exception(message);
+
+/// <summary>A template with {placeholder} variables.</summary>
+sealed partial record PromptTemplate(string Name, string Template)
+{
+    public RenderedPrompt Render(Dictionary<string, string> values, PromptBudget budget, Tokenizer tokenizer)
     {
-        string rendered = PlaceholderRegex().Replace(Template, match =>
-            values.TryGetValue(match.Groups[1].Value, out string? value)
-                ? value
-                : throw new KeyNotFoundException(
-                    $"No value provided for placeholder '{match.Groups[1].Value}' in template '{Name}'."));
+        // Normalized so a CRLF checkout renders (and counts) the same as LF.
+        string text = Placeholder().Replace(Template.ReplaceLineEndings("\n"), m =>
+            values.TryGetValue(m.Groups[1].Value, out string? v)
+                ? v
+                : throw new KeyNotFoundException($"Template '{Name}' needs '{m.Groups[1].Value}', which was not given."));
 
-        int estimatedTokens = EstimateTokens(rendered);
-        if (estimatedTokens > MaxTokens)
-        {
-            throw new InvalidOperationException(
-                $"Template '{Name}' rendered to ~{estimatedTokens} tokens — over its hard cap of {MaxTokens}.");
-        }
+        int tokens = tokenizer.CountTokens(text);
+        if (tokens > budget.PromptLimit)
+            throw new PromptOverBudgetException(
+                $"'{Name}' is {tokens} tokens; the limit is {budget.PromptLimit} " +
+                $"({budget.Window} window - {budget.OutputReserve} output reserve).");
 
-        return rendered;
-    }
-
-    /// <summary>
-    /// Estimates token count with the same length / 4 trick as the models and context chapter.
-    /// </summary>
-    /// <param name="text">The text to estimate.</param>
-    /// <returns>Estimated token count.</returns>
-    public static int EstimateTokens(string text)
-    {
-        if (string.IsNullOrEmpty(text)) return 0;
-        return (int)Math.Ceiling(text.Length / 4.0);
+        return new(Name, text, tokens, budget.OutputReserve);
     }
 
     [GeneratedRegex(@"\{(\w+)\}")]
-    private static partial Regex PlaceholderRegex();
+    private static partial Regex Placeholder();
 }

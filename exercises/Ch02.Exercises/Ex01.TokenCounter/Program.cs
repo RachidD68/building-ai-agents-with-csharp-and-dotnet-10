@@ -1,104 +1,94 @@
 // ============================================================================
-// Exercise 01 — Token Counter (Basic)
-// Extends the companion EstimateTokenCount method with a content-type hint
-// ("prose", "code", "json") and per-type divisors, then processes a folder of
-// .txt/.cs/.json files and prints a table of file -> estimated tokens ->
-// estimated GPT-5.6 Terra input cost.
+// Exercise 01: Token Counter (Basic)
+// Counts the tokens of every .txt and .cs file in a folder with a real BPE
+// tokenizer, next to the length/4 estimate, and reports chars per token for
+// each file. The bundled samples are English prose, Arabic prose and C#.
+//
+//   dotnet run                       the bundled samples folder
+//   dotnet run -- C:\path\to\folder  your own files
+//   dotnet run -- --self-test        pinned counts for the samples, RESULT n/n
 // ============================================================================
 
-// GPT-5.6 Terra input rate, per 1M tokens (verify current rates before relying on them).
-const decimal InputRatePer1M = 2.00m;
+using System.Text;
+using Microsoft.ML.Tokenizers;
 
-Console.WriteLine("=== Exercise: Token Counter — Content-Type-Aware Estimator ===\n");
+Console.OutputEncoding = Encoding.UTF8;
 
-using CancellationTokenSource cts = new();
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+const string Encoding200k = "o200k_base";
+Tokenizer tokenizer = TiktokenTokenizer.CreateForEncoding(Encoding200k);
+string samples = Path.Combine(AppContext.BaseDirectory, "samples");
 
-// Default to the bundled samples folder (copied next to the binary at build
-// time). Pass a different folder as the first argument to scan your own files:
-//   dotnet run -- C:\path\to\folder
-string folder = args.Length > 0 ? args[0] : Path.Combine(AppContext.BaseDirectory, "samples");
+if (args.Contains("--self-test")) return SelfTest(tokenizer, samples);
 
+string folder = args.Length > 0 ? args[0] : samples;
 if (!Directory.Exists(folder))
 {
     Console.WriteLine($"Folder not found: {folder}");
     return 1;
 }
 
-string[] files = [.. Directory.EnumerateFiles(folder)
-    .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".txt" or ".cs" or ".json")
-    .Order(StringComparer.OrdinalIgnoreCase)];
-
-if (files.Length == 0)
+List<FileCount> counts = await CountFolderAsync(folder, tokenizer);
+if (counts.Count == 0)
 {
-    Console.WriteLine($"No .txt, .cs, or .json files found in: {folder}");
+    Console.WriteLine($"No .txt or .cs files found in: {folder}");
     return 1;
 }
 
-Console.WriteLine($"Scanning: {folder}\n");
-
-Console.WriteLine($"  {"File",-16} {"Type",-6} {"Chars",8} {"Est. tokens",12} {"Input cost ($)",15}");
-Console.WriteLine($"  {new string('-', 16)} {new string('-', 6)} {new string('-', 8)} {new string('-', 12)} {new string('-', 15)}");
-
-int totalTokens = 0;
-decimal totalCost = 0m;
-
-foreach (string file in files)
+Console.WriteLine($"Tokenizer: {Encoding200k} (Microsoft.ML.Tokenizers, offline)\n");
+Console.WriteLine($"  {"File",-12} {"Chars",6} {"Tokens",7} {"len/4",6} {"Chars/token",12}");
+Console.WriteLine($"  {new string('-', 47)}");
+foreach (FileCount c in counts)
 {
-    string text = await File.ReadAllTextAsync(file, cts.Token);
-
-    string contentType = GetContentTypeHint(file);
-    int tokens = EstimateTokenCount(text, contentType);
-    decimal cost = tokens * InputRatePer1M / 1_000_000m;
-
-    totalTokens += tokens;
-    totalCost += cost;
-
-    Console.WriteLine($"  {Path.GetFileName(file),-16} {contentType,-6} {text.Length,8:N0} {tokens,12:N0} {cost,15:F6}");
+    Console.WriteLine($"  {c.Name,-12} {c.Chars,6} {c.Tokens,7} {c.Estimate,6} {c.CharsPerToken,12:F2}");
 }
-
-Console.WriteLine($"  {new string('-', 16)} {new string('-', 6)} {new string('-', 8)} {new string('-', 12)} {new string('-', 15)}");
-Console.WriteLine($"  {"TOTAL",-16} {"",-6} {"",8} {totalTokens,12:N0} {totalCost,15:F6}");
-
-Console.WriteLine("\n=== Exercise complete! ===");
-
+Console.WriteLine($"  {new string('-', 47)}");
+Console.WriteLine($"  {"TOTAL",-12} {counts.Sum(c => c.Chars),6} {counts.Sum(c => c.Tokens),7} {counts.Sum(c => c.Estimate),6}");
 return 0;
 
-// ---------------------------------------------------------------
-// Helpers — a 20-line method beats a framework
-// ---------------------------------------------------------------
-
-/// <summary>
-/// Maps a file extension to a content-type hint for the estimator.
-/// </summary>
-/// <param name="filePath">The file whose extension supplies the hint.</param>
-/// <returns>"prose", "code", or "json".</returns>
-static string GetContentTypeHint(string filePath) =>
-    Path.GetExtension(filePath).ToLowerInvariant() switch
-    {
-        ".cs" => "code",
-        ".json" => "json",
-        _ => "prose"   // .txt (and anything unrecognized) reads like prose
-    };
-
-/// <summary>
-/// Estimates the token count for a text, adjusting the chars-per-token divisor
-/// by content type: prose tokenizes at ~4 chars/token, code at ~3 (symbols and
-/// identifiers split more), and JSON at ~2.5 (punctuation-heavy).
-/// </summary>
-/// <param name="text">The text to estimate tokens for.</param>
-/// <param name="contentTypeHint">"prose", "code", or "json".</param>
-/// <returns>The estimated number of tokens.</returns>
-static int EstimateTokenCount(string text, string contentTypeHint)
+static async Task<List<FileCount>> CountFolderAsync(string folder, Tokenizer tokenizer)
 {
-    if (string.IsNullOrEmpty(text)) return 0;
-
-    double divisor = contentTypeHint switch
+    List<FileCount> counts = [];
+    foreach (string file in Directory.EnumerateFiles(folder)
+                 .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".txt" or ".cs")
+                 .Order(StringComparer.OrdinalIgnoreCase))
     {
-        "code" => 3.0,
-        "json" => 2.5,
-        _ => 4.0   // "prose" — the classic rule of thumb
-    };
+        // Normalize line endings so a CRLF checkout counts the same as LF.
+        string text = (await File.ReadAllTextAsync(file)).ReplaceLineEndings("\n");
+        int tokens = tokenizer.CountTokens(text);
+        counts.Add(new(Path.GetFileName(file), text.Length, tokens,
+            (int)Math.Ceiling(text.Length / 4.0)));
+    }
+    return counts;
+}
 
-    return Math.Max(1, (int)Math.Ceiling(text.Length / divisor));
+static int SelfTest(Tokenizer tokenizer, string samples)
+{
+    int passed = 0, total = 0;
+    void Expect(string name, bool ok)
+    {
+        total++;
+        if (ok) passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+    }
+
+    Dictionary<string, FileCount> byName = CountFolderAsync(samples, tokenizer).GetAwaiter().GetResult()
+        .ToDictionary(c => c.Name);
+    // Pinned once from Microsoft.ML.Tokenizers 2.0.0 (o200k_base).
+    (string File, int Tokens)[] pinned = [("arabic.txt", 111), ("notes.txt", 142), ("snippet.cs", 88)];
+    foreach ((string file, int tokens) in pinned)
+    {
+        Expect($"{file} counts {tokens} tokens", byName.TryGetValue(file, out FileCount? c) && c.Tokens == tokens);
+    }
+    Expect("the count comes from the tokenizer: len/4 misses the Arabic file",
+        byName["arabic.txt"].Tokens != byName["arabic.txt"].Estimate);
+    Expect("Arabic packs fewer characters per token than English",
+        byName["arabic.txt"].CharsPerToken < byName["notes.txt"].CharsPerToken);
+
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
+}
+
+sealed record FileCount(string Name, int Chars, int Tokens, int Estimate)
+{
+    public double CharsPerToken => Tokens == 0 ? 0 : (double)Chars / Tokens;
 }

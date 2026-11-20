@@ -1,560 +1,159 @@
 // ============================================================================
-// How LLMs Work: A Developer's Mental Model
-// Explores tokenization, temperature, embeddings, and cost estimation.
-// No network calls — every number below is computed locally.
+// Token Explorer: tokens, context budgets, sampling and similarity, offline.
+// Every number below comes from a real tokenizer or from plain arithmetic;
+// nothing here calls a model.
+//
+//   dotnet run                 the tour
+//   dotnet run -- --self-test  fixed token counts and the budget rules, RESULT n/n
 // ============================================================================
 
+using System.Text;
+using Ch02.TokenExplorer;
 using Microsoft.Extensions.AI;
 using Microsoft.ML.Tokenizers;
 
-Console.WriteLine("=== How LLMs Work — Token Explorer ===\n");
+Console.OutputEncoding = Encoding.UTF8;
+
+if (args.Contains("--self-test")) return TokenSelfTest.Run();
+
+Console.WriteLine("=== Token Explorer ===");
 
 // ----------------------------------------------------------------------------
-#region Tokenization Simulation
+#region Estimate, then verify
 // ----------------------------------------------------------------------------
-// Real LLMs use BPE (Byte Pair Encoding) tokenizers. We simulate the concept
-// by splitting text into word-level and subword-level chunks.
+// Two tokenizer families from Microsoft.ML.Tokenizers, both offline: the vocab
+// ships in the Data.O200kBase and Data.Cl100kBase packages. Which vendor model
+// uses which encoding is a dated fact; check the vendor's documentation.
 
-WriteSection("Tokenization Simulation");
+WriteSection("Estimate, then verify");
 
-string[] sampleTexts =
-[
-    "Hello, world!",
-    "The quick brown fox jumps over the lazy dog.",
-    "Microsoft.Extensions.AI provides IChatClient for vendor-neutral LLM access.",
-    "C# is awesome! 🚀",
-    "async Task<ChatResponse> GetCompletionAsync(string prompt, CancellationToken ct)"
-];
+Tokenizer o200k = TiktokenTokenizer.CreateForEncoding("o200k_base");
+Tokenizer cl100k = TiktokenTokenizer.CreateForEncoding("cl100k_base");
 
-foreach (string text in sampleTexts)
+Console.WriteLine($"  {"Sample",-9} {"Chars",6} {"len/4",6} {"o200k",6} {"cl100k",7} {"chars/token",12} {"len/4 error",12}");
+Console.WriteLine($"  {new string('-', 64)}");
+foreach (Sample sample in Samples.All)
 {
-    string[] tokens = SimulateTokenization(text);
-    Console.WriteLine($"  Text:   \"{text}\"");
-    WriteColored($"  Tokens: [{string.Join("] [", tokens)}]", ConsoleColor.Cyan);
-    Console.WriteLine($"  Count:  {tokens.Length} tokens");
-    Console.WriteLine($"  Ratio:  ~{(double)text.Length / tokens.Length:F1} chars/token");
-    Console.WriteLine();
-}
-
-#endregion
-
-// ----------------------------------------------------------------------------
-#region Token Count Estimation
-// ----------------------------------------------------------------------------
-// A common rule of thumb: 1 token ~ 4 characters in English.
-// Knowing this helps you estimate costs and stay within context windows.
-
-WriteSection("Token Count Estimation");
-
-Dictionary<string, string> contextExamples = new()
-{
-    ["Short prompt"] = "What is .NET?",
-    ["Medium prompt"] = "Explain the difference between Task and ValueTask in C#. Include code examples and performance considerations.",
-    ["System prompt"] = "You are a senior .NET developer assistant. You provide concise, accurate answers about C#, ASP.NET Core, and Azure. Always include code examples when applicable. Format responses using markdown.",
-    ["Long document"] = string.Join(' ', Enumerable.Repeat("The .NET platform provides a comprehensive framework for building modern applications.", 20)),
-};
-
-foreach ((string label, string text) in contextExamples)
-{
-    int estimatedTokens = EstimateTokenCount(text);
-    Console.WriteLine($"  {label,-16} | {text.Length,5} chars | ~{estimatedTokens,5} tokens | {GetContextPercentage(estimatedTokens)}");
+    int estimate = TokenMath.EstimateTokens(sample.Text);
+    int real = o200k.CountTokens(sample.Text);
+    int older = cl100k.CountTokens(sample.Text);
+    double ratio = (double)sample.Text.Length / real;
+    double error = (double)(estimate - real) / real;
+    Console.WriteLine($"  {sample.Label,-9} {sample.Text.Length,6} {estimate,6} {real,6} {older,7} {ratio,12:F2} {error,12:P0}");
 }
 
 Console.WriteLine();
-Console.WriteLine("  Context window reference:");
-Console.WriteLine("    GPT-5.6 (all tiers): 272K tokens");
-Console.WriteLine("    Llama 3.2:           128K tokens");
+Console.WriteLine("  len/4 is a prose rule. Arabic and C# drift from it, and the two");
+Console.WriteLine("  encodings disagree with each other. Count with the model's tokenizer.");
 
 #endregion
 
 // ----------------------------------------------------------------------------
-#region Real Tokenizer (Microsoft.ML.Tokenizers)
+#region The conversation is a list of messages
 // ----------------------------------------------------------------------------
-// The length/4 estimate above is fine for back-of-the-envelope work, but when
-// precision matters, use a real BPE tokenizer. Microsoft.ML.Tokenizers ships
-// TiktokenTokenizer, which matches OpenAI's o200k_base (GPT-4o / GPT-4.1 / GPT-5 / GPT-5.6
-// family) and cl100k_base exactly — offline, no network call.
+// A chat request is an ordered List<ChatMessage>, re-sent in full on every
+// turn. Counting the whole list each turn shows the history riding along.
 
-WriteSection("Real Tokenizer vs the length/4 Estimate");
-
-// o200k_base is the encoding used by the current GPT-5 / GPT-5.6 family.
-// The vocab ships in the Microsoft.ML.Tokenizers.Data.O200kBase package.
-Tokenizer tokenizer = TiktokenTokenizer.CreateForEncoding("o200k_base");
-
-(string Label, string Text)[] tokenizerSamples =
-[
-    ("Prose",  "The quick brown fox jumps over the lazy dog and then keeps on running."),
-    ("C# code", "public async Task<ChatResponse> GetCompletionAsync(string prompt, CancellationToken ct)"),
-    ("JSON",    "{ \"role\": \"user\", \"content\": \"Hello\", \"temperature\": 0.2, \"max_tokens\": 256 }"),
-    ("Emoji",   "Ship it! 🚀🔥✅ C# + .NET 10 = 💜"),
-];
-
-Console.WriteLine(string.Format("  {0,-8} {1,7} {2,9} {3,8}  {4}",
-    "Type", "Real", "len/4", "Error", "Text"));
-Console.WriteLine($"  {new string('-', 78)}");
-
-foreach (var (label, text) in tokenizerSamples)
-{
-    int real = tokenizer.CountTokens(text);
-    int estimate = EstimateTokenCount(text);
-    double errorPct = real == 0 ? 0 : (double)(estimate - real) / real * 100;
-
-    string preview = text.Length <= 40 ? text : text[..37] + "...";
-    ConsoleColor color = Math.Abs(errorPct) switch
-    {
-        <= 15 => ConsoleColor.Green,
-        <= 40 => ConsoleColor.Yellow,
-        _ => ConsoleColor.Red
-    };
-
-    Console.Write(string.Format("  {0,-8} {1,7} {2,9} ", label, real, estimate));
-    WriteColoredInline($"{errorPct,+7:F1}%", color);
-    Console.WriteLine($"  {preview}");
-}
-
-Console.WriteLine();
-Console.WriteLine("  The estimate is close for prose and drifts for code, JSON, and emoji.");
-Console.WriteLine("  Use the real tokenizer when a wrong count would overflow the window");
-Console.WriteLine("  or under-bill a customer.");
-
-#endregion
-
-// ----------------------------------------------------------------------------
-#region Message Array & Cost Growth
-// ----------------------------------------------------------------------------
-// A chat request is an ordered List<ChatMessage>. "History" is just that array,
-// re-sent in full on every turn. Re-counting the whole array each turn shows
-// why an unbounded conversation gets expensive — the $2,047 story, in code.
-// No network call: the real tokenizer from the region above does the counting.
-
-WriteSection("Message Array & Cost Growth");
+WriteSection("The conversation is a list of messages");
 
 List<ChatMessage> conversation =
 [
-    new ChatMessage(ChatRole.System,
-        "You are a terse, senior .NET engineer. Answer with one sentence, then code."),
+    new(ChatRole.System, "You answer Contoso expense-policy questions in one sentence."),
 ];
 
-// A scripted multi-turn exchange. Each (user, assistant) pair is one "turn".
 (string User, string Assistant)[] turns =
 [
-    ("What is IAsyncEnumerable<T> for?",
-     "Streaming sequences you await item-by-item: await foreach (var x in source) { }"),
-    ("How do I cancel it?",
-     "Pass a CancellationToken and honor it: [EnumeratorCancellation] on the token param."),
-    ("Show a producer.",
-     "async IAsyncEnumerable<int> Count() { for (int i=0;i<10;i++){ await Task.Yield(); yield return i; } }"),
-    ("And a consumer with a timeout?",
-     "using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); await foreach (var i in Count().WithCancellation(cts.Token)) Log(i);"),
+    ("Can I claim a 42 EUR taxi?", "Yes: claims up to 50 EUR need no review."),
+    ("And 64.80 EUR?", "That needs a finance reviewer's approval first."),
+    ("Can I approve it myself?", "No. The reviewer must be someone other than the requester."),
+    ("What if my account is in EUR and the receipt is in USD?", "The claim is denied: the currency must match the account."),
 ];
 
-// GPT-5.6 Terra input rate, per 1M tokens (verify current rate before relying on it).
-const decimal inputRatePer1M = 2.00m;
-
-Console.WriteLine("  Each turn re-sends the ENTIRE array. Running input cost per turn:\n");
-Console.WriteLine(string.Format("  {0,-5} {1,10} {2,14} {3,14}",
-    "Turn", "Msgs", "Input tokens", "Cost this call"));
-Console.WriteLine($"  {new string('-', 50)}");
-
-int turnNumber = 0;
-foreach (var (user, assistant) in turns)
+Console.WriteLine($"  {"Turn",-5} {"Messages",9} {"Input tokens (o200k)",21}");
+Console.WriteLine($"  {new string('-', 37)}");
+int turn = 0;
+foreach ((string user, string assistant) in turns)
 {
-    turnNumber++;
-    conversation.Add(new ChatMessage(ChatRole.User, user));
-
-    // The cost of THIS call is the whole array we send up to (and including) the
-    // new user message — the assistant reply does not exist yet when we send.
-    int inputTokens = CountConversationTokens(conversation, tokenizer);
-    decimal callCost = inputTokens * inputRatePer1M / 1_000_000m;
-
-    Console.WriteLine(string.Format("  {0,-5} {1,10} {2,14:N0} {3,14:C5}",
-        turnNumber, conversation.Count, inputTokens, callCost));
-
-    // The model's answer is appended and re-sent on every later turn.
-    conversation.Add(new ChatMessage(ChatRole.Assistant, assistant));
+    conversation.Add(new(ChatRole.User, user));
+    Console.WriteLine($"  {++turn,-5} {conversation.Count,9} {TokenMath.CountMessages(conversation, o200k),21}");
+    conversation.Add(new(ChatRole.Assistant, assistant));
 }
 
 Console.WriteLine();
-Console.WriteLine($"  After {turns.Length} short turns the array holds {conversation.Count} messages.");
-Console.WriteLine("  Input tokens grow every turn because the whole history rides along.");
-Console.WriteLine("  Now imagine 50 turns of pasted stack traces. That is the $2,047 bill.");
+Console.WriteLine("  The per-message framing is an approximation (4 tokens); providers differ.");
 
 #endregion
 
 // ----------------------------------------------------------------------------
-#region Temperature Simulation
+#region Context budget
 // ----------------------------------------------------------------------------
-// Temperature controls randomness in token selection.
-// Low temperature (0.0) = near-deterministic; High temperature (1.5) = creative.
+// The window holds the input AND the output. Plan the parts, keep a reserve
+// for the answer, and refuse a request that does not fit before calling.
 
-WriteSection("Temperature Simulation");
+WriteSection("Context budget");
 
-// Simulated probability distribution for next token after "The weather is"
-Dictionary<string, double> baseProbs = new()
+ContextBudget plan = new(
+    Window: 8_192, Instructions: 600, History: 2_400,
+    Evidence: 2_000, ToolResults: 800, OutputReserve: 1_024);
+PrintBudget("Planned", plan);
+PrintBudget("History grew", plan with { History = 4_200 });
+
+Console.WriteLine();
+Console.WriteLine("  Send OutputReserve as ChatOptions.MaxOutputTokens. A reply that hits");
+Console.WriteLine("  the cap ends with FinishReason Length: the output was cut, not finished.");
+
+#endregion
+
+// ----------------------------------------------------------------------------
+#region Temperature and top-p (a toy distribution)
+// ----------------------------------------------------------------------------
+// Temperature rescales the next-token distribution before sampling. This is
+// arithmetic on made-up probabilities, not a model: a provider may clamp,
+// ignore or reinterpret the value, and temperature 0 is not a determinism
+// guarantee (batching and hardware can still change the result).
+
+WriteSection("Temperature and top-p (a toy distribution)");
+
+Dictionary<string, double> next = new()
 {
-    ["sunny"] = 0.35,
-    ["cloudy"] = 0.25,
-    ["rainy"] = 0.15,
-    ["cold"] = 0.10,
-    ["beautiful"] = 0.08,
-    ["unpredictable"] = 0.04,
-    ["magnificent"] = 0.02,
-    ["transformative"] = 0.01,
+    ["approved"] = 0.45, ["pending"] = 0.25, ["denied"] = 0.20, ["escalated"] = 0.10,
 };
-
-double[] temperatures = [0.0, 0.3, 0.7, 1.0, 1.5];
-
-Console.WriteLine("  Prompt: \"The weather is ___\"");
-Console.WriteLine("  Base probabilities:");
-foreach ((string token, double prob) in baseProbs)
+Console.WriteLine("  \"The claim is ___\"");
+foreach (double t in new[] { 0.2, 0.7, 1.0, 1.5 })
 {
-    string bar = new('#', (int)(prob * 40));
-    Console.WriteLine($"    {token,-17} {prob:P0}  {bar}");
+    Dictionary<string, double> scaled = TokenMath.ApplyTemperature(next, t);
+    Console.WriteLine($"  T={t:F1}  " + string.Join("  ", scaled.Select(kv => $"{kv.Key} {kv.Value:P0}")));
 }
-Console.WriteLine();
-
-foreach (double temperature in temperatures)
-{
-    Console.Write($"  Temperature {temperature:F1}: ");
-    Dictionary<string, double> adjusted = ApplyTemperature(baseProbs, temperature);
-
-    // Sample 10 times to show the effect
-    string[] samples = new string[10];
-    Random rng = new(42); // Fixed seed for reproducibility
-    for (int i = 0; i < 10; i++)
-    {
-        samples[i] = SampleToken(adjusted, rng);
-    }
-
-    WriteColored($"[{string.Join(", ", samples)}]", ConsoleColor.Yellow);
-
-    // Show top token probability
-    var top = adjusted.OrderByDescending(kv => kv.Value).First();
-    Console.WriteLine($"              Top token \"{top.Key}\" has {top.Value:P0} probability");
-}
+string[] nucleus = TokenMath.TopP(next, 0.7);
+Console.WriteLine($"  top-p 0.7 keeps: {string.Join(", ", nucleus)}");
 
 #endregion
 
 // ----------------------------------------------------------------------------
-#region Cosine Similarity
+#region Cosine similarity
 // ----------------------------------------------------------------------------
-// Embeddings represent text as vectors. Cosine similarity measures how
-// "close" two pieces of text are in meaning.
+// Made-up 4-dimension vectors; a real embedding model returns hundreds of
+// dimensions. The retrieval chapter computes real ones.
 
-WriteSection("Cosine Similarity (Embedding Distance)");
+WriteSection("Cosine similarity (toy vectors)");
 
-// Simulated embedding vectors for sentences
-// In reality, each dimension captures a semantic feature.
-(string Label, double[] Vector)[] sentences =
-[
-    ("C# is a programming language",   [0.8, 0.1, 0.3, 0.9, 0.2]),
-    ("Java is a programming language",  [0.7, 0.1, 0.3, 0.8, 0.2]),
-    ("The weather is sunny today",      [0.1, 0.9, 0.1, 0.0, 0.8]),
-    ("It is raining outside",           [0.1, 0.8, 0.2, 0.0, 0.7]),
-    ("I love writing .NET code",        [0.9, 0.0, 0.4, 0.8, 0.1]),
-];
-
-Console.WriteLine("  Pairwise cosine similarity:");
-Console.WriteLine(string.Format("  {0,3} {1,-35} {2,-35} {3,10}", "", "Sentence A", "Sentence B", "Similarity"));
-Console.WriteLine($"  {new string('-', 85)}");
-
-for (int i = 0; i < sentences.Length; i++)
-{
-    for (int j = i + 1; j < sentences.Length; j++)
-    {
-        double similarity = CosineSimilarity(sentences[i].Vector, sentences[j].Vector);
-        ConsoleColor color = similarity switch
-        {
-            > 0.9 => ConsoleColor.Green,
-            > 0.7 => ConsoleColor.Yellow,
-            _ => ConsoleColor.Red
-        };
-
-        Console.Write($"  {"",-3} {sentences[i].Label,-35} {sentences[j].Label,-35} ");
-        WriteColored($"{similarity:F4}", color);
-    }
-}
-
-Console.WriteLine();
-Console.WriteLine("  Interpretation:");
-Console.WriteLine("    > 0.90 = Very similar (same topic, near-synonyms)");
-Console.WriteLine("    > 0.70 = Related (same domain)");
-Console.WriteLine("    < 0.70 = Different topics");
+float[] taxi = [0.9f, 0.1f, 0.3f, 0.0f];
+float[] cab = [0.8f, 0.2f, 0.3f, 0.1f];
+float[] lunch = [0.1f, 0.9f, 0.2f, 0.4f];
+Console.WriteLine($"  taxi receipt vs cab fare:      {TokenMath.Cosine(taxi, cab):F3}");
+Console.WriteLine($"  taxi receipt vs team lunch:    {TokenMath.Cosine(taxi, lunch):F3}");
 
 #endregion
 
-// ----------------------------------------------------------------------------
-#region Token Cost Calculator
-// ----------------------------------------------------------------------------
-// Understanding token costs is essential for budgeting AI applications.
+Console.WriteLine("\n=== Token Explorer complete ===");
+return 0;
 
-WriteSection("Token Cost Calculator");
-
-(string Model, decimal InputPer1M, decimal OutputPer1M)[] pricing =
-[
-    ("GPT-6 Astra",   10.00m,  50.00m),
-    ("GPT-5.6 Sol",    4.00m,  20.00m),
-    ("GPT-5.6 Terra",  2.00m,  12.00m),
-    ("GPT-5.6 Luna",   0.20m,   1.20m),
-    ("Ollama local",   0.00m,   0.00m),
-];
-
-// Scenario: 100 requests/day, average 500 input + 200 output tokens each
-int requestsPerDay = 100;
-int avgInputTokens = 500;
-int avgOutputTokens = 200;
-int daysPerMonth = 30;
-
-Console.WriteLine($"  Scenario: {requestsPerDay} requests/day, {avgInputTokens} in + {avgOutputTokens} out tokens each");
-Console.WriteLine($"  Monthly volume: {requestsPerDay * daysPerMonth:N0} requests\n");
-
-string header = string.Format("  {0,-16} {1,10} {2,12} {3,11} {4,13}",
-    "Model", "Input $/1M", "Output $/1M", "Daily Cost", "Monthly Cost");
-Console.WriteLine(header);
-Console.WriteLine($"  {new string('-', 65)}");
-
-foreach (var (model, inputRate, outputRate) in pricing)
+static void PrintBudget(string label, ContextBudget budget)
 {
-    decimal dailyInputCost = requestsPerDay * avgInputTokens * inputRate / 1_000_000m;
-    decimal dailyOutputCost = requestsPerDay * avgOutputTokens * outputRate / 1_000_000m;
-    decimal dailyTotal = dailyInputCost + dailyOutputCost;
-    decimal monthlyTotal = dailyTotal * daysPerMonth;
-
-    Console.WriteLine(string.Format("  {0,-16} {1,10:F2} {2,12:F2} {3,10:C4} {4,12:C2}",
-        model, inputRate, outputRate, dailyTotal, monthlyTotal));
+    string verdict = budget.Fits
+        ? $"fits, {budget.Free:N0} free"
+        : $"OVER by {-budget.Free:N0}: trim history or evidence before the call";
+    Console.WriteLine($"  {label,-13} input {budget.Input,6:N0} + reserve {budget.OutputReserve,5:N0} of {budget.Window:N0} -> {verdict}");
 }
 
-// --- Four cost dimensions, not two -------------------------------------------
-// Input and output are only half the picture. Cached input and batch are the
-// other two levers. Rates below are GPT-5.6 Terra figures published in
-// September 2026; re-verify against the live rate card before you trust them.
-//   input   = $2.00 / 1M
-//   cached  = $0.20 / 1M  (automatic on >=1,024-token prefixes; 128-token steps)
-//   batch   = 50% off both input and output (async, within 24h)
-const decimal inRate = 2.00m;     // fresh input
-const decimal cachedRate = 0.20m; // cached input (a repeated, stable prefix)
-const decimal outRate = 12.00m;   // output
-
-Console.WriteLine();
-Console.WriteLine("  Same volume, four pricing dimensions (GPT-5.6 Terra rates):\n");
-
-// A realistic agent-style split: the prompt is dominated by a stable
-// system+tool-schema prefix that is big enough to actually cache — the
-// automatic cache needs >= 1,024 tokens — plus a small volatile tail (the
-// user's new message). Note the deliberate size: a 420-token prefix would
-// never hit the threshold and would bill fresh on every call.
-int agentInputTokens = 1_500;                     // per-call input, this scenario
-int cacheablePrefix = 1_280;                      // stable prefix, >= 1,024 so it caches
-int freshTail = agentInputTokens - cacheablePrefix; // the volatile user message
-long callsPerMonth = (long)requestsPerDay * daysPerMonth;
-
-decimal uncached = (agentInputTokens * inRate + avgOutputTokens * outRate)
-    * callsPerMonth / 1_000_000m;
-
-decimal withCache = (cacheablePrefix * cachedRate + freshTail * inRate + avgOutputTokens * outRate)
-    * callsPerMonth / 1_000_000m;
-
-decimal withBatch = uncached * 0.50m; // batch = 50% off the uncached total
-
-Console.WriteLine(string.Format("    {0,-28} {1,12:C2}", "Standard (all fresh)", uncached));
-Console.WriteLine(string.Format("    {0,-28} {1,12:C2}", "Cached stable prefix", withCache));
-Console.WriteLine(string.Format("    {0,-28} {1,12:C2}", "Batch (50% off)", withBatch));
-Console.WriteLine();
-Console.WriteLine($"    Caching the {cacheablePrefix}-token prefix saves "
-    + $"{(uncached - withCache) / uncached:P0} on this workload.");
-Console.WriteLine("    Rule: keep the prefix stable so it caches; put volatile content LAST.");
-
-#endregion
-
-Console.WriteLine("\n=== Token Explorer complete! ===");
-
-// ============================================================================
-// Helper Methods
-// ============================================================================
-
-/// <summary>
-/// Simulates BPE-like tokenization by splitting on whitespace, punctuation,
-/// and camelCase/PascalCase boundaries.
-/// </summary>
-static string[] SimulateTokenization(string text)
-{
-    List<string> tokens = [];
-
-    // Split on spaces first, then break on punctuation
-    string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-    foreach (string word in words)
-    {
-        List<string> subTokens = [];
-        string current = "";
-
-        for (int i = 0; i < word.Length; i++)
-        {
-            char c = word[i];
-
-            // Break on punctuation
-            if (char.IsPunctuation(c) || char.IsSymbol(c))
-            {
-                if (current.Length > 0)
-                {
-                    subTokens.Add(current);
-                    current = "";
-                }
-                subTokens.Add(c.ToString());
-                continue;
-            }
-
-            // Break on camelCase boundary (lowercase followed by uppercase)
-            if (i > 0 && char.IsUpper(c) && char.IsLower(word[i - 1]))
-            {
-                if (current.Length > 0)
-                {
-                    subTokens.Add(current);
-                    current = "";
-                }
-            }
-
-            current += c;
-        }
-
-        if (current.Length > 0)
-        {
-            subTokens.Add(current);
-        }
-
-        tokens.AddRange(subTokens);
-    }
-
-    return [.. tokens];
-}
-
-/// <summary>
-/// Estimates token count using the ~4 characters per token rule.
-/// </summary>
-static int EstimateTokenCount(string text)
-{
-    return Math.Max(1, (int)Math.Ceiling(text.Length / 4.0));
-}
-
-/// <summary>
-/// Returns a context window usage label.
-/// </summary>
-static string GetContextPercentage(int tokens)
-{
-    double pct = (double)tokens / 128_000 * 100;
-    return $"{pct:F3}% of 128K";
-}
-
-/// <summary>
-/// Applies temperature scaling to a probability distribution.
-/// Temperature 0 makes it near-deterministic (all mass on the top token, but
-/// provider tie-breaking and GPU non-determinism can still vary the output).
-/// Higher temperatures flatten the distribution.
-/// </summary>
-static Dictionary<string, double> ApplyTemperature(
-    Dictionary<string, double> baseProbs,
-    double temperature)
-{
-    if (temperature < 0.01)
-    {
-        // Temperature ~0: near-deterministic — nearly all probability on the top token
-        string topToken = baseProbs.OrderByDescending(kv => kv.Value).First().Key;
-        return baseProbs.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Key == topToken ? 1.0 : 0.0);
-    }
-
-    // Apply softmax with temperature: p_i = exp(log(p_i)/T) / sum(exp(log(p_j)/T))
-    var logScaled = baseProbs.ToDictionary(
-        kv => kv.Key,
-        kv => Math.Exp(Math.Log(Math.Max(kv.Value, 1e-10)) / temperature));
-
-    double sum = logScaled.Values.Sum();
-    return logScaled.ToDictionary(kv => kv.Key, kv => kv.Value / sum);
-}
-
-/// <summary>
-/// Samples a token from a probability distribution.
-/// </summary>
-static string SampleToken(Dictionary<string, double> probs, Random rng)
-{
-    double roll = rng.NextDouble();
-    double cumulative = 0;
-
-    foreach ((string token, double prob) in probs.OrderByDescending(kv => kv.Value))
-    {
-        cumulative += prob;
-        if (roll <= cumulative)
-        {
-            return token;
-        }
-    }
-
-    return probs.Keys.Last();
-}
-
-/// <summary>
-/// Computes cosine similarity between two vectors.
-/// Returns a value between -1 and 1, where 1 means identical direction.
-/// </summary>
-static double CosineSimilarity(double[] a, double[] b)
-{
-    double dot = 0, magA = 0, magB = 0;
-
-    for (int i = 0; i < a.Length; i++)
-    {
-        dot += a[i] * b[i];
-        magA += a[i] * a[i];
-        magB += b[i] * b[i];
-    }
-
-    double denominator = Math.Sqrt(magA) * Math.Sqrt(magB);
-    return denominator == 0 ? 0 : dot / denominator;
-}
-
-/// <summary>
-/// Prints a section header with formatting.
-/// </summary>
-static void WriteSection(string title)
-{
-    Console.WriteLine($"--- {title} ---");
-    Console.WriteLine();
-}
-
-/// <summary>
-/// Writes colored text to the console, then resets the color.
-/// </summary>
-static void WriteColored(string text, ConsoleColor color)
-{
-    ConsoleColor original = Console.ForegroundColor;
-    Console.ForegroundColor = color;
-    Console.WriteLine(text);
-    Console.ForegroundColor = original;
-}
-
-/// <summary>
-/// Writes colored text without a trailing newline, then resets the color.
-/// </summary>
-static void WriteColoredInline(string text, ConsoleColor color)
-{
-    ConsoleColor original = Console.ForegroundColor;
-    Console.ForegroundColor = color;
-    Console.Write(text);
-    Console.ForegroundColor = original;
-}
-
-/// <summary>
-/// Counts the tokens an entire message array contributes to a request. Real
-/// providers add a few framing tokens per message; we approximate that with a
-/// small per-message overhead so the growth trend is realistic.
-/// </summary>
-static int CountConversationTokens(List<ChatMessage> messages, Tokenizer tokenizer)
-{
-    const int perMessageOverhead = 4; // role + delimiter framing, approximate
-    int total = 0;
-    foreach (ChatMessage message in messages)
-    {
-        total += perMessageOverhead + tokenizer.CountTokens(message.Text);
-    }
-    return total;
-}
+static void WriteSection(string title) => Console.WriteLine($"\n--- {title} ---\n");

@@ -1,38 +1,36 @@
-# Exercise 02 — Prompt Template Engine (Intermediate)
+# Exercise 02: Prompt Template Engine (Intermediate)
 
 ## Prompt
 
-Build a small **prompt-template class** that supports `{placeholder}` substitution from a dictionary, and **tracks the estimated token count** of the rendered output. Add a **hard cap**: if the rendered prompt exceeds the cap, the method **throws**. Test with three templates — a **system prompt**, a **user question template**, and a **few-shot classification template**.
+Build a `{placeholder}` prompt template that renders under a token budget. The budget is a context window and an output reserve; the rendered prompt may use only what the reserve leaves free, and the reserve becomes the request's `MaxOutputTokens`. Test it with a system prompt, a user question and a few-shot classifier.
+
+## Acceptance
+
+- A missing variable fails loudly (an exception that names the template and the variable).
+- An over-budget prompt is rejected before any model call.
+- The output reserve is respected: a prompt that fits the window but eats the reserve is rejected too.
 
 ## Hints
 
-- The `System.Text.RegularExpressions` namespace gives you the substitution in one line: `Regex.Replace(template, @"\{(\w+)\}", m => values[m.Groups[1].Value])`.
-- The token estimate is the same length / 4 trick from the models and context chapter.
-- Don't over-engineer; this is about feeling how easily a prompt blows its budget.
-- Use `[GeneratedRegex]` for the compile-time regex source generator.
+- `Regex.Replace(template, @"\{(\w+)\}", m => ...)` does the substitution in one line; `[GeneratedRegex]` compiles it.
+- Count with `TiktokenTokenizer.CreateForEncoding("o200k_base")`, not length/4.
+- Normalize line endings before counting: a raw string literal takes the line endings of the checkout.
 
-## Expected Outcome
+## Run it
 
 ```
---- Rendered Prompts ---
-
-  [SystemPrompt] ~56/120 tokens (221 chars):
-  ...
-  [UserQuestion] ~14/80 tokens (56 chars):
-  ...
-  [FewShotClassifier] ~89/160 tokens (354 chars):
-  ...
-
---- Hard Cap ---
-
-  Caught: Template 'UserQuestion' rendered to ~433 tokens — over its hard cap of 80.
+dotnet run                   # three templates, then a blown budget and a missing variable
+dotnet run -- --self-test    # the three rules, RESULT n/n
 ```
 
-All three templates render within budget; then a pasted wall of text in the `question` placeholder blows the `UserQuestion` cap and `Render` throws `InvalidOperationException`.
+## Expected outcome (window 160, reserve 64)
 
-## Key Concepts
+```
+Rejected before the call: 'UserQuestion' is 151 tokens; the limit is 96 (160 window - 64 output reserve).
+Rejected before the call: Template 'UserQuestion' needs 'question', which was not given.
+```
 
-- Prompt templates as data: system, user, and few-shot shapes
-- One-line placeholder substitution with `Regex.Replace` and a match evaluator
-- Token estimation (length / 4) as a render-time budget check
-- Hard caps that fail fast — a loud exception beats a silent cost overrun
+## Key concepts
+
+- The window holds the prompt and the reply; plan the reply's share first.
+- Reject before the call: a loud exception is cheaper than a truncated answer.
