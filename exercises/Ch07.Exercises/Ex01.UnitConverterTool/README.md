@@ -28,3 +28,7 @@ Agent: 0°C equals 273.15 Kelvin...
 - `[Description]` attributes on the method and every parameter
 - Explicit valid-unit lists in parameter descriptions
 - Graceful degradation: unknown units return an error string, not an exception
+
+## Self-test
+
+`dotnet run -- --self-test` needs no model. It calls `ConvertTemperature` directly (100 °F is 37.78 °C, 0 °C is 273.15 K, an unknown unit returns an error string), then runs the agent on a scripted chat client from `AgenticAI.Testing`: the tool is advertised with the valid units in its parameter descriptions, runs with the scripted arguments, and a bad unit reaches the model as a string, not an exception. It ends with `RESULT 6/6`.

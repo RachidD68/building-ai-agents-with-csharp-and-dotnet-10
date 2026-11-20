@@ -1,30 +1,29 @@
-# Exercise 01 — Conversation Logger (Basic)
+# Exercise 01: Conversation Logger (Basic)
 
 ## Prompt
 
-Extend the `Ch06.AgentSessionDemo` program to write every turn to a log file in real time. Each log line should contain a **timestamp, the session ID, the role, and the message text**. The log survives across runs; the in-memory history does not.
+Log every turn of a persisted conversation with a timestamp, the session id and the role, to a file that outlives the process. After a restart the log still holds the earlier turns and new turns append to it; the log of one session never contains message text from another session.
 
-## Hints
+## How it works
 
-- `File.AppendAllTextAsync` in a helper method invoked after each turn. You don't need a real logger for this — `ILogger<Program>` with a file provider is the observability chapter's job.
-- `AgentSession` has no built-in id for client-side history, so assign each session a short id of your own — the log then distinguishes session 1's turns from session 2's.
-- Append to a fixed file name so the log accumulates across runs.
+- It builds on `Ch06.PersistentSession`: each named session is serialized to `conversations/sessions/<id>.json` after every turn and restored with `DeserializeSessionAsync` on the next run.
+- After each `RunAsync` it reads the messages the history provider holds for that session (`InMemoryChatHistoryProvider.GetMessages`) and appends the ones not logged yet to `conversations/logs/<id>.log`, one line per message.
+- One log file per session, so isolation doesn't depend on filtering a shared file. The session id becomes a file name, so only letters, digits and dashes are accepted.
 
-## Expected Outcome
-
-A log file like:
+## Run it
 
 ```
-2026-07-24 10:30:05.123 [a1b2c3d4] [user     ] My name is Rachid. I work on the Contoso expense app...
-2026-07-24 10:30:07.456 [a1b2c3d4] [assistant] Nice to meet you, Rachid! ...
-2026-07-24 10:30:12.789 [9f8e7d6c] [user     ] What is my name?
-2026-07-24 10:30:14.012 [9f8e7d6c] [assistant] I don't have that information...
+dotnet run -- alice      # first run: a new session, one turn
+dotnet run -- alice      # second run: restored, the log keeps growing
+dotnet run -- --self-test
 ```
 
-Run the program twice: the file keeps growing, while each run's in-memory history starts empty.
+A log line looks like this (the text is the model's, so yours will differ):
 
-## Key Concepts
+```
+<yyyy-MM-dd HH:mm:ss.fff> [alice] [user     ] I'm planning a trip to Lisbon and I like walking tours.
+```
 
-- `InMemoryChatHistoryProvider` wired via `ChatClientAgentOptions`
-- Real-time per-turn logging with timestamp + session id + role + text
-- Durable log file vs volatile in-memory history
+## Self-test
+
+`--self-test` needs no model. A fake `IChatClient` (from `AgenticAI.Testing`) answers two turns for `alice` and one for `bob`; then a new client, agent and history provider restore `alice` from its file, as a restart would. It checks that the restored session reached the model, that the earlier log lines are unchanged and the new turn is appended, that every line carries its timestamp, session id and role, that neither log holds the other session's text, and that a session id like `../alice` is refused. It ends with `RESULT 5/5`.

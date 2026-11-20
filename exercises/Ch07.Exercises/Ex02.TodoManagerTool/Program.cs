@@ -1,22 +1,27 @@
 // ============================================================================
-// Exercise 02 — Todo Manager Tool (Intermediate)
+// Exercise 02: Todo Manager Tool (Intermediate)
+// ----------------------------------------------------------------------------
 // Stateful todo-list agent with three tools: AddTodo, ListTodos, CompleteTodo.
 // The tools live in a TodoTools class that receives an in-memory TodoRepository
-// via constructor injection — the DI pattern from Ch07.DatabaseLookupTool.
-// FULLY STANDALONE.
+// via constructor injection, the DI pattern from Ch07.DatabaseLookupTool. The
+// list is local state, not a business effect.
+//
+//   dotnet run                    a four-turn conversation on one session,
+//                                 against the configured model (Ollama llama3.2)
+//   dotnet run -- --self-test     direct method tests, no model; RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
 using System.ComponentModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+if (args.Contains("--self-test")) return SelfTest();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddLlmChatClient(builder.Configuration);
 
 // ---------------------------------------------------------------
 // Step 1: Register the repository and the tool class in DI.
@@ -26,8 +31,7 @@ builder.Services.AddSingleton<TodoRepository>();
 builder.Services.AddSingleton<TodoTools>();
 
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 Console.WriteLine("=== Exercise: Todo Manager Tool ===\n");
 
@@ -54,7 +58,7 @@ ChatClientAgent agent = new(
     tools: [addTool, listTool, completeTool]);
 
 // ---------------------------------------------------------------
-// Step 3: A multi-turn conversation on ONE session — the repository keeps
+// Step 3: A multi-turn conversation on ONE session. The repository keeps
 // state across turns: add several items, list them, mark some complete.
 // ---------------------------------------------------------------
 AgentSession session = await agent.CreateSessionAsync(cts.Token);
@@ -73,46 +77,69 @@ foreach (string turn in turns)
 
     try
     {
-        AgentResponse response = await agent.RunAsync(
-            turn, session, cancellationToken: cts.Token);
-
+        AgentResponse response = await agent.RunAsync(turn, session, cancellationToken: cts.Token);
         Console.WriteLine($"Agent: {response.Text}\n");
     }
-    catch (OperationCanceledException)
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
     {
         Console.WriteLine("\n[Cancelled]");
-        return;
+        return 0;
     }
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
-// Provider factory
+// Offline proof: dotnet run -- --self-test
+// The same DI registrations as the live run; the tool methods are called
+// directly, in the order the conversation's turns would call them.
 // ---------------------------------------------------------------
-
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
+static int SelfTest()
 {
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
+    Console.WriteLine("=== Todo Manager Tool (self-test, no model) ===\n");
+    int passed = 0, total = 0;
+    void Expect(string name, bool ok) { total++; if (ok) passed++; Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}"); }
 
-    return provider switch
-    {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+    ServiceCollection services = new();
+    services.AddSingleton<TodoRepository>();
+    services.AddSingleton<TodoTools>();
+    using ServiceProvider provider = services.BuildServiceProvider();
+
+    // Turn 1: add three items.
+    TodoTools turn1 = provider.GetRequiredService<TodoTools>();
+    string added = turn1.AddTodo("buy groceries", "high");
+    turn1.AddTodo("write the chapter review", "medium");
+    turn1.AddTodo("book a dentist appointment", "low");
+    Expect("AddTodo returns the new item with its id and priority", added == "Added todo #1: buy groceries (priority: high)");
+
+    // Turn 2: list, from a second resolution of the tool class.
+    TodoTools turn2 = provider.GetRequiredService<TodoTools>();
+    string listed = turn2.ListTodos();
+    Expect("a later turn lists the items added earlier (same singleton repository)",
+        ReferenceEquals(turn1, turn2) && listed.Split('\n').Length == 3 && listed.Contains("#2: [ ] write the chapter review"));
+
+    // Turn 3: complete two, and one id that doesn't exist.
+    string done1 = turn2.CompleteTodo(1);
+    string done3 = turn2.CompleteTodo(3);
+    string unknown = turn2.CompleteTodo(99);
+    Console.WriteLine($"   CompleteTodo(99) -> {unknown}");
+    Expect("CompleteTodo marks the right items", done1 == "Completed todo #1: buy groceries" && done3 == "Completed todo #3: book a dentist appointment");
+    Expect("CompleteTodo on an unknown id returns a clear error string, no exception", unknown == "Todo #99 not found.");
+
+    // Turn 4: list again.
+    string after = provider.GetRequiredService<TodoTools>().ListTodos();
+    Console.WriteLine("   ListTodos after the completions:");
+    foreach (string line in after.Split('\n')) Console.WriteLine($"     {line}");
+    Expect("the final list shows two items done and one still open",
+        after.Contains("#1: [X]") && after.Contains("#2: [ ]") && after.Contains("#3: [X]"));
+
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
 }
 
 // ---------------------------------------------------------------
-// Repository — in-memory, registered as a DI singleton
+// Repository: in-memory, registered as a DI singleton
 // ---------------------------------------------------------------
 
 /// <summary>
@@ -163,7 +190,7 @@ sealed class TodoRepository
 }
 
 // ---------------------------------------------------------------
-// Tool class — receives the repository via constructor injection
+// Tool class: receives the repository via constructor injection
 // ---------------------------------------------------------------
 
 /// <summary>
@@ -230,9 +257,7 @@ sealed class TodoTools
 // Data model
 // ---------------------------------------------------------------
 
-/// <summary>
-/// A todo item.
-/// </summary>
+/// <summary>A todo item.</summary>
 /// <param name="Id">Unique identifier.</param>
 /// <param name="Title">The todo title.</param>
 /// <param name="Priority">The priority: high, medium, or low.</param>

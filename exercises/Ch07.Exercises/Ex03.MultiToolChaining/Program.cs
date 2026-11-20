@@ -1,32 +1,40 @@
 // ============================================================================
-// Exercise 03 — Multi-Tool Chaining (Challenge)
+// Exercise 03: Multi-Tool Chaining (Challenge)
+// ----------------------------------------------------------------------------
 // Agent with five tools backed by a pretend e-commerce service: SearchProducts,
-// GetProductDetails, CheckInventory, PlaceOrder, TrackOrder. The tools are
-// instrumented with ILogger so the chaining sequence is visible in the log.
-// FULLY STANDALONE.
+// GetProductDetails, CheckInventory, PlaceOrder, TrackOrder. The tools log
+// every call with ILogger, so the chain is visible in the log. The invocation
+// layer is built explicitly, as Ch07.LoopControl does, so the iteration cap is
+// a number you chose, not the library default. PlaceOrder only changes an
+// in-memory dictionary: it is a simulated write, made safe in the
+// authorized-actions chapter.
+//
+//   dotnet run                    the three-step request, against the configured
+//                                 model (Ollama llama3.2)
+//   dotnet run -- --self-test     a scripted chat client, no network; RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
 using System.ComponentModel;
 using System.Text.Json;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using AgenticAI.Common.Extensions;
+using AgenticAI.Testing;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+if (args.Contains("--self-test")) return await ChainSelfTest.RunAsync();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddLlmChatClient(builder.Configuration);
 
 // The tool class is DI-registered (a scale-up of Ch07.DatabaseLookupTool) so
 // it can receive an ILogger via constructor injection.
 builder.Services.AddSingleton<EcommerceTools>();
 
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 Console.WriteLine("=== Exercise: Multi-Tool Chaining ===\n");
 
@@ -34,26 +42,10 @@ using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 EcommerceTools ecommerceTools = host.Services.GetRequiredService<EcommerceTools>();
+ChatClientAgent agent = ChainAgent.Create(chatClient, ecommerceTools);
 
-AIFunction searchTool = AIFunctionFactory.Create(ecommerceTools.SearchProducts);
-AIFunction detailsTool = AIFunctionFactory.Create(ecommerceTools.GetProductDetails);
-AIFunction inventoryTool = AIFunctionFactory.Create(ecommerceTools.CheckInventory);
-AIFunction orderTool = AIFunctionFactory.Create(ecommerceTools.PlaceOrder);
-AIFunction trackTool = AIFunctionFactory.Create(ecommerceTools.TrackOrder);
-
-ChatClientAgent agent = new(
-    chatClient,
-    instructions: """
-        You are a helpful e-commerce assistant. Use the tools to search products,
-        look up details, check warehouse inventory, place orders, and track shipments.
-        Chain the tools as needed: find the product first, verify stock at the requested
-        warehouse, place the order, then track it. Summarize each step for the user.
-        """,
-    name: "EcommerceAssistant",
-    tools: [searchTool, detailsTool, inventoryTool, orderTool, trackTool]);
-
-// The three-step scenario from the chapter brief — a single question that
-// should produce four or five tool calls in the log.
+// The three-step scenario: a single question that should produce four or
+// five tool calls in the log.
 const string scenario =
     "I want to order 2 blue widgets, check they're in stock at the warehouse in Seattle, " +
     "and track the shipment afterward.";
@@ -63,42 +55,151 @@ Console.WriteLine($"You: {scenario}\n");
 try
 {
     AgentSession session = await agent.CreateSessionAsync(cts.Token);
-    AgentResponse response = await agent.RunAsync(
-        scenario, session, cancellationToken: cts.Token);
-
+    AgentResponse response = await agent.RunAsync(scenario, session, cancellationToken: cts.Token);
     Console.WriteLine($"\nAgent: {response.Text}\n");
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.WriteLine("\n[Cancelled]");
-    return;
+    return 0;
 }
 
 Console.WriteLine("=== Exercise complete! ===");
-Console.WriteLine("Check the log lines above — the tool-call sequence is the point of this exercise.");
+Console.WriteLine("Check the log lines above: the tool-call sequence is the point of this exercise.");
+return 0;
 
 // ---------------------------------------------------------------
-// Provider factory
+// The agent, with an explicit invocation layer
 // ---------------------------------------------------------------
-
-/// <summary>Creates an IChatClient from configuration.</summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
+internal static class ChainAgent
 {
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
+    /// <summary>
+    /// Model round-trips allowed for one request. The chain needs four or five;
+    /// eight leaves room for a retry and stops a model that never stops asking.
+    /// </summary>
+    public const int MaxIterations = 8;
 
-    return provider switch
+    /// <summary>The agent the live run and the self-test share.</summary>
+    public static ChatClientAgent Create(IChatClient innerClient, EcommerceTools tools)
     {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+        IChatClient pipeline = innerClient
+            .AsBuilder()
+            .UseFunctionInvocation(configure: c => c.MaximumIterationsPerRequest = MaxIterations)
+            .Build();
+
+        // UseProvidedChatClientAsIs: the agent adds no function-invocation layer
+        // of its own, so the cap above is the one that applies.
+        return new ChatClientAgent(
+            pipeline,
+            new ChatClientAgentOptions
+            {
+                Name = "EcommerceAssistant",
+                UseProvidedChatClientAsIs = true,
+                ChatOptions = new ChatOptions
+                {
+                    Instructions = """
+                        You are a helpful e-commerce assistant. Use the tools to search products,
+                        look up details, check warehouse inventory, place orders, and track shipments.
+                        Chain the tools as needed: find the product first, verify stock at the requested
+                        warehouse, place the order, then track it. Summarize each step for the user.
+                        """,
+                    Tools =
+                    [
+                        AIFunctionFactory.Create(tools.SearchProducts),
+                        AIFunctionFactory.Create(tools.GetProductDetails),
+                        AIFunctionFactory.Create(tools.CheckInventory),
+                        AIFunctionFactory.Create(tools.PlaceOrder),
+                        AIFunctionFactory.Create(tools.TrackOrder),
+                    ],
+                },
+            });
+    }
+}
+
+// ---------------------------------------------------------------
+// Offline proof: dotnet run -- --self-test
+// ---------------------------------------------------------------
+internal static class ChainSelfTest
+{
+    static int s_passed, s_total;
+
+    public static async Task<int> RunAsync()
+    {
+        Console.WriteLine("=== Multi-Tool Chaining (self-test, scripted model, no network) ===\n");
+
+        // 1. The chain: the scripted model asks for one tool per turn, as a model would.
+        ListLogger log = new();
+        ScriptedToolChatClient chain = null!;
+        chain = new(turn => turn.Results.Count switch
+        {
+            0 => chain.Call("SearchProducts", new Dictionary<string, object?> { ["query"] = "blue widget" }),
+            1 => chain.Call("CheckInventory", new Dictionary<string, object?> { ["productId"] = 1, ["warehouse"] = "Seattle" }),
+            2 => chain.Call("PlaceOrder", new Dictionary<string, object?> { ["productId"] = 1, ["quantity"] = 2, ["warehouse"] = "Seattle" }),
+            3 => chain.Call("TrackOrder", new Dictionary<string, object?> { ["orderId"] = OrderIdFrom(turn.Results[2]) }),
+            _ => ScriptedToolChatClient.Say("Ordered 2 Blue Widgets from Seattle; the shipment is in transit."),
+        });
+        AgentResponse done = await ChainAgent.Create(chain, new EcommerceTools(log)).RunAsync(
+            "I want to order 2 blue widgets, check they're in stock at the warehouse in Seattle, and track the shipment afterward.");
+        Console.WriteLine("-- the chain, from the ILogger lines --");
+        foreach (string line in log.Lines) Console.WriteLine($"   {line}");
+        Expect("the log shows the chain in order: search, inventory, order, track",
+            log.Lines.Select(l => l.Split(' ')[2]).SequenceEqual(["SearchProducts", "CheckInventory", "PlaceOrder", "TrackOrder"]));
+        Expect("each result fed the next call: TrackOrder found the order PlaceOrder created",
+            chain.Turns[^1].Results[3].Result?.ToString()?.StartsWith("Order ORD-0001: 2 x Blue Widget") == true);
+        Expect("the run ended with the model's text answer after five model calls",
+            chain.Turns.Count == 5 && done.Text.StartsWith("Ordered 2 Blue Widgets"));
+
+        // 2. The cap: a scripted model that never stops asking for CheckInventory.
+        ListLogger runawayLog = new();
+        ScriptedToolChatClient runaway = null!;
+        runaway = new(turn => turn.ToolNames.Count == 0
+            ? ScriptedToolChatClient.Say("I stopped: the tool budget for this request is spent.")
+            : runaway.Call("CheckInventory", new Dictionary<string, object?> { ["productId"] = 1, ["warehouse"] = "Seattle" }));
+        string? thrown = null;
+        AgentResponse? capped = null;
+        try { capped = await ChainAgent.Create(runaway, new EcommerceTools(runawayLog)).RunAsync("Keep checking Seattle stock."); }
+        catch (Exception ex) { thrown = $"{ex.GetType().Name}: {ex.Message}"; }
+        Console.WriteLine($"\n-- MaximumIterationsPerRequest = {ChainAgent.MaxIterations}, a model that never stops asking --");
+        Console.WriteLine($"   CheckInventory ran {runawayLog.Lines.Count} time(s); the model was called {runaway.Turns.Count} time(s)");
+        Console.WriteLine($"   the last request carried {runaway.Turns[^1].ToolNames.Count} tool(s)");
+        Console.WriteLine($"   the run returned: {capped?.Text ?? thrown}");
+        Expect($"the tool ran exactly {ChainAgent.MaxIterations} times, then the loop stopped invoking it",
+            runawayLog.Lines.Count == ChainAgent.MaxIterations);
+        Expect("the run stopped at the cap and returned the model's answer, with no exception",
+            thrown is null && capped?.Text.StartsWith("I stopped") == true);
+
+        Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
+        return s_passed == s_total ? 0 : 1;
+    }
+
+    static string OrderIdFrom(FunctionResultContent placed) =>
+        JsonDocument.Parse(placed.Result?.ToString() ?? "{}").RootElement.GetProperty("orderId").GetString() ?? "";
+
+    static void Expect(string name, bool ok)
+    {
+        s_total++;
+        if (ok) s_passed++;
+        Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+    }
+}
+
+/// <summary>An ILogger that keeps the formatted messages, so the self-test can read the chain.</summary>
+internal sealed class ListLogger : ILogger<EcommerceTools>
+{
+    private readonly List<string> _lines = [];
+    private readonly Lock _gate = new();
+
+    public IReadOnlyList<string> Lines { get { lock (_gate) return [.. _lines]; } }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+        Func<TState, Exception?, string> formatter)
+    {
+        lock (_gate) _lines.Add(formatter(state, exception));
+    }
 }
 
 // ---------------------------------------------------------------

@@ -32,3 +32,7 @@ Agent: Done! Both items are marked complete.
 - Tool class (`TodoTools`) with constructor-injected dependencies
 - `AIFunctionFactory.Create()` over DI-resolved instance methods
 - Multi-turn tool interaction on a single `AgentSession`
+
+## Self-test
+
+`dotnet run -- --self-test` needs no model. It registers the same singletons as the live run and calls the tool methods directly, turn by turn: items added first are listed and completed later, and `CompleteTodo` on an unknown id returns `Todo #99 not found.` instead of throwing. It ends with `RESULT 5/5`. The list is local state, not a business effect.

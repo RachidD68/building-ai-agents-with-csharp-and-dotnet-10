@@ -4,17 +4,18 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <!-- GA only: the provider switch comes from AgenticAI.Common, the fake model
+       for the self-test from AgenticAI.Testing. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
-    <PackageReference Include="Azure.AI.OpenAI" />
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../../src/Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">

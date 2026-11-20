@@ -1,181 +1,190 @@
 // ============================================================================
-// Exercise 01 — Conversation Logger (Basic)
-// Extends Ch06.AgentSessionDemo: the agent runs with a wired
-// InMemoryChatHistoryProvider, and EVERY turn is appended to a log file in
-// real time. Each log line carries a timestamp, the SESSION ID, the role, and
-// the message text. The log file survives across runs; the in-memory history
-// does not. FULLY STANDALONE.
+// Exercise 01: Conversation Logger (Basic)
+// ----------------------------------------------------------------------------
+// Builds on Ch06.PersistentSession: each named session is serialized to its
+// own JSON file after every turn, so the conversation survives a restart. After
+// each RunAsync the program reads the messages the history provider holds for
+// that session and appends the ones not logged yet to that session's log file:
+// one line per message, with a timestamp, the session id, the role and the text.
+// One file per session, so one session's log never holds another's text.
 //
-// AgentSession has no built-in id in MAF (ChatClientAgentSession.ConversationId
-// stays null for client-side history), so the app assigns each session a short
-// id of its own — which is exactly what makes the log readable: two sessions,
-// two ids, one file.
+//   dotnet run -- <session>       run a turn on that session (default: demo);
+//                                 run it again and the log keeps growing
+//   dotnet run -- --self-test     a fake IChatClient and a temp folder, a
+//                                 simulated restart, no network; RESULT n/n
 // ============================================================================
 
-using System.ClientModel;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using AgenticAI.Common.Extensions;
+using AgenticAI.Testing;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+if (args.Contains("--self-test")) return await SelfTest();
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
+builder.Services.AddLlmChatClient(builder.Configuration);
 using IHost host = builder.Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
-IChatClient chatClient = CreateChatClient(config);
-
-Console.WriteLine("=== Exercise: Conversation Logger ===\n");
+IChatClient chatClient = host.Services.GetRequiredService<IChatClient>();
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// A FIXED file name, appended to on every run — that is what makes the log
-// survive across runs while the in-memory history does not.
-string logFile = Path.Combine(Environment.CurrentDirectory, "conversation.log");
+string sessionId = args.FirstOrDefault(a => !a.StartsWith('-')) ?? "demo";
+LoggedConversations conversations = new(chatClient, Path.Combine(AppContext.BaseDirectory, "conversations"));
 
-if (File.Exists(logFile))
-{
-    int previousLines = File.ReadAllLines(logFile).Length;
-    Console.WriteLine($"Log file already holds {previousLines} lines from previous runs.");
-}
-Console.WriteLine($"Logging to: {logFile}\n");
-
-// ---------------------------------------------------------------
-// The agent, with the history provider actually wired
-// ---------------------------------------------------------------
-InMemoryChatHistoryProvider historyProvider = new(new InMemoryChatHistoryProviderOptions());
-
-ChatClientAgentOptions agentOptions = new()
-{
-    Name = "MemoryBot",
-    Description = "An assistant that remembers the conversation — and logs it",
-    ChatHistoryProvider = historyProvider,
-    ChatOptions = new ChatOptions
-    {
-        Temperature = 0.7f
-    }
-};
-
-ChatClientAgent agent = new(chatClient, options: agentOptions);
+Console.WriteLine("=== Exercise: Conversation Logger ===\n");
 
 try
 {
-    // ---------------------------------------------------------------
-    // Session 1 — the three AgentSessionDemo turns, each logged live
-    // ---------------------------------------------------------------
-    AgentSession session = await agent.CreateSessionAsync(cts.Token);
-    string sessionId = NewSessionId();
+    (AgentSession session, bool resumed) = await conversations.LoadOrCreateAsync(sessionId, cts.Token);
+    Console.WriteLine(resumed
+        ? $"Session '{sessionId}' restored: {conversations.History(session).Count} messages."
+        : $"Session '{sessionId}' is new.");
 
-    Console.WriteLine($"Session {sessionId} created. Every turn is logged as it happens.\n");
+    string message = resumed
+        ? "Can you remind me what we talked about last time?"
+        : "I'm planning a trip to Lisbon and I like walking tours.";
+    Console.WriteLine($"You: {message}");
+    string reply = await conversations.RunTurnAsync(sessionId, session, message, cts.Token);
+    Console.WriteLine($"Agent: {reply}\n");
 
-    await RunLoggedTurnAsync(session, sessionId,
-        "My name is Rachid. I work on the Contoso expense app and I love C# programming.");
-
-    await RunLoggedTurnAsync(session, sessionId,
-        "What's my name? What do I work on? What programming language do I love?");
-
-    await RunLoggedTurnAsync(session, sessionId,
-        "Based on what you know about me, suggest a weekend project.");
-
-    // ---------------------------------------------------------------
-    // Session 2 — isolation: a fresh session, a fresh id, same log file
-    // ---------------------------------------------------------------
-    Console.WriteLine(new string('=', 60));
-    Console.WriteLine("SESSION ISOLATION");
-    Console.WriteLine(new string('=', 60));
-
-    AgentSession session2 = await agent.CreateSessionAsync(cts.Token);
-    string sessionId2 = NewSessionId();
-
-    Console.WriteLine($"New session {sessionId2} — asking 'What is my name?'\n");
-
-    await RunLoggedTurnAsync(session2, sessionId2, "What is my name?");
-
-    Console.WriteLine("As expected, the new session has no memory of the first conversation —");
-    Console.WriteLine("but the log file recorded both sessions, each line tagged with its id.\n");
-
-    // ---------------------------------------------------------------
-    // In-memory history vs the log file
-    // ---------------------------------------------------------------
-    int session1Messages = historyProvider.GetMessages(session).Count;
-    int session2Messages = historyProvider.GetMessages(session2).Count;
-    int logLines = File.ReadAllLines(logFile).Length;
-
-    Console.WriteLine(new string('=', 60));
-    Console.WriteLine($"In-memory history: {session1Messages} messages ({sessionId}), " +
-                      $"{session2Messages} messages ({sessionId2}) — gone when the process exits.");
-    Console.WriteLine($"Log file:          {logLines} lines total — survives the next run.");
+    Console.WriteLine($"Log: {conversations.LogPath(sessionId)} ({File.ReadAllLines(conversations.LogPath(sessionId)).Length} lines)");
+    Console.WriteLine("Run the program again with the same session id: the log keeps the earlier turns and grows.");
 }
-catch (OperationCanceledException)
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.WriteLine("\n[Cancelled]");
 }
-
-Console.WriteLine("\n=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
-// Helpers
+// Offline proof: dotnet run -- --self-test
 // ---------------------------------------------------------------
-
-// Runs one turn: logs the user message, runs the agent, logs the reply.
-// Both log writes happen in real time, before the next turn starts.
-async Task RunLoggedTurnAsync(AgentSession session, string sessionId, string message)
+static async Task<int> SelfTest()
 {
-    Console.WriteLine($"You: {message}");
-    await LogTurnAsync(logFile, sessionId, "user", message, cts.Token);
+    Console.WriteLine("=== Conversation Logger (self-test, fake model, no network) ===\n");
+    int passed = 0, total = 0;
+    void Expect(string name, bool ok) { total++; if (ok) passed++; Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}"); }
 
-    AgentResponse response = await agent.RunAsync(message, session, cancellationToken: cts.Token);
-
-    Console.WriteLine($"Agent: {response.Text}\n");
-    await LogTurnAsync(logFile, sessionId, "assistant", response.Text ?? string.Empty, cts.Token);
-}
-
-// A short app-assigned session id (see the header note).
-static string NewSessionId() => Guid.NewGuid().ToString("N")[..8];
-
-/// <summary>
-/// Appends one log line: timestamp, session id, role, message text.
-/// </summary>
-/// <param name="path">The log file path.</param>
-/// <param name="sessionId">The id of the session the turn belongs to.</param>
-/// <param name="role">The message role (user, assistant).</param>
-/// <param name="text">The message text (flattened to a single line).</param>
-/// <param name="cancellationToken">Token to cancel the operation.</param>
-static async Task LogTurnAsync(
-    string path, string sessionId, string role, string text, CancellationToken cancellationToken)
-{
-    string flattened = text.ReplaceLineEndings(" ");
-    string entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{sessionId}] [{role,-9}] {flattened}\n";
-    await File.AppendAllTextAsync(path, entry, cancellationToken);
-}
-
-/// <summary>
-/// Creates an <see cref="IChatClient"/> from User Secrets configuration.
-/// </summary>
-static IChatClient CreateChatClient(IConfiguration configuration)
-{
-    string provider = configuration["LlmProvider:Provider"]?.ToLowerInvariant() ?? "ollama";
-
-    return provider switch
+    string root = Path.Combine(Path.GetTempPath(), "ex01-conversation-logger-" + Guid.NewGuid().ToString("N")[..8]);
+    try
     {
-        "azure" => new AzureOpenAIClient(
-                new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing endpoint")),
-                new DefaultAzureCredential())
-            .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
+        // Process 1: two turns for alice, one for bob.
+        FakeChatClient model1 = new(FakeReply.Text("Teal it is."), FakeReply.Text("Lisbon has good walking tours."),
+            FakeReply.Text("Hello, bob."));
+        LoggedConversations first = new(model1, root);
+        (AgentSession alice, _) = await first.LoadOrCreateAsync("alice");
+        await first.RunTurnAsync("alice", alice, "My favourite colour is teal.");
+        await first.RunTurnAsync("alice", alice, "I'm planning a trip to Lisbon.");
+        (AgentSession bob, _) = await first.LoadOrCreateAsync("bob");
+        await first.RunTurnAsync("bob", bob, "Hi, I'm bob and I collect stamps.");
+        string[] aliceBefore = File.ReadAllLines(first.LogPath("alice"));
 
-        "openai" => new OpenAI.OpenAIClient(
-                configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing key"))
-            .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna")
-            .AsIChatClient(),
+        // Process 2: a new client, a new agent and a new history provider; only the files remain.
+        FakeChatClient model2 = new(FakeReply.Text("Your favourite colour is teal."));
+        LoggedConversations second = new(model2, root);
+        (AgentSession aliceAgain, bool resumed) = await second.LoadOrCreateAsync("alice");
+        int restored = second.History(aliceAgain).Count;
+        await second.RunTurnAsync("alice", aliceAgain, "What is my favourite colour?");
+        string[] aliceAfter = File.ReadAllLines(second.LogPath("alice"));
+        string[] bobLog = File.ReadAllLines(second.LogPath("bob"));
 
-        "ollama" => new OllamaSharp.OllamaApiClient(
-            new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"),
-            configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
+        Console.WriteLine($"   alice restored with {restored} messages; the model was sent {model2.Calls[0].Messages.Count} on the next turn");
+        Console.WriteLine("   alice.log after the restart (timestamps cut):");
+        foreach (string line in aliceAfter) Console.WriteLine($"     {line[24..]}");
+        Console.WriteLine("   bob.log:");
+        foreach (string line in bobLog) Console.WriteLine($"     {line[24..]}");
 
-        _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
-    };
+        Expect("the session came back from its file with the earlier turns, and they reached the model",
+            resumed && restored == 4 && model2.Calls[0].Messages.Count == 5);
+        Expect("after the restart the log still holds the earlier lines, unchanged, and the new turn is appended",
+            aliceBefore.Length == 4 && aliceAfter.Length == 6 && aliceAfter.Take(4).SequenceEqual(aliceBefore)
+            && aliceAfter[4].Contains("[user     ] What is my favourite colour?")
+            && aliceAfter[5].Contains("[assistant] Your favourite colour is teal."));
+        Expect("every line carries a timestamp, its own session id and the role",
+            aliceAfter.All(l => Regex.IsMatch(l, @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[alice\] \[(user     |assistant)\] "))
+            && bobLog.All(l => l.Contains(" [bob] ")));
+        Expect("one session's log holds no message text from the other",
+            !aliceAfter.Any(l => l.Contains("stamps") || l.Contains("Hello, bob"))
+            && !bobLog.Any(l => l.Contains("teal") || l.Contains("Lisbon")));
+        string? rejected = null;
+        try { second.LogPath("../alice"); } catch (ArgumentException ex) { rejected = ex.Message; }
+        Expect("a session id that isn't a plain name is refused before it becomes a path", rejected is not null);
+    }
+    finally
+    {
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    }
+
+    Console.WriteLine($"\nRESULT {passed}/{total}");
+    return passed == total ? 0 : 1;
+}
+
+/// <summary>
+/// Named conversations on disk: sessions/&lt;id&gt;.json holds the serialized session
+/// (the PersistentSession pattern), logs/&lt;id&gt;.log the per-message log.
+/// </summary>
+internal sealed partial class LoggedConversations
+{
+    // Session serialization is source-generated: start from the framework's options.
+    private static readonly JsonSerializerOptions s_json = new(AgentAbstractionsJsonUtilities.DefaultOptions);
+
+    private readonly InMemoryChatHistoryProvider _history = new(new InMemoryChatHistoryProviderOptions());
+    private readonly ChatClientAgent _agent;
+    private readonly string _root;
+
+    public LoggedConversations(IChatClient chatClient, string root)
+    {
+        _root = root;
+        Directory.CreateDirectory(Path.Combine(root, "sessions"));
+        Directory.CreateDirectory(Path.Combine(root, "logs"));
+        _agent = new ChatClientAgent(chatClient, new ChatClientAgentOptions
+        {
+            Name = "LoggedBot",
+            ChatHistoryProvider = _history,
+        });
+    }
+
+    public string LogPath(string sessionId) => Path.Combine(_root, "logs", Checked(sessionId) + ".log");
+
+    private string SessionPath(string sessionId) => Path.Combine(_root, "sessions", Checked(sessionId) + ".json");
+
+    /// <summary>The messages the history provider holds for this session.</summary>
+    public List<ChatMessage> History(AgentSession session) => _history.GetMessages(session);
+
+    public async Task<(AgentSession Session, bool Resumed)> LoadOrCreateAsync(string sessionId, CancellationToken ct = default)
+    {
+        string path = SessionPath(sessionId);
+        if (!File.Exists(path)) return (await _agent.CreateSessionAsync(ct), false);
+        JsonElement saved = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(path, ct));
+        return (await _agent.DeserializeSessionAsync(saved, s_json, ct), true);
+    }
+
+    /// <summary>One turn: run, log the messages the provider now holds that aren't logged yet, save.</summary>
+    public async Task<string> RunTurnAsync(string sessionId, AgentSession session, string message, CancellationToken ct = default)
+    {
+        AgentResponse response = await _agent.RunAsync(message, session, cancellationToken: ct);
+
+        string logPath = LogPath(sessionId);
+        int alreadyLogged = File.Exists(logPath) ? File.ReadAllLines(logPath).Length : 0;
+        IEnumerable<string> lines = History(session).Skip(alreadyLogged).Select(m =>
+            $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{sessionId}] [{m.Role.Value,-9}] {m.Text.ReplaceLineEndings(" ")}");
+        await File.AppendAllLinesAsync(logPath, lines, ct);
+
+        JsonElement state = await _agent.SerializeSessionAsync(session, s_json, ct);
+        await File.WriteAllTextAsync(SessionPath(sessionId), JsonSerializer.Serialize(state, s_json), ct);
+        return response.Text;
+    }
+
+    // The id becomes a file name, so only a plain name is accepted.
+    private static string Checked(string sessionId) =>
+        SafeId().IsMatch(sessionId) ? sessionId
+            : throw new ArgumentException($"Session id '{sessionId}' must be 1-40 letters, digits or dashes.", nameof(sessionId));
+
+    [GeneratedRegex("^[A-Za-z0-9-]{1,40}$")]
+    private static partial Regex SafeId();
 }
