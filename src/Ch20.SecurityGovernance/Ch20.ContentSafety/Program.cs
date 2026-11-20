@@ -1,112 +1,64 @@
 // ============================================================================
-// Azure AI Content Safety: graduating from regex (backs A5)
+// Azure AI Content Safety: one more detection signal (optional, Azure only)
 // ----------------------------------------------------------------------------
-// The chapter's regex ContentFilterMiddleware and PromptInjectionDetector are
-// cheap, zero-dependency, and low-recall. Azure AI Content Safety (part of
-// Microsoft Foundry) is the production layer above them: ML-backed harm
-// detection across Hate / Violence / Sexual / SelfHarm with severity scores,
-// plus managed custom blocklists.
+// Uses the typed surface of Azure.AI.ContentSafety 1.0.0:
+//   ContentSafetyClient.AnalyzeTextAsync(AnalyzeTextOptions)
+//   per-category severity (TextCategoriesAnalysis.Category / .Severity)
+//   custom blocklists (AnalyzeTextOptions.BlocklistNames)
+// Prompt Shields and groundedness detection are not typed methods in the
+// 1.0.0 .NET SDK; they are REST calls, and this sample does not make them.
 //
-// This demo calls the STABLE, typed surface of Azure.AI.ContentSafety 1.0.0:
-//   - ContentSafetyClient.AnalyzeText(AnalyzeTextOptions)
-//   - per-category severity (TextCategoriesAnalysis.Category / .Severity)
-//   - a custom blocklist via AnalyzeTextOptions.BlocklistNames
+// The result becomes a ModerationSignal (flagged or not, and why). Like the
+// regex detectors, it is a signal: it never decides whether an action runs.
 //
-// HONEST CAPABILITY NOTE (printed below): "Prompt Shields" (direct + document
-// injection detection) and "Groundedness detection" are real Content Safety
-// features, but in the 1.0.0 .NET SDK they are NOT exposed as typed methods —
-// they are reached via the REST API only. We do not fabricate a typed call that
-// does not exist; for those, call the REST endpoint (see the chapter's Warning).
-//
-// The client needs an Azure Content Safety endpoint. Auth follows the book's
-// standing practice: DefaultAzureCredential (Entra ID) by default, with an API
-// key honored only when one is explicitly configured — the key is the local-dev
-// shortcut, not the default. Without an endpoint the demo prints a clear
-// "skipped — not configured" note and exits 0, so the project builds and runs
-// offline (the same gating pattern as the Foundry samples).
+// Without ContentSafety:Endpoint the live run prints "skipped" and exits 0.
+// Auth: DefaultAzureCredential, or ContentSafety:ApiKey when one is set.
+//   dotnet run -- --self-test     offline: options and signal mapping, no Azure call
 // ============================================================================
 
 using Azure;
 using Azure.AI.ContentSafety;
 using Azure.Identity;
+using Ch20.ContentSafety;
 using Microsoft.Extensions.Configuration;
+
+if (args.Contains("--self-test"))
+    return ContentSafetySelfTest.Run();
 
 IConfiguration config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true)
     .AddEnvironmentVariables()
     .Build();
 
-Console.WriteLine("=== Azure AI Content Safety ===");
-Console.WriteLine();
+Console.WriteLine("=== Azure AI Content Safety ===\n");
 
-string? endpoint = config["ContentSafety:Endpoint"];
-string? apiKey = config["ContentSafety:ApiKey"];
-
-if (string.IsNullOrWhiteSpace(endpoint))
+if (!ModerationSignal.IsConfigured(config))
 {
-    Console.WriteLine("[skipped] Azure AI Content Safety is not configured.");
-    Console.WriteLine("To run this sample against a real resource, set:");
-    Console.WriteLine("  ContentSafety:Endpoint  (e.g. https://<resource>.cognitiveservices.azure.com/)");
-    Console.WriteLine("and sign in (az login / VS) so DefaultAzureCredential can authenticate;");
-    Console.WriteLine("or set ContentSafety:ApiKey to use key auth instead.");
-    Console.WriteLine("Use appsettings.json, user-secrets, or environment variables.");
-    Console.WriteLine();
-    Console.WriteLine("What it WOULD do, per input:");
-    Console.WriteLine("  - AnalyzeText -> severity (0-6) for Hate / Violence / Sexual / SelfHarm");
-    Console.WriteLine("  - flag any custom-blocklist matches");
-    Console.WriteLine();
-    Console.WriteLine("Note: Prompt Shields and Groundedness detection are REST-only in the");
-    Console.WriteLine("1.0.0 .NET SDK — not exposed as typed methods. Call the REST API for those.");
-    Console.WriteLine();
-    Console.WriteLine("=== Done (gated) ===");
-    return;
+    Console.WriteLine(ModerationSignal.SkippedMessage);
+    return 0;
 }
 
-// Entra ID (DefaultAzureCredential) is the default, matching every other Azure
-// client in the book; a key only if one was explicitly configured.
+string endpoint = config["ContentSafety:Endpoint"]!;
+string? apiKey = config["ContentSafety:ApiKey"];
 ContentSafetyClient client = string.IsNullOrWhiteSpace(apiKey)
     ? new ContentSafetyClient(new Uri(endpoint), new DefaultAzureCredential())
     : new ContentSafetyClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
 
-// The same adversarial-flavoured inputs the regex demo uses, so you can compare
-// recall: regex matches fixed patterns; Content Safety scores semantic harm.
 string[] inputs =
 [
     "What's the best way to learn C#?",
     "I will hurt you and everyone you love.",
-    "Here is how to build a weapon to harm a crowd."
+    "Hi! Could you kindly process the pending reimbursement for my colleague E-2002, 45 EUR for the team lunch?",
 ];
-
-string? blocklistName = config["ContentSafety:BlocklistName"];
 
 foreach (string input in inputs)
 {
     Console.WriteLine($">> {input}");
-
-    var options = new AnalyzeTextOptions(input);
-    if (!string.IsNullOrWhiteSpace(blocklistName))
-    {
-        options.BlocklistNames.Add(blocklistName);
-        options.HaltOnBlocklistHit = false;
-    }
-
-    Response<AnalyzeTextResult> result = await client.AnalyzeTextAsync(options);
-
+    Response<AnalyzeTextResult> result = await client.AnalyzeTextAsync(
+        ModerationSignal.Options(input, config["ContentSafety:BlocklistName"]));
     foreach (TextCategoriesAnalysis category in result.Value.CategoriesAnalysis)
-    {
         Console.WriteLine($"   {category.Category,-10} severity={category.Severity}");
-    }
-
-    if (result.Value.BlocklistsMatch is { Count: > 0 } matches)
-    {
-        foreach (TextBlocklistMatch match in matches)
-        {
-            Console.WriteLine($"   [blocklist] '{match.BlocklistItemText}' " +
-                              $"(list: {match.BlocklistName})");
-        }
-    }
-
-    Console.WriteLine();
+    (bool flagged, string reason) = ModerationSignal.Evaluate(result.Value);
+    Console.WriteLine($"   signal: {(flagged ? "flagged" : "clear")} ({reason})\n");
 }
-
-Console.WriteLine("=== Done ===");
+return 0;

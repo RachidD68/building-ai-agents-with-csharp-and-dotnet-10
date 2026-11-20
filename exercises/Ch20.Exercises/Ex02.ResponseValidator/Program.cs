@@ -4,7 +4,11 @@
 // of rules (no URLs, minimum length, maximum length, no unexpected code block
 // in a short/casual response). When ANY rule fails, the response is REPLACED
 // with a safe fallback message — never truncated — and the rule(s) that
-// triggered are logged. Both the blocking and streaming paths validate.
+// triggered are logged (rule id and lengths, never the response text). Both
+// the blocking and streaming paths validate.
+//
+//   dotnet run                    live run against the configured provider
+//   dotnet run -- --self-test     offline: one failing input per rule, RESULT n/n
 // FULLY STANDALONE.
 // ============================================================================
 
@@ -19,6 +23,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+if (args.Contains("--self-test"))
+    return await ValidatorSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
@@ -68,11 +75,12 @@ foreach (string prompt in prompts)
     catch (OperationCanceledException)
     {
         Console.WriteLine("\n[Cancelled]");
-        return;
+        return 1;
     }
 }
 
 Console.WriteLine("=== Exercise complete! ===");
+return 0;
 
 // ---------------------------------------------------------------
 // Provider factory
@@ -86,7 +94,7 @@ static IChatClient CreateChatClient(IConfiguration configuration)
     {
         "azure" => new AzureOpenAIClient(new Uri(configuration["LlmProvider:AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException("Missing")), new DefaultAzureCredential())
             .GetChatClient(configuration["LlmProvider:AzureOpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
-        "openai" => new OpenAI.OpenAIClient(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing"))
+        "openai" => new OpenAI.OpenAIClient(new ApiKeyCredential(configuration["LlmProvider:OpenAI:ApiKey"] ?? throw new InvalidOperationException("Missing")))
             .GetChatClient(configuration["LlmProvider:OpenAI:Model"] ?? "gpt-5.6-luna").AsIChatClient(),
         "ollama" => new OllamaSharp.OllamaApiClient(new Uri(configuration["LlmProvider:Ollama:Endpoint"] ?? "http://localhost:11434"), configuration["LlmProvider:Ollama:Model"] ?? "llama3.2"),
         _ => throw new InvalidOperationException($"Unknown provider: '{provider}'")
@@ -113,6 +121,7 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
 
     private readonly int _minResponseChars;
     private readonly int _maxResponseChars;
+    private readonly Action<string> _log;
 
     /// <summary>
     /// Initializes a new <see cref="ResponseValidatorMiddleware"/>.
@@ -121,12 +130,15 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
     /// <param name="minResponseChars">Minimum acceptable response length in characters.</param>
     /// <param name="maxResponseChars">Maximum acceptable response length in characters.</param>
     public ResponseValidatorMiddleware(
-        IChatClient innerClient, int minResponseChars, int maxResponseChars)
+        IChatClient innerClient, int minResponseChars, int maxResponseChars, Action<string>? log = null)
         : base(innerClient)
     {
         _minResponseChars = minResponseChars;
         _maxResponseChars = maxResponseChars;
+        _log = log ?? Console.WriteLine;
     }
+
+    public const string FallbackText = SafeFallbackText;
 
     /// <inheritdoc/>
     public override async Task<ChatResponse> GetResponseAsync(
@@ -141,7 +153,7 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
 
         if (violations.Count == 0)
         {
-            Console.WriteLine($"  [VALIDATION] Passed ({text.Length} chars)");
+            _log($"  [VALIDATION] Passed ({text.Length} chars)");
             return response;
         }
 
@@ -186,7 +198,7 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
             yield break;
         }
 
-        Console.WriteLine($"  [VALIDATION] (streaming) Passed ({text.Length} chars)");
+        _log($"  [VALIDATION] (streaming) Passed ({text.Length} chars)");
         foreach (ChatResponseUpdate update in buffered)
         {
             yield return update;
@@ -194,7 +206,7 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
     }
 
     /// <summary>Runs every rule and returns the list of violations (empty when clean).</summary>
-    private List<string> Validate(string text)
+    internal List<string> Validate(string text)
     {
         List<string> violations = [];
 
@@ -226,18 +238,103 @@ sealed partial class ResponseValidatorMiddleware : DelegatingChatClient
     }
 
     /// <summary>Logs the rule(s) that triggered — the shape ContentFilterMiddleware uses.</summary>
-    private static void LogViolations(List<string> violations, bool streaming)
+    private void LogViolations(List<string> violations, bool streaming)
     {
         string suffix = streaming ? " (streaming)" : string.Empty;
-        Console.WriteLine(
+        _log(
             $"  [VALIDATION]{suffix} {violations.Count} rule(s) violated -> " +
             "response replaced with safe fallback:");
         foreach (string violation in violations)
         {
-            Console.WriteLine($"    - {violation}");
+            _log($"    - {violation}");
         }
     }
 
     [GeneratedRegex(@"(?i)\bhttps?://\S+|\bwww\.\S+")]
     private static partial Regex UrlRegex();
+}
+
+/// <summary>A model that replies with fixed text, as one update per chunk when streaming.</summary>
+sealed class FixedReplyClient(params string[] chunks) : IChatClient
+{
+    public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, string.Concat(chunks))));
+
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        foreach (string chunk in chunks)
+        {
+            await Task.Yield();
+            yield return new ChatResponseUpdate(ChatRole.Assistant, chunk);
+        }
+    }
+
+    public object? GetService(Type serviceType, object? serviceKey = null) => null;
+    public void Dispose() { }
+}
+
+static class ValidatorSelfTest
+{
+    // Every bad response carries this marker; it must never reach the log.
+    const string Marker = "zebra4711";
+
+    public static async Task<int> RunAsync()
+    {
+        Console.WriteLine("=== Exercise: Response Validator: self-test ===");
+        int passed = 0, total = 0;
+        void Expect(string name, bool ok)
+        {
+            total++;
+            if (ok) passed++;
+            Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+        }
+
+        Console.WriteLine("\n-- One failing input per rule --");
+        (string Rule, string Reply)[] cases =
+        [
+            ("no-urls", $"The {Marker} guide is at https://contoso.example/docs for all the details."),
+            ("no-urls", $"The {Marker} guide is at www.contoso.example for all the details you need."),
+            ("min-length", $"{Marker}."),
+            ("max-length", $"{Marker} " + new string('x', 600)),
+            ("unexpected-code-block", $"Use ```var {Marker} = 1;``` in your code, that is all."),
+        ];
+        foreach ((string rule, string reply) in cases)
+        {
+            List<string> log = [];
+            IChatClient client = new ResponseValidatorMiddleware(new FixedReplyClient(reply), 20, 500, log.Add);
+            ChatResponse r = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "q")]);
+            Expect($"{rule}: replaced by the fallback, rule logged, text not logged",
+                r.Text == ResponseValidatorMiddleware.FallbackText &&
+                log.Any(l => l.Contains(rule, StringComparison.Ordinal)) &&
+                log.All(l => !l.Contains(Marker, StringComparison.Ordinal)));
+        }
+
+        Console.WriteLine("\n-- Clean answers pass unchanged --");
+        {
+            const string clean = "LINQ is a set of query operators for in-memory and remote sequences.";
+            IChatClient client = new ResponseValidatorMiddleware(new FixedReplyClient(clean), 20, 500, _ => { });
+            ChatResponse r = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "q")]);
+            Expect("a clean answer is returned as it came", r.Text == clean);
+            string longCode = "Here is a longer example.\n```csharp\n" + new string('/', 220) + "\n```";
+            Expect("a code block in a long answer is allowed",
+                (await new ResponseValidatorMiddleware(new FixedReplyClient(longCode), 20, 500, _ => { })
+                    .GetResponseAsync([new ChatMessage(ChatRole.User, "q")])).Text == longCode);
+        }
+
+        Console.WriteLine("\n-- Streaming: validated on the whole text --");
+        {
+            List<string> log = [];
+            IChatClient client = new ResponseValidatorMiddleware(
+                new FixedReplyClient($"The {Marker} docs live at htt", "ps://contoso.example/docs, have a look."), 20, 500, log.Add);
+            List<string> texts = [];
+            await foreach (ChatResponseUpdate u in client.GetStreamingResponseAsync([new ChatMessage(ChatRole.User, "q")]))
+                texts.Add(u.Text);
+            Expect("a URL split across two chunks is caught; one fallback update is emitted",
+                texts.Count == 1 && texts[0] == ResponseValidatorMiddleware.FallbackText && log.All(l => !l.Contains(Marker, StringComparison.Ordinal)));
+        }
+
+        Console.WriteLine($"\nRESULT {passed}/{total}");
+        return passed == total ? 0 : 1;
+    }
 }

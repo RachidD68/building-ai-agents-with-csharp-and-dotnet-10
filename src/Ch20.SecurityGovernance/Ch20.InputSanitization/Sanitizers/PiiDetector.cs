@@ -7,9 +7,9 @@ namespace Ch20.InputSanitization.Sanitizers;
 /// Detects email addresses, phone numbers, credit card numbers, and SSNs.
 /// </summary>
 /// <remarks>
-/// These regex patterns catch common formats but are not exhaustive.
-/// For production, consider using Azure AI Language PII detection or
-/// Microsoft Presidio for comprehensive PII identification.
+/// These regex patterns catch common formats only. The self-test prints the
+/// identifiers they miss (an IBAN, a Canadian SIN, a spelled-out email) and one
+/// they wrongly flag (a seven-digit reference read as a phone number).
 /// </remarks>
 public static partial class PiiDetector
 {
@@ -56,14 +56,26 @@ public static partial class PiiDetector
             return text;
         }
 
+        // Longest, most specific patterns first: the phone pattern matches the
+        // tail of a card number, so running it first leaves the card's first
+        // digits in clear and the card pattern no longer matches.
         string result = text;
-        result = EmailRegex().Replace(result, "[REDACTED-EMAIL]");
-        result = PhoneRegex().Replace(result, "[REDACTED-PHONE]");
         result = CreditCardRegex().Replace(result, "[REDACTED-CC]");
         result = SsnRegex().Replace(result, "[REDACTED-SSN]");
         result = IpAddressRegex().Replace(result, "[REDACTED-IP]");
-
+        result = EmailRegex().Replace(result, "[REDACTED-EMAIL]");
+        result = PhoneRegex().Replace(result, "[REDACTED-PHONE]");
         return result;
+    }
+
+    /// <summary>The first edition's order (email, phone, card, ...), kept only to reproduce its defect.</summary>
+    internal static string RedactInFirstEditionOrder(string text)
+    {
+        string result = EmailRegex().Replace(text, "[REDACTED-EMAIL]");
+        result = PhoneRegex().Replace(result, "[REDACTED-PHONE]");
+        result = CreditCardRegex().Replace(result, "[REDACTED-CC]");
+        result = SsnRegex().Replace(result, "[REDACTED-SSN]");
+        return IpAddressRegex().Replace(result, "[REDACTED-IP]");
     }
 
     private static void ScanPattern(

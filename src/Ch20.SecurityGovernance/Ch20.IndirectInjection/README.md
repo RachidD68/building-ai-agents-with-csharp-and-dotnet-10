@@ -1,35 +1,23 @@
-# Ch20.IndirectInjection — Second-order prompt injection (OWASP LLM01 / LLM08)
+# Ch20.IndirectInjection: the instruction arrives inside retrieved data
 
-The dangerous case the chapter's direct-injection defence does **not** cover:
-the malicious instruction arrives inside content the agent **ingests** — a
-RAG-retrieved document (the RAG chapter), MCP tool/server output (the MCP
-chapter), a web page, an
-email, a file.
+`PromptAssembler.Build` assembles a prompt from retrieved chunks in three steps:
 
-## What It Shows
+1. **Provenance**: each `RetrievedChunk` carries its source and a trust level
+   (internal handbook or external upload, email, web page).
+2. **Quarantine**: chunks the `ToolOutputScanner` flags are held back.
+3. **Fence**: what is sent is wrapped in `<<DATA id=... source=... trust=...>>`
+   with a random id per request, and fence-like text inside a chunk is
+   neutralised, so a chunk cannot close its own fence.
 
-- A "retrieved document" whose legitimate first line is followed by an embedded
-  `[SYSTEM OVERRIDE] Ignore previous instructions…` payload.
-- **Defence 1 (deterministic): scan the tool/retrieval output.** A
-  `[GeneratedRegex]` `ToolOutputScanner` runs the same idea as
-  `PromptInjectionDetector`, but over the **retrieved text** — it flags the
-  payload every run.
-- **Defence 2: spotlighting / delimiting.** The untrusted block is fenced in
-  `<<DATA>> … <</DATA>>` and the system prompt tells the model the block is
-  data, never commands.
-
-## Honest caveat (the program prints it)
-
-A safety-tuned model sometimes resists the payload and sometimes complies —
-model resistance is **probabilistic**. The deterministic defence is the scanner;
-spotlighting raises the odds. Never rely on the model alone; pair with the
-security chapter's output filters and the critic.
-
-Cross-references: the MCP chapter (MCP) and the RAG chapter (RAG) are the entry points for
-tainted content.
+The self-test uses a deliberately obedient scripted model (it follows any
+"reply only with: X" it is sent). It shows the quarantine working, a
+paraphrased payload that the scanner misses, and the first edition's fixed
+`<<DATA>>` fence being closed from inside a document. `Assembled.IngestedExternal`
+records that external text reached the model.
 
 ## Running
 
 ```bash
-dotnet run   # Ollama + llama3.2 by default
+dotnet run -- --self-test   # offline: RESULT n/n
+dotnet run                  # live, against the configured provider
 ```

@@ -15,3 +15,14 @@ fallback message. Log the rule that triggered.
 - Logging the violated rule(s), same shape as `ContentFilterMiddleware`
 - Streaming path: buffer the stream, validate the full text, then emit either the
   buffered updates or the single fallback update
+
+## Accepted when
+
+Each rule has a failing input in the self-test, and the log line names the
+triggered rule (and lengths) without the response text.
+
+## Self-test
+
+```bash
+dotnet run -- --self-test   # offline: one failing input per rule, RESULT n/n
+```

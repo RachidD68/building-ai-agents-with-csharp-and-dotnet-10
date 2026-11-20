@@ -1,31 +1,19 @@
-# Ch20.ConsumptionLimits — Denial-of-wallet & runaway loops (OWASP LLM10)
+# Ch20.ConsumptionLimits: runaway loops and denial of wallet (OWASP LLM10:2025)
 
-Cost and availability are **safety** concerns. An attacker or a buggy tool loop
-can drive unbounded token spend or an effectively infinite function-call loop.
-The agent loop needs hard caps.
+- **`MaximumIterationsPerRequest`** on `FunctionInvokingChatClient`: with a cap of
+  4, a model that asks for the same tool forever (`RunawayClient`) gets 4 tool
+  calls and 5 model calls; the last reply comes back with its tool call left
+  unexecuted.
+- **`TokenBudgetClient`** reserves each call's worst case before the call and
+  refuses when it does not fit, so the budget holds under 20 concurrent callers
+  (`Task.Run`). The first edition's check after the call is kept to reproduce
+  its defect: the tokens are spent before the check runs.
+- **A deadline** (`CancellationToken`) stops a slow call.
 
-## What It Shows
-
-- **`MaximumIterationsPerRequest`** (on `FunctionInvokingChatClient`, default 40)
-  — caps function-call roundtrips. A deterministic `RunawayClient` requests the
-  same tool every turn and never stops; the cap terminates it cleanly after N
-  calls (no exception, no infinite spin).
-- **`ChatOptions.AllowMultipleToolCalls = false`** — one tool call per
-  iteration, so a runaway model cannot fan out within a turn.
-- **A per-request token-budget guard** — a tiny `DelegatingChatClient` that sums
-  `ChatResponse.Usage.TotalTokenCount` and throws once a budget is exceeded.
-- **A per-request deadline** — a `CancellationToken` with a timeout cancels a
-  slow call instead of waiting forever.
-
-The demo uses deterministic test doubles so every cap is provably exercised
-without a live model. `MaximumConsecutiveErrorsPerRequest` (default 3) is the
-related cap for consecutive failing tool calls.
-
-> API-gateway / per-user rate limiting lives in **the hosting chapter**. This project is
-> about the **agent loop** specifically.
+The edge (API gateway, rate limits) is the hosting chapter's; this is the loop.
 
 ## Running
 
 ```bash
-dotnet run
+dotnet run -- --self-test   # RESULT n/n
 ```

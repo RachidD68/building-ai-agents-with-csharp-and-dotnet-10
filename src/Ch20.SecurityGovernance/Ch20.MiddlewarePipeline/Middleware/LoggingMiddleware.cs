@@ -5,78 +5,53 @@ using Microsoft.Extensions.Logging;
 namespace Ch20.MiddlewarePipeline.Middleware;
 
 /// <summary>
-/// Chat client middleware that logs every request and response.
-/// Wraps the inner <see cref="IChatClient"/> and delegates after logging.
+/// Logs the shape of every request and response: message count, roles,
+/// character counts and the finish reason. It never logs message text. A
+/// prompt can carry an email address, a card number or a pasted contract, and
+/// a log line is copied to more places, and kept longer, than the conversation
+/// it came from.
 /// </summary>
-/// <remarks>
-/// This uses the <see cref="DelegatingChatClient"/> base class from
-/// Microsoft.Extensions.AI, which provides the standard middleware pattern.
-/// Both <see cref="GetResponseAsync"/> and <see cref="GetStreamingResponseAsync"/>
-/// are overridden so the middleware applies on every invocation path.
-/// </remarks>
-public sealed class LoggingMiddleware : DelegatingChatClient
+public sealed class LoggingMiddleware(IChatClient innerClient, ILogger logger)
+    : DelegatingChatClient(innerClient)
 {
-    private readonly ILogger _logger;
-
-    /// <summary>
-    /// Initializes a new <see cref="LoggingMiddleware"/>.
-    /// </summary>
-    /// <param name="innerClient">The next client in the pipeline.</param>
-    /// <param name="logger">Logger instance for writing structured logs.</param>
-    public LoggingMiddleware(IChatClient innerClient, ILogger logger)
-        : base(innerClient)
-    {
-        _logger = logger;
-    }
-
-    /// <inheritdoc/>
     public override async Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        ChatMessage? lastMessage = messages.LastOrDefault();
-        _logger.LogInformation(
-            "[Logging] Request: {MessageCount} message(s), last = \"{LastMessage}\"",
-            messages.Count(),
-            Truncate(lastMessage?.Text ?? "(empty)", 80));
+        List<ChatMessage> sent = [.. messages];
+        logger.LogInformation("[Logging] Request: {Shape}", Shape(sent));
 
-        ChatResponse response = await base.GetResponseAsync(
-            messages, options, cancellationToken);
+        ChatResponse response = await base.GetResponseAsync(sent, options, cancellationToken);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "[Logging] Response: {ResponseLength} chars, finish reason = {FinishReason}",
-            response.Text?.Length ?? 0,
+            response.Text.Length,
             response.FinishReason?.ToString() ?? "none");
-
         return response;
     }
 
-    /// <inheritdoc/>
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ChatMessage? lastMessage = messages.LastOrDefault();
-        _logger.LogInformation(
-            "[Logging] Streaming request: {MessageCount} message(s), last = \"{LastMessage}\"",
-            messages.Count(),
-            Truncate(lastMessage?.Text ?? "(empty)", 80));
+        List<ChatMessage> sent = [.. messages];
+        logger.LogInformation("[Logging] Streaming request: {Shape}", Shape(sent));
 
         int totalChars = 0;
         await foreach (ChatResponseUpdate update in base.GetStreamingResponseAsync(
-            messages, options, cancellationToken))
+            sent, options, cancellationToken))
         {
-            totalChars += update.Text?.Length ?? 0;
+            totalChars += update.Text.Length;
             yield return update;
         }
 
-        _logger.LogInformation(
-            "[Logging] Streaming response: {ResponseLength} chars total",
-            totalChars);
+        logger.LogInformation("[Logging] Streaming response: {ResponseLength} chars total", totalChars);
     }
 
-    private static string Truncate(string value, int maxLength) =>
-        value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength), "...");
+    /// <summary>"3 message(s) [system, user, user], 212 chars": no content.</summary>
+    public static string Shape(IReadOnlyList<ChatMessage> messages) =>
+        $"{messages.Count} message(s) [{string.Join(", ", messages.Select(m => m.Role.Value))}], " +
+        $"{messages.Sum(m => m.Text.Length)} chars";
 }

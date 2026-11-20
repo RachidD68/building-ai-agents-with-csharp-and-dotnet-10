@@ -25,3 +25,12 @@ affects another.
 `dotnet run` — fully offline, no model or network required. The loop must stop at
 exactly the iteration cap; session-a/session-c hit their budgets and get
 short-circuited while session-b/session-d keep working.
+
+## Status
+
+Not printed in the chapter: a bonus exercise kept beside the others (its
+natural sequel is the cost chapter). It runs offline.
+
+```bash
+dotnet run -- --self-test   # RESULT n/n
+```

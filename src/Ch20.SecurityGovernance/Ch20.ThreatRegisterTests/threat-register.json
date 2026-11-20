@@ -1,0 +1,119 @@
+{
+  "system": "Contoso reimbursement agent",
+  "owasp": {
+    "llm": "OWASP Top 10 for LLM Applications 2025 (LLM01-LLM10)",
+    "agentic": "OWASP Top 10 for Agentic Applications (ASI01-ASI10)"
+  },
+  "rows": [
+    {
+      "id": "R01",
+      "threat": "Direct prompt injection in the user's message",
+      "owasp": ["LLM01:2025", "ASI01"],
+      "control": "injection-detector",
+      "kind": "detection",
+      "test": "direct_injection_is_flagged",
+      "owner": "Agent team",
+      "residual": "Paraphrases, other languages and character tricks pass; Ch20.InputSanitization prints the measured misses.",
+      "stop": "Revoke the agent's action tools (RevocationList.RevokeTool) so it can only answer; review the flagged sessions."
+    },
+    {
+      "id": "R02",
+      "threat": "Indirect injection inside a retrieved document",
+      "owasp": ["LLM01:2025", "ASI06"],
+      "control": "retrieval-quarantine",
+      "kind": "detection",
+      "test": "poisoned_chunk_never_reaches_the_model",
+      "owner": "Knowledge team",
+      "residual": "A paraphrased payload passes the scanner and reaches the model fenced, marked external.",
+      "stop": "Remove the source from the index, re-ingest, and replay the affected questions."
+    },
+    {
+      "id": "R03",
+      "threat": "Harmless wording asks for a forbidden action (another tenant's employee)",
+      "owasp": ["LLM06:2025", "ASI02", "ASI03"],
+      "control": "policy-at-effect",
+      "kind": "enforcement",
+      "test": "harmless_forbidden_request_is_denied_at_the_effect",
+      "owner": "Payments team",
+      "residual": "None for scope; amounts within the employee's own balance remain the employee's call.",
+      "stop": "Revoke the reimburse tool; every transport is denied on its next call."
+    },
+    {
+      "id": "R04",
+      "threat": "A second transport (agent host) reaches the effect without the API's check",
+      "owasp": ["ASI02", "ASI07"],
+      "control": "single-decision-point",
+      "kind": "enforcement",
+      "test": "agent_host_path_hits_the_same_decision",
+      "owner": "Payments team",
+      "residual": "A new transport written against the ledger instead of the service; the parity test in Ch20.PolicyEnforcement covers HTTP, MCP, A2A and AG-UI.",
+      "stop": "Disable the transport at the edge; the service remains the only writer."
+    },
+    {
+      "id": "R05",
+      "threat": "A tool keeps acting after it was revoked (open sessions)",
+      "owasp": ["ASI10", "ASI03"],
+      "control": "revocation-check",
+      "kind": "enforcement",
+      "test": "revoked_tool_is_denied_in_an_open_session",
+      "owner": "SRE",
+      "residual": "Revocation is per process here; a shared store is needed across instances.",
+      "stop": "RevokeTool(\"reimburse\"), then confirm a denied decision in the audit log."
+    },
+    {
+      "id": "R06",
+      "threat": "Model output carries an exfiltration image or a lookalike link",
+      "owasp": ["LLM05:2025"],
+      "control": "markdown-allowlist",
+      "kind": "enforcement",
+      "test": "exfiltration_image_is_removed",
+      "owner": "Front-end team",
+      "residual": "Other sinks (HTML, SQL) need their own encoding; Ch20.OutputHandling covers them.",
+      "stop": "Render answers as plain text until the renderer is fixed."
+    },
+    {
+      "id": "R07",
+      "threat": "Personal data copied into logs",
+      "owasp": ["LLM02:2025"],
+      "control": "shape-only-logging",
+      "kind": "enforcement",
+      "test": "logs_carry_shapes_not_text",
+      "owner": "Platform team",
+      "residual": "Other loggers in the process (HTTP, exceptions) need the same rule.",
+      "stop": "Lower the log level of the chat pipeline and purge the affected log partition under the retention policy."
+    },
+    {
+      "id": "R08",
+      "threat": "Concurrent requests overspend the token budget (denial of wallet)",
+      "owasp": ["LLM10:2025"],
+      "control": "token-budget-reservation",
+      "kind": "enforcement",
+      "test": "concurrent_callers_stay_within_budget",
+      "owner": "Platform team",
+      "residual": "A provider that ignores MaxOutputTokens can exceed one call's reservation.",
+      "stop": "Set the tenant's budget to zero; calls are refused before they reach the model."
+    },
+    {
+      "id": "R09",
+      "threat": "A runaway tool loop",
+      "owasp": ["LLM10:2025", "ASI08"],
+      "control": "iteration-cap",
+      "kind": "enforcement",
+      "test": "runaway_loop_stops_at_the_cap",
+      "owner": "Agent team",
+      "residual": "Each iteration can still be expensive; the token budget bounds the total.",
+      "stop": "Lower MaximumIterationsPerRequest and redeploy, or revoke the looping tool."
+    },
+    {
+      "id": "R10",
+      "threat": "The critic passes text that contains personal data",
+      "owasp": ["LLM02:2025", "ASI09"],
+      "control": "pii-detector-at-gate",
+      "kind": "detection",
+      "test": "critic_pass_with_pii_is_rejected",
+      "owner": "Agent team",
+      "residual": "Names and identifiers the detector does not know (IBAN, SIN) are escalated only when the critic sees them.",
+      "stop": "Hold publication (gate to Escalate for all) until the detector is updated."
+    }
+  ]
+}

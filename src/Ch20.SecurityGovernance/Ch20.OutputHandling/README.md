@@ -1,29 +1,18 @@
-# Ch20.OutputHandling — The model's output is untrusted input (OWASP LLM05)
+# Ch20.OutputHandling: the model's output is untrusted input (OWASP LLM05:2025)
 
-The chapter redacts PII **out** of a response. This demo covers the other
-direction: an LLM's output is **untrusted input** to whatever consumes it. The
-model can be steered into emitting a string that is harmless as text but
-dangerous the moment it is interpolated into HTML (XSS), SQL (injection), a
-shell command, or a file path.
+Three sinks, no model, the same result every run:
 
-## What It Shows
-
-- **HTML sink** — a model answer carrying an `<img onerror=…>` payload. Raw
-  interpolation is stored/reflected XSS; `HtmlEncoder.Default.Encode(...)` makes
-  it inert.
-- **SQL sink** — an extracted "customer name" of `Robert'); DROP TABLE
-  Customers;--`. String concatenation is classic injection; a parameterized
-  command binds the value as data, never parsed as SQL.
-
-No LLM call — the output is fully deterministic.
-
-## Key takeaway
-
-Never trust, never interpolate — **encode or parameterize at every boundary the
-answer crosses.**
+- **HTML**: `HtmlEncoder.Default.Encode` turns an `<img onerror=...>` answer into text.
+- **Markdown**: `SafeMarkdown` keeps a link or image only when the URL is https
+  and the host is on the allow-list (exact match or subdomain). Images to
+  other hosts are removed whole: the browser fetches them on render. A
+  substring host check accepts `contoso.example.evil.example`; the self-test
+  reproduces it.
+- **SQL** (in-memory SQLite): concatenation runs the model's `DROP TABLE`;
+  a parameter stores it as text.
 
 ## Running
 
 ```bash
-dotnet run
+dotnet run -- --self-test   # RESULT n/n
 ```

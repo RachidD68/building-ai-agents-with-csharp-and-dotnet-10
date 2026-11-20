@@ -484,6 +484,12 @@
           "OllamaSharp": "[5.4.25, )"
         }
       },
+      "agenticai.testing": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "[10.11.0, )"
+        }
+      },
       "Microsoft.Agents.AI.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[1.28.0, )",

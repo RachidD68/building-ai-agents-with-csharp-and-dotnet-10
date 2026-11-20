@@ -16,6 +16,12 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
+  <!-- The policy at the effect: Ch08's baseline rules and the chapter's decision
+       point (linked from Ch20.PolicyEnforcement, not copied). -->
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
+    <Compile Include="../../../src/Ch20.SecurityGovernance/Ch20.PolicyEnforcement/ReimbursementService.cs" Link="Linked/ReimbursementService.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">

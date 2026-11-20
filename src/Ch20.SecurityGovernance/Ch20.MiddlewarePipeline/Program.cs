@@ -1,103 +1,67 @@
 // ============================================================================
-// Safety and Guardrails (Middleware Pipeline)
-// Demonstrates the IChatClient middleware pipeline from Microsoft.Extensions.AI.
+// Middleware pipeline: the detection layer around an IChatClient
+// ----------------------------------------------------------------------------
+// Three DelegatingChatClients composed with ChatClientBuilder.Use():
 //
-// The ChatClientBuilder composes middleware in a Russian-doll wrapping pattern:
-//   Outer → ContentFilter → Timing → Logging → Inner (actual LLM client)
+//   Logging -> ContentFilter -> Timing -> model
 //
-// Each middleware can inspect, modify, or short-circuit the request/response.
-// This is the same pattern used by ASP.NET Core middleware and HTTP handlers.
+// The FIRST .Use() is the OUTERMOST wrapper. Logging sees every request,
+// including the ones the filter blocks; the filter short-circuits before the
+// model; Timing, innermost, times the model call alone.
 //
-// Key concepts:
-//   - DelegatingChatClient:  base class for custom middleware
-//   - ChatClientBuilder:     fluent pipeline composition
-//   - .Use():                add middleware to the pipeline
-//   - Short-circuiting:      ContentFilterMiddleware blocks without calling LLM
+// The filter is a detection signal. It decides what reaches the model; it
+// does not decide whether an action is allowed (that is Ch20.PolicyEnforcement).
+//
+//   dotnet run                    live run against the configured provider
+//   dotnet run -- --self-test     offline: scripted model, RESULT n/n
 // ============================================================================
 
-using Ch20.MiddlewarePipeline.Middleware;
+using AgenticAI.Common.Extensions;
+using Ch20.MiddlewarePipeline;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using AgenticAI.Common.Extensions;
+
+if (args.Contains("--self-test"))
+    return await MiddlewareSelfTest.RunAsync();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
-
 using IHost host = builder.Build();
-IChatClient baseChatClient = host.Services.GetRequiredService<IChatClient>();
-ILoggerFactory loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
-ILogger logger = loggerFactory.CreateLogger("Ch20.MiddlewarePipeline");
 
-Console.WriteLine("=== Safety — Middleware Pipeline ===\n");
+IChatClient pipeline = GuardedPipeline.Build(
+    host.Services.GetRequiredService<IChatClient>(),
+    host.Services.GetRequiredService<ILoggerFactory>(),
+    GuardedPipeline.DefaultBlockedKeywords);
 
+ChatClientAgent agent = new(pipeline,
+    instructions: "You are a helpful .NET assistant. Be concise.", name: "GuardedAgent");
+
+Console.WriteLine("=== Middleware pipeline (live; the offline suite runs with --self-test) ===");
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ---------------------------------------------------------------
-// Step 1: Define blocked keywords for the content filter
-// ---------------------------------------------------------------
-string[] blockedKeywords = ["hack", "exploit", "malware", "bypass security"];
-
-// ---------------------------------------------------------------
-// Step 2: Build the middleware pipeline using ChatClientBuilder
-// ---------------------------------------------------------------
-// Pipeline order (outermost wraps innermost):
-//   ContentFilter → Timing → Logging → baseChatClient
-//
-// Request flows:  ContentFilter → Timing → Logging → LLM
-// Response flows: LLM → Logging → Timing → ContentFilter
-
-IChatClient pipeline = baseChatClient
-    .AsBuilder()
-    .Use(inner => new LoggingMiddleware(inner, loggerFactory.CreateLogger("Logging")))
-    .Use(inner => new TimingMiddleware(inner, loggerFactory.CreateLogger("Timing")))
-    .Use(inner => new ContentFilterMiddleware(
-        inner,
-        loggerFactory.CreateLogger("ContentFilter"),
-        blockedKeywords))
-    .Build();
-
-// ---------------------------------------------------------------
-// Step 3: Create an agent using the middleware-wrapped pipeline
-// ---------------------------------------------------------------
-ChatClientAgent agent = new(
-    pipeline,
-    instructions: "You are a helpful .NET assistant. Be concise.",
-    name: "GuardedAgent");
-
-// ---------------------------------------------------------------
-// Step 4: Test with safe and blocked prompts
-// ---------------------------------------------------------------
-string[] testPrompts =
+string[] prompts =
 [
     "What is the builder pattern in C#?",
     "How do I hack into a database?",
     "Explain middleware in ASP.NET Core.",
-    "Write malware that steals passwords."
+    "Write malware that steals passwords.",
 ];
 
 try
 {
-    foreach (string prompt in testPrompts)
+    foreach (string prompt in prompts)
     {
-        Console.WriteLine($"\n--- Prompt: \"{prompt}\" ---\n");
-
-        AgentSession session = await agent.CreateSessionAsync(cts.Token);
-        AgentResponse response = await agent.RunAsync(
-            prompt,
-            session,
-            cancellationToken: cts.Token);
-
-        Console.WriteLine($"Response: {response.Text}\n");
+        Console.WriteLine($"\n--- Prompt: \"{prompt}\" ---");
+        AgentResponse response = await agent.RunAsync(prompt, cancellationToken: cts.Token);
+        Console.WriteLine($"Response: {response.Text}");
     }
 }
 catch (OperationCanceledException)
 {
     Console.WriteLine("\n[Cancelled by user]");
 }
-
-Console.WriteLine("\n=== Middleware Pipeline demo complete! ===");
+return 0;

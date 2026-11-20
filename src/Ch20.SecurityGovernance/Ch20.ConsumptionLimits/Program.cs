@@ -1,201 +1,140 @@
 // ============================================================================
-// Unbounded Consumption: denial-of-wallet & runaway loops (LLM10)
+// Unbounded consumption: runaway loops and denial of wallet (LLM10:2025)
 // ----------------------------------------------------------------------------
-// Cost and availability are SAFETY concerns. An attacker (or a buggy tool loop)
-// can drive unbounded token spend, or an effectively infinite function-call
-// loop, until the bill or the rate limit takes the service down. The agent loop
-// needs hard caps.
+// Three caps on the agent loop, each proven with a deterministic test double
+// (a small local model rarely loops on demand):
 //
-// MAF / Microsoft.Extensions.AI give you built-in caps on the
-// FunctionInvokingChatClient:
-//   - MaximumIterationsPerRequest      — caps function-call roundtrips (default 40)
-//   - MaximumConsecutiveErrorsPerRequest — caps consecutive failing calls (default 3)
-//   - ChatOptions.AllowMultipleToolCalls = false — one tool call per iteration
-// Plus two patterns you add yourself:
-//   - a per-request deadline via CancellationToken
-//   - a per-request token-budget guard (a tiny DelegatingChatClient)
+//   1. FunctionInvokingChatClient.MaximumIterationsPerRequest stops a model
+//      that asks for the same tool forever (RunawayClient).
+//   2. TokenBudgetClient reserves a call's worst case BEFORE the call and
+//      refuses when the reservation does not fit, so the budget holds even
+//      under concurrent requests. A check after the call cannot: the tokens
+//      are already spent.
+//   3. A deadline (CancellationToken) bounds wall-clock time.
 //
-// To make the cap provably fire (a small local model rarely loops on demand),
-// this demo uses a deterministic RunawayClient that requests the same tool every
-// turn and never stops. The cap stops it cleanly — no exception, no infinite
-// spin. (API-gateway rate limiting lives in the hosting chapter; this is the AGENT LOOP.)
+// Rate limiting at the API edge is the hosting chapter's; this is the loop.
+//   dotnet run -- --self-test     prints RESULT n/n, exit code 1 on any failure
 // ============================================================================
 
 using System.ComponentModel;
+using System.Diagnostics;
+using Ch20.ConsumptionLimits;
 using Microsoft.Extensions.AI;
 
-Console.WriteLine("=== Unbounded Consumption (LLM10) ===");
-Console.WriteLine();
+bool selfTest = args.Contains("--self-test");
+Console.WriteLine(selfTest
+    ? "=== Unbounded consumption: self-test ==="
+    : "=== Unbounded consumption (no model; the same suite runs with --self-test) ===");
 
-// ── A tool the runaway model keeps calling forever ────────────────────
+int passed = 0, total = 0;
+void Expect(string name, bool ok)
+{
+    total++;
+    if (ok) passed++;
+    Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+}
+
+// ── 1. Iteration cap ───────────────────────────────────────────────────
+Console.WriteLine("\n-- 1. MaximumIterationsPerRequest stops a runaway tool loop --");
+const int IterationCap = 4;
 int toolCalls = 0;
 
 [Description("Returns the next migration step. Always reports more work to do.")]
 string NextStep([Description("the current step number")] int step)
 {
-    toolCalls++;
-    Console.WriteLine($"   [tool] next_step(step={step}) — call #{toolCalls}");
+    Interlocked.Increment(ref toolCalls);
     return $"Step {step} done. Call next_step with step={step + 1}.";
 }
 
-AIFunction loopTool = AIFunctionFactory.Create((Delegate)NextStep, name: "next_step");
-
-// ── Demo 1: the iteration cap terminates a runaway loop ───────────────
-Console.WriteLine("-- Demo 1: MaximumIterationsPerRequest caps a runaway loop --");
-const int IterationCap = 4;
-
-var runaway = new RunawayClient();
-IChatClient capped = runaway
-    .AsBuilder()
+RunawayClient runaway = new();
+IChatClient capped = runaway.AsBuilder()
     .UseFunctionInvocation(configure: c => c.MaximumIterationsPerRequest = IterationCap)
     .Build();
-
-var options = new ChatOptions
+ChatOptions loopOptions = new()
 {
-    Tools = [loopTool],
-    // One tool call per iteration: a runaway model cannot fan out within a turn.
-    AllowMultipleToolCalls = false
+    Tools = [AIFunctionFactory.Create((Delegate)NextStep, name: "next_step")],
+    AllowMultipleToolCalls = false,   // advisory: the connector decides whether it forwards this
 };
-
-Console.WriteLine($"   cap = {IterationCap} iterations");
 ChatResponse capResult = await capped.GetResponseAsync(
-    [new ChatMessage(ChatRole.User, "Run the migration to completion.")], options);
+    [new ChatMessage(ChatRole.User, "Run the migration to completion.")], loopOptions);
+Expect($"cap {IterationCap}: {toolCalls} tool calls, {runaway.Calls} model calls, then the loop returned",
+    toolCalls == IterationCap && runaway.Calls == IterationCap + 1);
+Expect($"the last model reply is returned as it came: {capResult.Messages.Last().Contents.OfType<FunctionCallContent>().Count()} tool call(s) left unexecuted",
+    capResult.Messages.Last().Contents.OfType<FunctionCallContent>().Any());
 
-Console.WriteLine($"   loop terminated cleanly after {toolCalls} tool calls " +
-                  $"(model wanted to continue forever).");
-Console.WriteLine();
-
-// ── Demo 2: a per-request token-budget guard ──────────────────────────
-// A tiny middleware that sums token usage across the request and throws once a
-// budget is exceeded — denial-of-wallet protection independent of the loop cap.
-Console.WriteLine("-- Demo 2: a per-request token-budget guard --");
-const long TokenBudget = 1000;
-
-var budgeted = new TokenBudgetClient(new MeteredClient(), TokenBudget);
-try
+// ── 2. Token budget ────────────────────────────────────────────────────
+Console.WriteLine("\n-- 2. Token budget: reserve before the call --");
 {
-    // MeteredClient reports 400 tokens per call; the 3rd call trips the 1000 budget.
+    MeteredClient metered = new(tokensPerCall: 400);
+    TokenBudgetClient budget = new(metered, budget: 1000, reservePerCall: 400);
+    List<string> outcomes = [];
     for (int i = 1; i <= 4; i++)
     {
-        ChatResponse r = await budgeted.GetResponseAsync(
-            [new ChatMessage(ChatRole.User, $"request {i}")]);
-        Console.WriteLine($"   request {i}: ok — cumulative tokens = {budgeted.TokensUsed}");
-    }
-}
-catch (InvalidOperationException ex)
-{
-    Console.WriteLine($"   BLOCKED: {ex.Message}");
-}
-Console.WriteLine();
-
-// ── Demo 3: a per-request deadline via CancellationToken ──────────────
-Console.WriteLine("-- Demo 3: a per-request deadline (CancellationToken) --");
-using var deadline = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-try
-{
-    var slow = new SlowClient(TimeSpan.FromSeconds(5));
-    await slow.GetResponseAsync([new ChatMessage(ChatRole.User, "hello")], cancellationToken: deadline.Token);
-    Console.WriteLine("   completed (unexpected)");
-}
-catch (OperationCanceledException)
-{
-    Console.WriteLine("   request cancelled at the 200ms deadline — no runaway wait.");
-}
-Console.WriteLine();
-
-Console.WriteLine("=== Done ===");
-
-// ----------------------------------------------------------------------------
-// Test doubles — deterministic stand-ins so every cap is provably exercised
-// without a live model. In production the inner client is your real provider.
-// ----------------------------------------------------------------------------
-
-/// <summary>A model that asks to call the same tool every turn and never stops.</summary>
-sealed class RunawayClient : IChatClient
-{
-    private int _turn;
-    public ChatClientMetadata Metadata { get; } = new("runaway");
-
-    public Task<ChatResponse> GetResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        _turn++;
-        var call = new FunctionCallContent(
-            $"call-{_turn}", "next_step",
-            new Dictionary<string, object?> { ["step"] = _turn });
-        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, [call])));
-    }
-
-    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-        => throw new NotSupportedException();
-
-    public object? GetService(Type serviceType, object? serviceKey = null) => null;
-    public void Dispose() { }
-}
-
-/// <summary>Reports a fixed token usage per call so the budget guard can be tested.</summary>
-sealed class MeteredClient : IChatClient
-{
-    public ChatClientMetadata Metadata { get; } = new("metered");
-
-    public Task<ChatResponse> GetResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"))
+        try
         {
-            Usage = new UsageDetails { InputTokenCount = 300, OutputTokenCount = 100, TotalTokenCount = 400 }
-        });
-
-    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-        => throw new NotSupportedException();
-
-    public object? GetService(Type serviceType, object? serviceKey = null) => null;
-    public void Dispose() { }
-}
-
-/// <summary>A delegating client that enforces a cumulative token budget.</summary>
-sealed class TokenBudgetClient(IChatClient inner, long budget) : DelegatingChatClient(inner)
-{
-    public long TokensUsed { get; private set; }
-
-    public override async Task<ChatResponse> GetResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        ChatResponse response = await base.GetResponseAsync(messages, options, cancellationToken);
-        TokensUsed += response.Usage?.TotalTokenCount ?? 0;
-        if (TokensUsed > budget)
-        {
-            throw new InvalidOperationException(
-                $"Token budget of {budget} exceeded (used {TokensUsed}).");
+            await budget.GetResponseAsync([new ChatMessage(ChatRole.User, $"request {i}")]);
+            outcomes.Add("ok");
         }
-        return response;
+        catch (TokenBudgetExceededException)
+        {
+            outcomes.Add("refused");
+        }
     }
+    Expect($"budget 1000, 400 per call: [{string.Join(", ", outcomes)}], {metered.Calls} calls made, {budget.Spent} spent",
+        outcomes.SequenceEqual(["ok", "ok", "refused", "refused"]) && metered.Calls == 2 && budget.Spent == 800);
 }
-
-/// <summary>A model that takes longer than any sane request deadline.</summary>
-sealed class SlowClient(TimeSpan delay) : IChatClient
 {
-    public ChatClientMetadata Metadata { get; } = new("slow");
-
-    public async Task<ChatResponse> GetResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
+    MeteredClient metered = new(tokensPerCall: 400);
+    FirstEditionBudgetClient v1 = new(metered, budget: 1000);
+    int ok = 0;
+    try
     {
-        await Task.Delay(delay, cancellationToken);
-        return new ChatResponse(new ChatMessage(ChatRole.Assistant, "done"));
+        for (int i = 1; i <= 4; i++) { await v1.GetResponseAsync([new ChatMessage(ChatRole.User, "x")]); ok++; }
     }
-
-    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-        CancellationToken cancellationToken = default)
-        => throw new NotSupportedException();
-
-    public object? GetService(Type serviceType, object? serviceKey = null) => null;
-    public void Dispose() { }
+    catch (InvalidOperationException) { }
+    Expect($"DEFECT REPRODUCED: the first-edition check after the call spent {v1.TokensUsed} of 1000 in {metered.Calls} calls " +
+        $"and threw away a paid response ({ok} returned)", v1.TokensUsed == 1200 && metered.Calls == 3 && ok == 2);
 }
+{
+    MeteredClient metered = new(tokensPerCall: 400, delay: TimeSpan.FromMilliseconds(30));
+    TokenBudgetClient budget = new(metered, budget: 2000, reservePerCall: 400);
+    int admitted = 0, refused = 0;
+    Task[] callers = [.. Enumerable.Range(0, 20).Select(_ => Task.Run(async () =>
+    {
+        try
+        {
+            await budget.GetResponseAsync([new ChatMessage(ChatRole.User, "go")]);
+            Interlocked.Increment(ref admitted);
+        }
+        catch (TokenBudgetExceededException)
+        {
+            Interlocked.Increment(ref refused);
+        }
+    }))];
+    await Task.WhenAll(callers);
+    Expect($"20 concurrent callers (Task.Run), budget 2000: {admitted} admitted, {refused} refused, " +
+        $"peak {metered.PeakConcurrency} in flight, {budget.Spent} spent",
+        admitted == 5 && refused == 15 && metered.Calls == 5 && budget.Spent <= 2000 && metered.PeakConcurrency > 1);
+}
+
+// ── 3. Deadline ────────────────────────────────────────────────────────
+Console.WriteLine("\n-- 3. A per-request deadline --");
+{
+    SlowClient slow = new(TimeSpan.FromSeconds(30));
+    using CancellationTokenSource deadline = new(TimeSpan.FromMilliseconds(200));
+    long start = Stopwatch.GetTimestamp();
+    bool cancelled = false;
+    try
+    {
+        await slow.GetResponseAsync([new ChatMessage(ChatRole.User, "hello")], cancellationToken: deadline.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        cancelled = true;
+    }
+    TimeSpan elapsed = Stopwatch.GetElapsedTime(start);
+    Expect($"a 30 s call is cancelled at the 200 ms deadline (under 5 s)", cancelled && elapsed < TimeSpan.FromSeconds(5));
+}
+
+Console.WriteLine($"\nRESULT {passed}/{total}");
+return passed == total ? 0 : 1;

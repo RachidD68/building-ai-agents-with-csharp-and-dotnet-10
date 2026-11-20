@@ -22,9 +22,9 @@ namespace Ch20.MiddlewarePipeline.Middleware;
 /// unguarded.
 /// </para>
 /// <para>
-/// In production, replace keyword matching with a more sophisticated approach:
-/// Azure AI Content Safety API, custom ML classifiers, or semantic similarity
-/// against a blocklist.
+/// Keyword matching is a cheap signal with known misses (spacing, homoglyphs,
+/// paraphrase) and known false positives ("hackathon"); the self-test prints
+/// both. It decides what the model sees, never whether an action is allowed.
 /// </para>
 /// </remarks>
 public sealed class ContentFilterMiddleware : DelegatingChatClient
@@ -67,9 +67,10 @@ public sealed class ContentFilterMiddleware : DelegatingChatClient
                 "[ContentFilter] BLOCKED — user message contains prohibited keyword: \"{Keyword}\"",
                 blockedWord);
 
-            return new ChatResponse([
-                new ChatMessage(ChatRole.Assistant, SafeFallbackText)
-            ]);
+            return new ChatResponse(new ChatMessage(ChatRole.Assistant, SafeFallbackText))
+            {
+                FinishReason = ChatFinishReason.ContentFilter,
+            };
         }
 
         _logger.LogInformation("[ContentFilter] PASSED — no blocked content detected");
@@ -89,7 +90,10 @@ public sealed class ContentFilterMiddleware : DelegatingChatClient
                 "[ContentFilter] BLOCKED (streaming) — user message contains prohibited keyword: \"{Keyword}\"",
                 blockedWord);
 
-            yield return new ChatResponseUpdate(ChatRole.Assistant, SafeFallbackText);
+            yield return new ChatResponseUpdate(ChatRole.Assistant, SafeFallbackText)
+            {
+                FinishReason = ChatFinishReason.ContentFilter,
+            };
             yield break;
         }
 

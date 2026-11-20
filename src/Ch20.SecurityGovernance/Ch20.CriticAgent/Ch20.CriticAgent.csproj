@@ -14,8 +14,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- Scripted model for the offline self-test only. -->
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
   </ItemGroup>
 
+  <!-- The deterministic PII detector the critic is compared against (linked, not copied). -->
+  <ItemGroup>
+    <Compile Include="../Ch20.InputSanitization/Sanitizers/PiiDetector.cs" Link="Linked/PiiDetector.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">

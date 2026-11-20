@@ -12,12 +12,22 @@
 //
 // Deterministic on purpose: test doubles make each limit provably fire without
 // a live model. In production the inner client is your real provider.
+//   dotnet run -- --self-test     prints RESULT n/n, exit code 1 on any failure
 // ============================================================================
 
 using System.ComponentModel;
 using Microsoft.Extensions.AI;
 
-Console.WriteLine("=== Exercise: Consumption Limits (LLM10) ===\n");
+Console.WriteLine(args.Contains("--self-test")
+    ? "=== Exercise: Consumption Limits (LLM10): self-test ===\n"
+    : "=== Exercise: Consumption Limits (LLM10) (no model; the same suite runs with --self-test) ===\n");
+int passed = 0, total = 0;
+void Expect(string name, bool ok)
+{
+    total++;
+    if (ok) passed++;
+    Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
+}
 
 int toolCalls = 0;
 
@@ -44,9 +54,7 @@ var options = new ChatOptions { Tools = [loopTool], AllowMultipleToolCalls = fal
 await capped.GetResponseAsync(
     [new ChatMessage(ChatRole.User, "Run the migration to completion.")], options);
 
-Console.WriteLine(toolCalls == IterationCap
-    ? $"PROOF: loop stopped at exactly {toolCalls} calls (the cap)."
-    : $"NOTE: loop ran {toolCalls} calls vs cap {IterationCap}.");
+Expect($"loop stopped at {toolCalls} tool calls (cap {IterationCap})", toolCalls == IterationCap);
 Console.WriteLine();
 
 // ── Per-session token budget ──────────────────────────────────────────
@@ -69,11 +77,9 @@ for (int i = 1; i <= 4; i++)
 // session-b has its OWN ledger — session-a's exhaustion does not leak across.
 await RunInSession(tokenBudgeted, "session-b", "request 1");
 
-Console.WriteLine(
+Expect($"session-a capped at {tokenBudgeted.TokensUsed("session-a")} tokens; session-b untouched ({tokenBudgeted.TokensUsed("session-b")})",
     tokenBudgeted.TokensUsed("session-a") >= TokenBudgetPerSession
-    && tokenBudgeted.TokensUsed("session-b") < TokenBudgetPerSession
-        ? "PROOF: session-a is capped while session-b runs untouched (per-session isolation)."
-        : "NOTE: unexpected ledger state — inspect the output above.");
+    && tokenBudgeted.TokensUsed("session-b") < TokenBudgetPerSession);
 Console.WriteLine();
 
 // ── Per-session request budget (independent guard) ────────────────────
@@ -93,13 +99,12 @@ for (int i = 1; i <= 3; i++)
 // session-d again proves isolation: a fresh session id, a fresh ledger.
 await RunInSession(requestBudgeted, "session-d", "request 1");
 
-Console.WriteLine(
+Expect($"session-c stopped at {requestBudgeted.RequestsMade("session-c")} requests; session-d made {requestBudgeted.RequestsMade("session-d")}",
     requestBudgeted.RequestsMade("session-c") == RequestBudgetPerSession
-    && requestBudgeted.RequestsMade("session-d") == 1
-        ? "PROOF: session-c stopped at its request budget; session-d unaffected."
-        : "NOTE: unexpected ledger state — inspect the output above.");
+    && requestBudgeted.RequestsMade("session-d") == 1);
 
-Console.WriteLine("\n=== Exercise complete! ===");
+Console.WriteLine($"\nRESULT {passed}/{total}");
+return passed == total ? 0 : 1;
 
 /// <summary>Sends one request tagged with a session id and prints the outcome.</summary>
 static async Task RunInSession(SessionBudgetClient client, string sessionId, string prompt)

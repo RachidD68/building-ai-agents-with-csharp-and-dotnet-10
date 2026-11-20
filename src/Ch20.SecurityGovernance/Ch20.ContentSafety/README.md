@@ -1,43 +1,24 @@
-# Ch20.ContentSafety — Graduating from regex (Azure AI Content Safety)
+# Ch20.ContentSafety: Azure AI Content Safety as one more signal (optional)
 
-The production layer above the chapter's regex filters. Part of Microsoft
-Foundry; ML-backed harm detection plus managed custom blocklists. Backs
-the security chapter's "Azure AI Content Safety" section.
+Azure only. Uses the typed surface of `Azure.AI.ContentSafety` 1.0.0
+(`ContentSafetyClient.AnalyzeTextAsync`, per-category severity, custom
+blocklists) and turns the result into a `ModerationSignal`: flagged or clear,
+with the reason. A missing severity is not treated as clear.
 
-## What It Shows
+Prompt Shields and groundedness detection are not typed methods in the 1.0.0
+.NET SDK (they are REST calls); this sample does not make them.
 
-Calls the **stable, typed** surface of `Azure.AI.ContentSafety` 1.0.0:
+## Configuration
 
-- `ContentSafetyClient.AnalyzeText(AnalyzeTextOptions)` — per-category severity
-  (0–6) for **Hate / Violence / Sexual / SelfHarm**.
-- A **custom blocklist** via `AnalyzeTextOptions.BlocklistNames`.
-
-Run against the same adversarial-flavoured inputs as the regex demo to compare
-recall: regex matches fixed patterns; Content Safety scores semantic harm.
-
-## Honest capability note
-
-**Prompt Shields** (direct + document/indirect injection) and **Groundedness
-detection** are real Content Safety features, but in the **1.0.0 .NET SDK they
-are not exposed as typed methods** — they are reached via the REST API only.
-This project does not fabricate a typed call that does not exist. For those
-features, call the REST endpoint (see the chapter's ⚠️ Warning).
-
-## Configuration (gated — runs offline without it)
-
-Without an endpoint + key the program prints a clear `[skipped]` note and exits
-0, so it builds and runs offline. To run for real, set:
-
-```
-ContentSafety:Endpoint   https://<resource>.cognitiveservices.azure.com/
-ContentSafety:ApiKey     <key from the resource>
-ContentSafety:BlocklistName   (optional) a blocklist you created
-```
-
-via `appsettings.json`, user-secrets, or environment variables.
+Without `ContentSafety:Endpoint` the live run prints `[skipped]` and exits 0.
+With it, auth is `DefaultAzureCredential`, or `ContentSafety:ApiKey` when set.
+Optional: `ContentSafety:BlocklistName`.
 
 ## Running
 
 ```bash
-dotnet run
+dotnet run -- --self-test   # offline: options and signal mapping, no Azure call
+dotnet run                  # calls Azure when configured
 ```
+
+The Azure path compiles; it has not been run for the book (no resource configured).

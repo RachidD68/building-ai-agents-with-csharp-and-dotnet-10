@@ -1,51 +1,24 @@
-# Ch20.CriticAgent — Critic Agent for Output Validation
+# Ch20.CriticAgent: a second model as a scored, fallible signal
 
-This project demonstrates the "critic agent" pattern where a second agent
-validates the output of a primary agent before it reaches the user.
+A writer agent answers; a critic agent returns a `ValidationResult` through
+`RunAsync<ValidationResult>()`; `CriticGate` decides, comparing the critic with the
+deterministic PII detector (linked from `Ch20.InputSanitization`):
 
-## What It Shows
+| Situation | Decision |
+|---|---|
+| detector finds PII | Reject (`pii_detector`) |
+| critic gives no usable verdict (prose, bad JSON) | Reject (`critic_unavailable`) |
+| score outside 1-10 | Reject (`critic_out_of_range`) |
+| critic sees PII, detector does not | Escalate |
+| `passed` disagrees with the score | Escalate |
+| otherwise | Publish when score >= 7, else Reject |
 
-- **Two-agent pipeline** — Primary agent generates, critic agent validates
-- **Structured validation** — `RunAsync<ValidationResult>()` for type-safe evaluation
-- **Quality gates** — Pass/fail decisions based on critic scores
-- **Multi-dimensional review** — Factual accuracy, tone, and PII detection
-
-## Architecture
-
-```
-User Prompt
-  → Primary Agent (ContentWriter)
-    → generates response
-  → Critic Agent (QualityCritic)
-    → evaluates response → ValidationResult
-  → Quality Gate
-    → APPROVED (score >= 7) or REJECTED
-```
-
-## ValidationResult Schema
-
-```json
-{
-  "passed": true,
-  "score": 8,
-  "factualAssessment": "Technically accurate explanation",
-  "toneAssessment": "Professional and clear",
-  "piiDetected": false,
-  "issues": [],
-  "suggestions": ["Could add a code example"]
-}
-```
+The critic judges text. A well-written claim that a reimbursement for another
+tenant's employee was submitted passes it; that is the policy's job.
 
 ## Running
 
 ```bash
-dotnet user-secrets set "LlmProvider:OpenAI:ApiKey" "your-token"
-dotnet run
+dotnet run -- --self-test   # offline: scripted writer and critic, RESULT n/n
+dotnet run                  # live, against the configured provider
 ```
-
-## When to Use This Pattern
-
-- Content generation pipelines requiring quality assurance
-- Customer-facing outputs needing tone and accuracy checks
-- Compliance-sensitive domains (healthcare, finance, legal)
-- Any scenario where LLM output needs programmatic validation

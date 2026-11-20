@@ -6,10 +6,12 @@
 //   1. Prompt injection detection — blocks adversarial inputs before the LLM
 //   2. PII detection and redaction — scans responses for sensitive data leaks
 //
-// Key concepts:
-//   - Regex-based heuristic detection (GeneratedRegex for performance)
-//   - Pre-processing (input) and post-processing (output) guardrails
-//   - Defense in depth — multiple detection patterns
+// Both are SIGNALS with measured misses. The self-test runs a labelled corpus
+// and prints what each detector catches, misses and wrongly flags, so the
+// numbers in the chapter are this corpus's numbers and nothing more.
+//
+//   dotnet run                    live run (parts 1-2 offline, part 3 calls the model)
+//   dotnet run -- --self-test     offline: labelled corpus, RESULT n/n
 // ============================================================================
 
 using Ch20.InputSanitization.Sanitizers;
@@ -19,6 +21,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AgenticAI.Common.Extensions;
+using Ch20.InputSanitization;
+
+if (args.Contains("--self-test"))
+    return SanitizationSelfTest.Run();
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLlmChatClient(builder.Configuration);
@@ -146,3 +152,4 @@ else
 }
 
 Console.WriteLine("\n=== Input Sanitization demo complete! ===");
+return 0;

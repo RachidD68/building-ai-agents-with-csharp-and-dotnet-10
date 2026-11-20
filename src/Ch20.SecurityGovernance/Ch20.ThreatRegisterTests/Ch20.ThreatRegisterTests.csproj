@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The threat register (threat-register.json) and one test per row. The
+       tests run the chapter's own controls: their source files are linked
+       below, not copied. Offline with fakes (- -self-test); the injection suite
+       runs against the configured model with - -live. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj" />
+    <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Ch20.PolicyEnforcement/ReimbursementService.cs" Link="Controls/ReimbursementService.cs" />
+    <Compile Include="../Ch20.PolicyEnforcement/AgentTransport.cs" Link="Controls/AgentTransport.cs" />
+    <Compile Include="../Ch20.InputSanitization/Sanitizers/PromptInjectionDetector.cs" Link="Controls/PromptInjectionDetector.cs" />
+    <Compile Include="../Ch20.InputSanitization/Sanitizers/PiiDetector.cs" Link="Controls/PiiDetector.cs" />
+    <Compile Include="../Ch20.MiddlewarePipeline/Middleware/ContentFilterMiddleware.cs" Link="Controls/ContentFilterMiddleware.cs" />
+    <Compile Include="../Ch20.MiddlewarePipeline/Middleware/LoggingMiddleware.cs" Link="Controls/LoggingMiddleware.cs" />
+    <Compile Include="../Ch20.IndirectInjection/PromptAssembler.cs" Link="Controls/PromptAssembler.cs" />
+    <Compile Include="../Ch20.OutputHandling/SafeMarkdown.cs" Link="Controls/SafeMarkdown.cs" />
+    <Compile Include="../Ch20.ConsumptionLimits/Budget.cs" Link="Controls/Budget.cs" />
+    <Compile Include="../Ch20.CriticAgent/CriticGate.cs" Link="Controls/CriticGate.cs" />
+    <Compile Include="../Ch20.CriticAgent/Models/ValidationResult.cs" Link="Controls/ValidationResult.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="threat-register.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

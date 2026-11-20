@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Common/AgenticAI.Common/AgenticAI.Common.csproj" />
+    <!-- Scripted model for the offline self-test only. -->
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
   </ItemGroup>
 
   <ItemGroup>
