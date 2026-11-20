@@ -77,9 +77,11 @@ public sealed class ReimbursementDesk
             requester        TEXT    NOT NULL,
             employee_id      TEXT,
             amount           TEXT,
+            proposed_amount  TEXT,
             currency         TEXT,
             expected_version INTEGER,
             explanation      TEXT,
+            review_note      TEXT,
             state            TEXT    NOT NULL,
             reason           TEXT    NOT NULL,
             PRIMARY KEY (tenant, operation_id));
@@ -165,11 +167,13 @@ public sealed class ReimbursementDesk
     }
 
     /// <summary>
-    /// A reviewer decides, optionally with an edited amount. The claim is looked
-    /// up in the reviewer's own tenant, the reviewer is checked before anything
-    /// else, and an edit is stored only together with a valid decision.
+    /// A reviewer decides on the amount the review screen showed, optionally with
+    /// an edited amount. The claim is looked up in the reviewer's own tenant; the
+    /// reviewer and the shown amount are checked before anything is stored, and an
+    /// edit is stored only together with a valid decision. (The claim's state is
+    /// returned to any caller of the tenant who has its id: see the README.)
     /// </summary>
-    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, Guid operationId,
+    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, Guid operationId, decimal shownAmount,
         bool approve, decimal? editedAmount, CancellationToken ct)
     {
         string tenant = reviewer.TenantId;                // from authentication, never from the client
@@ -178,9 +182,11 @@ public sealed class ReimbursementDesk
             return Status(tenant, operationId);
         (Caller requester, ReimbursementProposal proposal) = pending.Value;
 
-        // Who may decide, checked directly: for every amount, and for a rejection too.
+        // Who may decide, checked directly: for every amount, and for a rejection too. The decision
+        // covers what the reviewer was shown: a proposal that changed since then is shown again.
         string? refused = !reviewer.Permissions.Contains(Roles.FinanceReviewer) ? "reviewer_not_authorized"
-            : reviewer.SubjectId == requester.SubjectId ? "separation_of_duties" : null;
+            : reviewer.SubjectId == requester.SubjectId ? "separation_of_duties"
+            : proposal.Amount != shownAmount ? "proposal_changed" : null;
         if (refused is not null)
             return Status(tenant, operationId) with { Reason = refused };    // nothing stored: still waiting
 
@@ -429,8 +435,10 @@ public sealed class ReimbursementDesk
 
     /// <summary>
     /// The account moved after the review: the claim waits for a reviewer again
-    /// (account_changed), on the current version. The old decision is removed in
-    /// the same transaction, so the next valid review can claim the row.
+    /// (account_changed), on the current version and with the model's proposed
+    /// amount, since an earlier reviewer's edit was never approved at this version.
+    /// The old decision is removed in the same transaction, so the next valid
+    /// review can claim the row.
     /// </summary>
     private ClaimStatus ReviewAgain(Caller requester, Guid operationId, long version)
     {
@@ -439,7 +447,8 @@ public sealed class ReimbursementDesk
         {
             (string, object)[] key = [("$tenant", requester.TenantId), ("$op", operationId.ToString("D"))];
             int moved = Execute(db, tx, """
-                UPDATE claims SET expected_version = $version, reason = 'account_changed'
+                UPDATE claims SET expected_version = $version, reason = 'account_changed',
+                                  amount = proposed_amount, review_note = NULL
                 WHERE tenant = $tenant AND operation_id = $op AND state = 'AwaitingReview'
                 """, [("$version", version), .. key]);
             if (moved == 1)
@@ -449,7 +458,12 @@ public sealed class ReimbursementDesk
         return Status(requester.TenantId, operationId);
     }
 
-    /// <summary>Hands each outbox row to the delivery worker. A row is marked only after the worker recorded its state.</summary>
+    /// <summary>
+    /// Hands each outbox row to the delivery worker. A row is marked only after the
+    /// worker recorded its state. Each row runs on its own: an error other than the
+    /// caller's cancellation is logged, the row is left for the next resume, and the
+    /// other rows are still delivered.
+    /// </summary>
     private async Task DispatchAsync(CancellationToken ct)
     {
         // One dispatcher at a time in this process: a commit that waits here finds its
@@ -459,9 +473,17 @@ public sealed class ReimbursementDesk
         {
             foreach (OutboxRow row in Store.PendingOutbox())
             {
-                await Worker.DeliverAsync(new Delivery(row.Tenant, row.OperationId, row.Payload.EmployeeId,
-                    row.Payload.Amount, row.Payload.Currency), ct);
-                Store.MarkDispatched(row.Id, _clock());
+                try
+                {
+                    await Worker.DeliverAsync(new Delivery(row.Tenant, row.OperationId, row.Payload.EmployeeId,
+                        row.Payload.Amount, row.Payload.Currency), ct);
+                    Store.MarkDispatched(row.Id, _clock());
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    Console.Error.WriteLine($"delivery of {row.Tenant}/{row.OperationId} failed, left for the next " +
+                                            $"resume: {ex.GetType().Name}: {ex.Message}");
+                }
             }
         }
         finally
@@ -479,8 +501,8 @@ public sealed class ReimbursementDesk
         """, ("$tenant", employee.TenantId), ("$op", operationId.ToString("D")), ("$requester", employee.SubjectId)) == 1;
 
     private void SaveProposal(Caller requester, ReimbursementProposal p, string explanation) => Execute("""
-        UPDATE claims SET employee_id = $employee, amount = $amount, currency = $currency,
-                          expected_version = $version, explanation = $explanation
+        UPDATE claims SET employee_id = $employee, amount = $amount, proposed_amount = $amount,
+                          currency = $currency, expected_version = $version, explanation = $explanation
         WHERE tenant = $tenant AND operation_id = $op
         """, ("$employee", p.EmployeeId), ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)),
         ("$currency", p.Currency), ("$version", p.ExpectedVersion), ("$explanation", explanation),
@@ -524,7 +546,7 @@ public sealed class ReimbursementDesk
             return false;
         }
         Execute(db, tx, """
-            UPDATE claims SET amount = $amount, expected_version = $version, explanation = COALESCE($note, explanation)
+            UPDATE claims SET amount = $amount, expected_version = $version, review_note = $note
             WHERE tenant = $tenant AND operation_id = $op
             """, ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)), ("$version", p.ExpectedVersion),
             ("$note", (object?)editNote ?? DBNull.Value), ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")));

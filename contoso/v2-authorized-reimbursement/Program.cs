@@ -17,7 +17,9 @@
 // amount (no role, own claim, another tenant), a crash between each pair of
 // steps, a model outage, a reviewer role revoked before the commit, a second
 // tenant that reuses an operation id, claims of one employee that commit in
-// between each other, and an account deleted under a stranded approval.
+// between each other, a reviewer's edit that must not outlive its review, an
+// account deleted under a stranded approval, a provider that refuses one payee
+// and a stranded claim whose repair throws.
 //
 //   dotnet run                    against the configured model (Ollama llama3.2)
 //   dotnet run -- --self-test     a scripted model, no network; RESULT n/n
@@ -74,6 +76,9 @@ internal static class Scenario
         s_assert = assert;
         string appDb = Path.Combine(root, "app.db"), journal = Path.Combine(root, "provider.db");
         CancellationToken ct = CancellationToken.None;
+        // A reviewer decides on what the review screen showed: by default, the amount of record now.
+        Task<ClaimStatus> Review(ReimbursementDesk d, Caller who, Guid op, bool approve, decimal? edit, decimal? shown = null) =>
+            d.ReviewAsync(who, op, shown ?? d.AmountOfRecord(Tenant, op) ?? 0m, approve, edit, ct);
 
         // Identities as the host's authentication would produce them. Alice also
         // holds the finance-reviewer role, which is what makes step 2 interesting.
@@ -112,7 +117,7 @@ internal static class Scenario
 
         decimal? proposed = desk.AmountOfRecord(Tenant, taxi.SubmissionId);
         Console.WriteLine("\n-- 2. Alice, a finance reviewer too, raises her own claim to 450.00 and approves it --");
-        ClaimStatus self = await desk.ReviewAsync(alice, taxi.SubmissionId, true, 450.00m, ct);
+        ClaimStatus self = await Review(desk, alice, taxi.SubmissionId, true, 450.00m);
         Show(self);
         Expect("refused: separation of duties, still awaiting review",
             self is { State: ClaimState.AwaitingReview, Reason: "separation_of_duties" });
@@ -136,7 +141,7 @@ internal static class Scenario
             ];
             foreach ((string who, Caller reviewer, decimal amount, string reason) in refusedReviews)
             {
-                ClaimStatus r = await desk.ReviewAsync(reviewer, taxi.SubmissionId, true, amount, ct);
+                ClaimStatus r = await Review(desk, reviewer, taxi.SubmissionId, true, amount);
                 Expect($"{who}: {reason}, nothing stored, the claim still waits",
                     r.Reason == reason && desk.AmountOfRecord(Tenant, taxi.SubmissionId) == proposed &&
                     desk.Status(Tenant, taxi.SubmissionId).State == ClaimState.AwaitingReview);
@@ -145,8 +150,8 @@ internal static class Scenario
 
         Console.WriteLine("\n-- 3. Rita edits the amount to 60.00 and approves, twice at once; the provider's response is lost --");
         ClaimStatus[] reviews = await Task.WhenAll(
-            Task.Run(() => desk.ReviewAsync(rita, taxi.SubmissionId, true, 60.00m, ct)),
-            Task.Run(() => desk.ReviewAsync(rita, taxi.SubmissionId, true, 60.00m, ct)));
+            Task.Run(() => Review(desk, rita, taxi.SubmissionId, true, 60.00m, proposed)),
+            Task.Run(() => Review(desk, rita, taxi.SubmissionId, true, 60.00m, proposed)));
         ClaimStatus afterReview = desk.Status(Tenant, taxi.SubmissionId);
         Show(afterReview);
         EmployeeAccount? account = desk.Store.LoadAccount(Tenant, "E-1001");
@@ -196,7 +201,7 @@ internal static class Scenario
         ClaimStatus hotelStatus = await restarted.SubmitAsync(bob, hotel, ct);
         Show(hotelStatus);
         directory.Revoke(Tenant, "E-2002", Permissions.SubmitReimbursement);
-        ClaimStatus revoked = await restarted.ReviewAsync(rita, hotel.SubmissionId, true, null, ct);
+        ClaimStatus revoked = await Review(restarted, rita, hotel.SubmissionId, true, null);
         Show(revoked);
         if (assert)
             Expect("the commit reloads Bob's rights: denied (missing_permission), nothing paid",
@@ -232,7 +237,7 @@ internal static class Scenario
         {
             (ReimbursementDesk crashing, string crashJournal) = Fresh(point, point);
             await crashing.SubmitAsync(alice, taxi, ct);
-            await Survive(() => crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            await Survive(() => Review(crashing, rita, taxi.SubmissionId, true, null));
             ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
             ReimbursementDesk repaired = Restart(point);
             await repaired.ResumeAsync(ct);
@@ -267,7 +272,7 @@ internal static class Scenario
             ReimbursementDesk repaired = Restart("after_proposal");
             await repaired.ResumeAsync(ct);
             ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
-            ClaimStatus reviewed = await repaired.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
+            ClaimStatus reviewed = await Review(repaired, rita, taxi.SubmissionId, true, null);
             Line("after_proposal", stranded, after);
             Expect("crash after_proposal: the restart decides the stored proposal; Rita's review then pays once",
                 stranded is { State: ClaimState.Submitted, Reason: "received" } &&
@@ -294,7 +299,7 @@ internal static class Scenario
         {
             (ReimbursementDesk crashing, string crashJournal) = Fresh("revoked_reviewer", "after_review");
             await crashing.SubmitAsync(alice, taxi, ct);
-            await Survive(() => crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            await Survive(() => Review(crashing, rita, taxi.SubmissionId, true, null));
             ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
             directory.Revoke(Tenant, "rita", Roles.FinanceReviewer);
             ReimbursementDesk repaired = Restart("revoked_reviewer");
@@ -319,7 +324,7 @@ internal static class Scenario
             fabrikam.Detail != restarted.Status(Tenant, lunch.SubmissionId).Detail && Effects(journal) == 3);
 
         // Every commit moves the account version, so one employee's claims meet each other.
-        Console.WriteLine("\n-- 11. Claims of one employee meet; an account disappears --");
+        Console.WriteLine("\n-- 11. Claims of one employee meet; an account disappears; one delivery and one repair fail --");
         directory.Grant(Tenant, "E-2002", Permissions.SubmitReimbursement);
         var train = new ExpenseClaim(Guid.Parse("2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b"), "E-1001",
             "Train to the Fabrikam office on 12 November: 22.40 EUR.");
@@ -328,26 +333,33 @@ internal static class Scenario
             (ReimbursementDesk d, string log) = Fresh("paid_first", null);
             await d.SubmitAsync(alice, taxi, ct);
             ClaimStatus paid = await d.SubmitAsync(alice, train, ct);
-            ClaimStatus reviewed = await d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
+            ClaimStatus reviewed = await Review(d, rita, taxi.SubmissionId, true, null);
             Console.WriteLine($"   train {paid.State} ({paid.Reason}), then Rita approves the taxi: {reviewed.State} ({reviewed.Reason})");
             Expect("another claim paid first: the review covers the current version, both paid once",
                 paid.State == ClaimState.Delivered && reviewed is { State: ClaimState.Delivered, Reason: "exact_proposal_approved" } &&
                 d.Store.LoadAccount(Tenant, "E-1001") is { ReimbursableBalance: 412.80m, Version: 9 } && Effects(log) == 2);
         }
         {
-            // Rita's approval is stored, the process dies, and the train commits before the restart.
+            // Rita's approval, edited to 450, is stored, the process dies, and the train commits before the restart.
             (ReimbursementDesk d, string log) = Fresh("moved_after_review", "after_review");
             await d.SubmitAsync(alice, taxi, ct);
-            await Survive(() => d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
+            await Survive(() => Review(d, rita, taxi.SubmissionId, true, 450.00m));
             await d.SubmitAsync(alice, train, ct);
             ReimbursementDesk repaired = Restart("moved_after_review");
             await repaired.ResumeAsync(ct);
             ClaimStatus waiting = repaired.Status(Tenant, taxi.SubmissionId);
-            ClaimStatus second = await repaired.ReviewAsync(rita, taxi.SubmissionId, true, null, ct);
-            Console.WriteLine($"   approved, then the account moved: {waiting.State} ({waiting.Reason}) -> second review {second.State} ({second.Reason})");
+            decimal? shown = repaired.AmountOfRecord(Tenant, taxi.SubmissionId);
+            // inherit: a review made on a screen that still shows the old edit, then one on the fresh screen.
+            ClaimStatus stale = await Review(repaired, rita, taxi.SubmissionId, true, null, shown: 450.00m);
+            ClaimStatus second = await Review(repaired, rita, taxi.SubmissionId, true, null);
+            Console.WriteLine($"   approved at 450, then the account moved: {waiting.State} ({waiting.Reason}) at {shown:0.00}, " +
+                              $"review of the old screen {stale.State} ({stale.Reason}), second review {second.State} ({second.Reason})");
             Expect("an approval for an older version is asked for again (account_changed), then paid once",
                 waiting is { State: ClaimState.AwaitingReview, Reason: "account_changed" } &&
                 second.State == ClaimState.Delivered && repaired.Store.Count("operations") == 2 && Effects(log) == 2);
+            Expect("inherit: the re-review starts from the proposed 64.80, a review of the old 450 screen stores nothing",
+                shown == 64.80m && stale is { State: ClaimState.AwaitingReview, Reason: "proposal_changed" } &&
+                repaired.Store.LoadAccount(Tenant, "E-1001") is { ReimbursableBalance: 412.80m, Version: 9 });
         }
         {
             // Six low-value claims by Bob at once: every commit but one finds a newer version.
@@ -373,8 +385,8 @@ internal static class Scenario
             var secondTaxi = taxi with { SubmissionId = Guid.Parse("3f4a5b6c-7d8e-4f9a-8b0c-2d3e4f5a6b7c") };
             await d.SubmitAsync(alice, taxi, ct);
             await d.SubmitAsync(alice, secondTaxi, ct);
-            await Survive(() => d.ReviewAsync(rita, taxi.SubmissionId, true, null, ct));
-            DeleteAccount(db, Tenant, "E-1001");
+            await Survive(() => Review(d, rita, taxi.SubmissionId, true, null));
+            Sql(db, "DELETE FROM accounts WHERE tenant = 'contoso' AND employee_id = 'E-1001'");
             var restartedTwice = new List<ReimbursementDesk>();
             for (int i = 0; i < 2; i++)
             {
@@ -385,7 +397,7 @@ internal static class Scenario
             ReimbursementDesk last = restartedTwice[^1];
             ClaimStatus stranded = last.Status(Tenant, taxi.SubmissionId);
             ClaimStatus reconciled = last.Status(Tenant, lunch.SubmissionId);
-            ClaimStatus edited = await last.ReviewAsync(rita, secondTaxi.SubmissionId, true, 55.00m, ct);
+            ClaimStatus edited = await Review(last, rita, secondTaxi.SubmissionId, true, 55.00m);
             Console.WriteLine($"   no account: taxi {stranded.State} ({stranded.Reason}), Bob's lunch {unknown.State} -> {reconciled.State}, " +
                               $"edited review {edited.State} ({edited.Reason})");
             Expect("a stranded approval without an account is rejected (resource_scope); the restart still reconciles",
@@ -395,6 +407,32 @@ internal static class Scenario
             Expect("a review of a claim without an account: rejected (resource_scope), nothing committed",
                 edited is { State: ClaimState.Rejected, Reason: "resource_scope" } && last.Store.Count("operations") == 1);
         }
+        {
+            // The provider refuses Bob outright (not a timeout), Alice's train response is lost,
+            // and a stranded taxi claim holds an amount the restart cannot read.
+            string db = Path.Combine(root, "isolation.db"), log = Path.Combine(root, "isolation-provider.db");
+            ReimbursementDesk Desk(ProviderFault fault) =>
+                new(model, db, new RefusingProvider(new FakePaymentProvider(log, fault), "E-2002"), directory);
+            ReimbursementDesk d = Desk(ProviderFault.AcceptThenTimeout);
+            d.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
+            d.Store.SeedAccount(new EmployeeAccount(Tenant, "E-2002", "EUR", 300m, 3));
+            ClaimStatus refused = await d.SubmitAsync(bob, lunch, ct);
+            ClaimStatus unknown = await d.SubmitAsync(alice, train, ct);
+            d.CrashPoint = step => { if (step == "after_proposal") throw new SimulatedCrash(step); };
+            await Survive(() => d.SubmitAsync(alice, taxi, ct));
+            Sql(db, $"UPDATE claims SET amount = 'unreadable' WHERE operation_id = '{taxi.SubmissionId:D}'");
+            ReimbursementDesk r = Desk(ProviderFault.None);
+            IReadOnlyList<ReconcileResult> resumed = await r.ResumeAsync(ct);
+            ClaimStatus lunchAfter = r.Status(Tenant, lunch.SubmissionId), trainAfter = r.Status(Tenant, train.SubmissionId),
+                        taxiAfter = r.Status(Tenant, taxi.SubmissionId);
+            Console.WriteLine($"   refused payee: lunch {refused.State} -> {lunchAfter.State}; lost response: train {unknown.State} " +
+                              $"-> {trainAfter.State}; unreadable claim: taxi {taxiAfter.State} ({taxiAfter.Reason})");
+            Expect("a provider that refuses one payee: no exception, that row waits, the other unknown payment reconciles",
+                refused.State == ClaimState.OutcomeUnknown && unknown.State == ClaimState.OutcomeUnknown &&
+                lunchAfter.State == ClaimState.OutcomeUnknown && trainAfter.State == ClaimState.Reconciled && Effects(log) == 1);
+            Expect("a stranded claim whose repair throws: ResumeAsync completes, that claim is left as it was",
+                taxiAfter is { State: ClaimState.Submitted, Reason: "received" } && resumed.Count == 2);
+        }
 
         Console.WriteLine($"RESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
@@ -402,15 +440,13 @@ internal static class Scenario
 
     static long Effects(string journal) => new FakePaymentProvider(journal).EffectCount();
 
-    /// <summary>An operator removes an account row while claims still point at it.</summary>
-    static void DeleteAccount(string db, string tenant, string employee)
+    /// <summary>An operator (or a fault) changes the database behind the desk's back.</summary>
+    static void Sql(string db, string sql)
     {
         using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={db};Pooling=False");
         connection.Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "DELETE FROM accounts WHERE tenant = $tenant AND employee_id = $employee";
-        cmd.Parameters.AddWithValue("$tenant", tenant);
-        cmd.Parameters.AddWithValue("$employee", employee);
+        cmd.CommandText = sql;
         cmd.ExecuteNonQuery();
     }
 
@@ -424,6 +460,17 @@ internal static class Scenario
         if (ok) s_passed++;
         Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
+}
+
+/// <summary>A provider that refuses one payee outright, as a 4xx would: not a timeout, so not "unknown".</summary>
+internal sealed class RefusingProvider(IPaymentProvider inner, string payee) : IPaymentProvider
+{
+    public Task<PaymentReceipt> PayAsync(PaymentRequest request, CancellationToken ct) =>
+        request.EmployeeId == payee ? throw new InvalidOperationException($"provider refused payee {payee}")
+                                    : inner.PayAsync(request, ct);
+
+    public Task<PaymentReceipt?> FindByReferenceAsync(string reference, CancellationToken ct) =>
+        inner.FindByReferenceAsync(reference, ct);
 }
 
 /// <summary>Thrown from the self-test's crash hook: the process "dies" at that step.</summary>

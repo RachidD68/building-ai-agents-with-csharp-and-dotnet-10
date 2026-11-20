@@ -21,7 +21,9 @@
 //      dir and type there take no '/' at all; folders are separated with '\'.
 //      The folder test ignores case only on Windows. Hard links are NOT detected.
 //      Shell metacharacters (& | < > ^ % ; , = ! ( ) quotes, backtick,
-//      control characters) are refused in every argument.
+//      control characters) are refused in every argument. cat, type and wc
+//      need a file name, and on Windows device names (CON, AUX, COM1...) are
+//      refused; the child's stdin is closed, so nothing can read the host's.
 //   3. Take structured arguments: the tool accepts an executable name plus a
 //      string[] of arguments and hands them to ProcessStartInfo.ArgumentList,
 //      so each argument is passed verbatim to the program. There is no shell
@@ -101,7 +103,7 @@ Console.WriteLine();
 // That removes a whole class of quoting and injection bugs.
 [Description("""
     Runs one read-only program in the scratch folder and returns its stdout.
-    Allowed: ls, dir, cat, type, wc on files inside the scratch folder, and
+    Allowed: ls and dir, cat, type and wc with a file inside the scratch folder, and
     dotnet --version / --info / --list-sdks / --list-runtimes. Arguments are
     passed as a structured list and may not contain shell metacharacters, so
     pipelines, redirects, and command chaining are impossible. If the program
@@ -213,6 +215,7 @@ internal static class ShellRunner
             FileName = cmdBuiltIn ? Path.Combine(Environment.SystemDirectory, "cmd.exe") : executable,
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,          // never go through the OS shell
+            RedirectStandardInput = true,     // closed after Start: never the host's stdin
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
@@ -265,6 +268,7 @@ internal static class ShellRunner
                 : $"Error: program '{executable}' could not be started ({ex.Message}).");
         }
 
+        if (startInfo.RedirectStandardInput) proc.StandardInput.Close();   // a reader of stdin sees EOF
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
 
@@ -368,9 +372,19 @@ internal static class ShellPolicy
             // A symbolic link or junction inside the folder can point anywhere: refuse any path through one.
             if (ThroughLink(root, parts))
                 return $"'{arg}' goes through a link, which can lead outside the scratch folder.";
+            // On Windows CON, CONIN$, AUX, COM1 and the like are devices, in any folder and with any extension.
+            if (OperatingSystem.IsWindows() && parts.Any(IsDeviceName))
+                return $"'{arg}' names a Windows device, not a file.";
         }
+        // With no file, cat, type and wc read standard input instead of a file in the folder.
+        if (executable.ToLowerInvariant() is "cat" or "type" or "wc" && arguments.All(a => a.StartsWith('-')))
+            return $"{executable.ToLowerInvariant()} needs a file name: without one it reads standard input.";
         return null;
     }
+
+    static bool IsDeviceName(string part) => System.Text.RegularExpressions.Regex.IsMatch(
+        part.TrimEnd('.', ' '), @"^(CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9]|LPT[1-9])(\..*)?$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     // A backslash separates paths only on Windows; elsewhere it is a filename character.
     static readonly char[] Separators = OperatingSystem.IsWindows() ? ['/', '\\'] : ['/'];
@@ -459,6 +473,12 @@ internal static class ShellPolicy
             ("type", [@"a.txt,..\..\x"], false),
             ("cat", ["a.txt;b"], false),
             ("dir", ["a.txt\r\ndel x"], false),
+            // With no file a viewer reads stdin; on Windows a device name is not a file.
+            ("cat", [], false),
+            ("wc", ["-l"], false),
+            ("type", ["CON"], !windows),
+            ("type", ["conin$"], !windows),
+            ("cat", ["notes/aux.txt"], !windows),
         ];
         int passed = 0;
         int total = 0;
@@ -553,6 +573,12 @@ internal static class ShellPolicy
             Report(ls.FileName == "ls" && ls.ArgumentList.SequenceEqual(["-la"]), $"Windows: ls -la -> {Describe(ls)}");
             ProcessStartInfo unixDir = ShellRunner.BuildStartInfo("dir", ["-l"], scratch, isWindows: false);
             Report(unixDir.FileName == "dir" && unixDir.ArgumentList.SequenceEqual(["-l"]), $"Linux: dir -l -> {Describe(unixDir)}");
+
+            // The child's stdin is closed: a program that reads it (sort here) sees EOF at once, never the host's input.
+            ShellResult stdin = await ShellRunner.RunAsync(
+                ShellRunner.BuildStartInfo("sort", [], scratch, OperatingSystem.IsWindows()), "sort", CancellationToken.None);
+            Report(stdin.Status == "exit 0" && stdin.Text == "(no output; exit code 0)",
+                $"sort with no file -> {stdin.Status}: {stdin.Text}");
 
             // A real read of a scratch file with this OS's built-in viewer.
             File.WriteAllText(Path.Combine(scratch, "README.md"), "hello from the scratch folder\n");
