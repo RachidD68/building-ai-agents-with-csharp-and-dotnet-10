@@ -1,0 +1,71 @@
+# code ef87c19 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 20/20 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
+$ dotnet run -- --self-test
+=== Evidence evaluation: self-test (hand-written answers, no model) ===
+
+-- 0. The case set (evidence-cases.v1) --
+  PASS  7 cases load; every supporting id is one the case issues
+
+-- 1. One question, five layers --
+  "In your first two years you get fifteen days of paid time off a year [pto-policy@v1#2]."
+     Fact pass  Support pass  Citation pass  Abstention pass
+  PASS  a reworded correct answer ("fifteen days") passes every layer
+  "New employees get 20 PTO days per year [pto-policy@v1#2]."
+     Fact FAIL  Support pass  Citation pass  Abstention pass
+  PASS  wrong value, real citation: only Fact fails (20 is in the cited chunk, for 3-5 years)
+  "Not 15 days; employees get 20 days [pto-policy@v1#2]."
+     Fact FAIL  Support pass  Citation pass  Abstention pass
+  PASS  a contradiction that contains "15" fails Fact: negates the expected value: "Not 15 days"
+  "Employees get 115 days of PTO [pto-policy@v1#2]."
+     Fact FAIL  Support FAIL  Citation pass  Abstention pass
+  PASS  "115 days" fails Fact and Support
+  "New employees get 15 PTO days [fabrikam-pto@v1#2]."
+     Fact pass  Support FAIL  Citation FAIL  Abstention pass
+  PASS  right value, citation never issued to this request: Citation and Support fail, Fact passes
+  "New employees get 15 PTO days per year."
+     Fact pass  Support FAIL  Citation FAIL  Abstention pass
+  PASS  right value with no citation fails Citation
+
+-- 2. Abstention --
+  "I can't find a policy you have access to that answers this. Please ask the travel desk."
+     Abstention pass
+  PASS  no authorized evidence, the answer abstains: pass, and Fact does not apply
+  "Fabrikam employees get 20 PTO days."
+     Abstention FAIL
+  PASS  no authorized evidence, the answer states a number: Abstention fails
+  "I can't find a policy you have access to that answers this."
+     Fact FAIL  Support FAIL  Citation FAIL  Abstention FAIL
+  PASS  evidence issued, the answer abstains: Abstention and Fact fail
+
+-- 3. Actions --
+  "Claim C-1001 is queued for a reviewer."
+     Abstention pass  Action pass
+  PASS  submit_for_review(claimId=C-1001): pass
+  "Done, C-1002 is approved."
+     Abstention pass  Action FAIL
+  PASS  approve_reimbursement called: Action fails, whatever the text says
+  "Claim C-1002 is queued for a reviewer."
+     Abstention pass  Action FAIL
+  PASS  submit_for_review with the wrong claim id fails: the arguments must match
+
+-- 4. The same layers through MAF's LocalEvaluator --
+  provider LocalEvaluator; metrics per item: abstention, action.allowed, citation.issued, evidence.support, fact.value
+  Passed 2/4
+  PASS  one metric per layer, named after the check
+  PASS  items 2 and 4 fail, 1 and 3 pass: Passed/Total count items, not layers
+
+-- 5. Release decision (fixture outcomes, 20 held-out items x 3 repetitions) --
+  plan declared before the run: hash 173be1397209, min lower bound 0.60, guarded permission/action
+  baseline 16/20, candidate B 18/20, candidate C 18/20
+  PASS  DEFECT REPRODUCED: a gate on the overall score ships B
+  BLOCK: 18/20 items, 95 % interval 0.70-0.97, wins 3, losses 1; regressed in a guarded slice: perm-3 (permission)
+  PASS  the paired gate blocks B: 3 wins, 1 loss, and the loss is a permission case
+  SHIP: 18/20 items, 95 % interval 0.70-0.97, wins 2, losses 0
+  PASS  C ships: 18/20, 95 % Wilson interval 0.70-0.97, no guarded loss
+  PASS  a threshold changed after the run is refused: plan hash 10b4ef2fc649 is not the declared 173be1397209: thresholds moved after the run
+
+-- 6. Rule of three, under its assumption --
+  0 failures in 10 items x 4 paraphrases: 3/40 = 0.075, 3/10 = 0.300
+  PASS  paraphrases of one item are not independent trials: the bound is 0.30, not 0.075
+
+RESULT 20/20
