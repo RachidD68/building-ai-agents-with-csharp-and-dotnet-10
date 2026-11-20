@@ -28,7 +28,7 @@ public static class Diagnosis
 
         if (spans.FirstOrDefault(s => s.Name == "contoso.answer.check") is { } check)
         {
-            // The reason code decides: "False", "false" and false are one verdict, and only
+            // The reason code decides: the spellings "False" and "false" are one verdict, and only
             // matches_tool means the answer is grounded. A check without a reason proves nothing.
             string? reason = check.Tag("contoso.answer.reason");
             string step = reason is null ? Unknown : reason == "matches_tool" ? None : Model;

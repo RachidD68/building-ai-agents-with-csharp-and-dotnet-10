@@ -40,7 +40,7 @@ internal static class SelfTest
                 Expect($"{fault}: diagnosed as {verdict.Step} ({verdict.Evidence})", verdict.Step == step);
             }
 
-            // A converted backend export spells the boolean its own way (OTLP/JSON writes false).
+            // A converter from a backend export may spell the string "false" rather than "False".
             string wrong = File.ReadAllText(Path.Combine(dir, $"{Fault.WrongValue}.jsonl"));
             string lowered = Path.Combine(dir, "wrongvalue-lowercase.jsonl");
             File.WriteAllText(lowered, wrong.Replace("\"contoso.answer.grounded\":\"False\"", "\"contoso.answer.grounded\":\"false\""));
