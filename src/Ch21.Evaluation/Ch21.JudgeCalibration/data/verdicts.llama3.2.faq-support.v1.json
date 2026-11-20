@@ -1,0 +1,128 @@
+{
+  "judgeModel": "llama3.2",
+  "rubric": "faq-support.v1",
+  "calibrationSet": "calibration.v1",
+  "recordedUtc": "2026-11-20 17:27:38Z",
+  "verdicts": [
+    {
+      "itemId": "c01",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR1"
+    },
+    {
+      "itemId": "c02",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c03",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c04",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c05",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c06",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c07",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c08",
+      "label": "unsupported",
+      "rubricLine": "R4",
+      "raw": "VERDICT: UNSUPPORTED\nRUBRIC: R4"
+    },
+    {
+      "itemId": "c09",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c10",
+      "label": "unsupported",
+      "rubricLine": "R4",
+      "raw": "VERDICT: UNSUPPORTED\nRUBRIC: R4"
+    },
+    {
+      "itemId": "c11",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c12",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c13",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c14",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c15",
+      "label": "supported",
+      "rubricLine": null,
+      "raw": "VERDICT: SUPPORTED\nR4"
+    },
+    {
+      "itemId": "c16",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c17",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c18",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c19",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    },
+    {
+      "itemId": "c20",
+      "label": "unsupported",
+      "rubricLine": null,
+      "raw": "VERDICT: UNSUPPORTED\nR4"
+    }
+  ]
+}

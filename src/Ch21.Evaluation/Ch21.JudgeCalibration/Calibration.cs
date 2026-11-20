@@ -118,7 +118,8 @@ public static partial class Calibration
     [GeneratedRegex(@"VERDICT:\W*(UNSUPPORTED|SUPPORTED)", RegexOptions.IgnoreCase)]
     private static partial Regex VerdictLine();
 
-    [GeneratedRegex(@"RUBRIC:\W*(R\d)", RegexOptions.IgnoreCase)]
+    // "RUBRIC: R2", or a bare "R2" on its own line (the form llama3.2 replied with).
+    [GeneratedRegex(@"(?:RUBRIC:\W*|^\W*)(R[1-9])\b", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex RubricLineRef();
 }
 

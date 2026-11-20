@@ -73,6 +73,8 @@ else
         return 2;
     }
     run = JsonSerializer.Deserialize<VerdictFile>(File.ReadAllText(recorded), JsonOptions.Read)!;
+    // Re-parse the raw replies, so a parser fix applies to what was recorded.
+    run = run with { Verdicts = [.. run.Verdicts.Select(v => Calibration.Parse(v.ItemId, v.Raw))] };
     Console.WriteLine($"replaying {run.Verdicts.Count} verdicts recorded {run.RecordedUtc} from judge {run.JudgeModel}");
 }
 

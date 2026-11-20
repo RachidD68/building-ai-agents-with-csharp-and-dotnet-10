@@ -61,6 +61,9 @@ internal static class SelfTest
         Check(verdicts.Single(v => v.ItemId == "c19").Label == "supported" && verdicts.Single(v => v.ItemId == "c04").Label == "supported",
             "\"UNSUPPORTED\" is matched before \"SUPPORTED\"; markdown around VERDICT is tolerated");
         Check(verdicts.Single(v => v.ItemId == "c14").Label is null, "a reply with no verdict line is kept as no verdict, not as a pass");
+        Verdict bare = Calibration.Parse("x", "VERDICT: SUPPORTED\nR1");
+        Check(bare is { Label: "supported", RubricLine: "R1" } && Calibration.Parse("y", "VERDICT: UNSUPPORTED").RubricLine is null,
+            "a bare rubric line (\"R1\" under the verdict) is read; no rubric line stays empty");
 
         Console.WriteLine("\n-- 3. Confusion matrix against the reference labels --");
         CalibrationReport r = Calibration.Compare(items, verdicts);
