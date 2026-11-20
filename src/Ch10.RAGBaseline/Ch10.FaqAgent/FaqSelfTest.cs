@@ -26,7 +26,7 @@ internal static partial class FaqSelfTest
     [
         (Pto, "pto-policy"), (Remote, "remote-work"), (Expense, "expense-policy"),
         ("How long is parental leave for birth parents?", "benefits"),
-        ("Can I carry over unused PTO days?", "pto-policy"), ("Which expense needs pre-approval?", "expense-policy"),
+        ("Can I carry over unused PTO days?", "pto-policy"), ("Which expense needs a finance reviewer?", "expense-policy"),
         ("Who pays for my remote monitor?", "remote-work"), ("Is parental leave paid?", "benefits"),
     ];
 
@@ -191,7 +191,7 @@ internal static partial class FaqSelfTest
         new() { Id = "pto-policy-0", Source = "pto-policy", Topic = "PTO", Content = "New employees get 15 PTO days per year; up to 5 unused days carry over." },
         new() { Id = "remote-work-0", Source = "remote-work", Topic = "Remote work", Content = "Remote staff get a $500 home office equipment stipend." },
         new() { Id = "remote-work-1", Source = "remote-work", Topic = "Remote work", Content = "Contractors may request remote work with manager approval." },
-        new() { Id = "expense-policy-0", Source = "expense-policy", Topic = "Expenses", Content = "File every expense report in the portal within 30 days; over $100 needs pre-approval." },
+        new() { Id = "expense-policy-0", Source = "expense-policy", Topic = "Expenses", Content = "File every expense report in the portal within 30 days; a claim over 50.00 EUR needs a finance reviewer." },
         new() { Id = "benefits-0", Source = "benefits", Topic = "Benefits", Content = "Birth parents receive 16 weeks of fully paid parental leave." },
     ];
 

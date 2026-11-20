@@ -9,7 +9,7 @@
   { "Id": "s08", "Question": "When do I need a doctor's note for sick leave?", "Relevant": ["sick-leave-8"] },
   { "Id": "s09", "Question": "How many approvals does a pull request need?", "Relevant": ["engineering-practices-4"] },
   { "Id": "s10", "Question": "When are performance reviews held?", "Relevant": ["performance-reviews-2"] },
-  { "Id": "m01", "Question": "Which expenses need manager or VP approval?", "Relevant": ["expense-policy-2", "expense-policy-10", "expense-policy-12"] },
+  { "Id": "m01", "Question": "Which expenses need someone else's approval?", "Relevant": ["expense-policy-2", "expense-policy-10", "expense-policy-12"] },
   { "Id": "m02", "Question": "What budgets does Contoso give for learning, conferences and books?", "Relevant": ["benefits-10", "expense-policy-10"] },
   { "Id": "m03", "Question": "What must I do before using a personal device for work?", "Relevant": ["remote-work-10", "security-policy-6"] },
   { "Id": "m04", "Question": "What stipends does Contoso pay?", "Relevant": ["remote-work-6", "benefits-8", "onboarding-6"] },

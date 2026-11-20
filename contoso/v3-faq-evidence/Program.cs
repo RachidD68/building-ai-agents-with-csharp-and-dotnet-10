@@ -201,7 +201,7 @@ internal static partial class SelfTest
     private static List<FaqChunk> Corpus() =>
     [
         new() { Id = "pto-policy-2", Source = "pto-policy", Topic = "PTO", Content = "New employees get 15 PTO days per year; up to 5 unused days carry over." },
-        new() { Id = "expense-policy-6", Source = "expense-policy", Topic = "Expenses", Content = "Meal expenses on travel are capped at $75 per day domestic and $100 international." },
+        new() { Id = "expense-policy-6", Source = "expense-policy", Topic = "Expenses", Content = "Meal expenses on travel are capped at 75.00 EUR per day domestic and 100.00 EUR international." },
         new() { Id = "expense-policy-8", Source = "expense-policy", Topic = "Expenses", Content = "Airfare, hotel, rental car, and ride-sharing expenses are reimbursable on travel." },
         new() { Id = "remote-work-6", Source = "remote-work", Topic = "Remote work", Content = "Remote staff get a $500 home office equipment stipend." },
         new() { Id = "benefits-6", Source = "benefits", Topic = "Benefits", Content = "Birth parents receive 16 weeks of fully paid parental leave." },
