@@ -18,4 +18,4 @@ dotnet run
 The program prints each record's JSON and an OK/MISMATCH verdict, then exits with code
 0 if every record round-tripped cleanly (1 otherwise) — a CI-friendly check.
 
-Full worked solution and discussion are in Appendix E.
+Full worked solution and discussion are in the exercise solutions appendix.

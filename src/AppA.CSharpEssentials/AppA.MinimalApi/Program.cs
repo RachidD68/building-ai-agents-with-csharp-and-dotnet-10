@@ -9,7 +9,16 @@ using System.Collections.Concurrent;
 using AppA.MinimalApi.Services;
 using Microsoft.Extensions.Options;
 
+// dotnet run                  the API on the launch-settings port
+// dotnet run -- --self-test   the same app on a loopback port, called over HTTP
+bool selfTest = args.Contains("--self-test");
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+if (selfTest)
+{
+    builder.WebHost.UseUrls("http://127.0.0.1:0");   // the OS picks a free port
+    builder.Logging.ClearProviders();                // keep the output to the checks
+}
 
 // --- Configuration and the options pattern ---
 // Bind a POCO from configuration. Here we seed an in-memory default; in a real
@@ -19,6 +28,16 @@ builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     ["Weather:DefaultCity"] = "Seattle",
 });
 builder.Services.Configure<WeatherOptions>(builder.Configuration.GetSection("Weather"));
+
+// --- Make request JSON honour the nullable annotations ---
+// By default System.Text.Json ignores them: a body of {} binds an EchoRequest whose
+// non-nullable Text is null, and the endpoint throws (a 500). With these two switches
+// a missing or null "text" fails deserialization, which Minimal APIs answer with a 400.
+builder.Services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.RespectNullableAnnotations = true;
+    o.SerializerOptions.RespectRequiredConstructorParameters = true;
+});
 
 // --- Dependency injection, including KEYED services ---
 // Keyed registration is exactly how the hosting chapter registers named agents with
@@ -65,7 +84,16 @@ app.MapGet("/weather/{city}", (
         : Results.NotFound(new { Error = $"No weather data for '{target}'." });
 });
 
+if (selfTest)
+{
+    await app.StartAsync();
+    int failed = await ApiSelfTest.RunAsync(app);
+    await app.StopAsync();
+    return failed == 0 ? 0 : 1;
+}
+
 app.Run();
+return 0;
 
 // ============================================================================
 // Request/Response Models + Options

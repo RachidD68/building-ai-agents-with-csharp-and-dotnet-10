@@ -13,6 +13,10 @@ Demonstrates the modern C# features used throughout the book. No external packag
 | Required Members | Compile-time enforcement of mandatory configuration |
 | Extension Methods | Adding AI utility methods to existing types |
 | Nullable Reference Types | Safe handling of optional LLM response fields |
+| JSON Serialization | `JsonSerializerOptions.Web`, `[JsonPropertyName]`, enums as strings |
+| Raw String Literals | Multi-line agent instructions without escaping |
+| Streaming with IAsyncEnumerable | `await foreach` over an async iterator with `[EnumeratorCancellation]` |
+| Exception Handling | Cancellation kept apart from failure; exception filters for HTTP status codes |
 
 ## Running
 
