@@ -8,17 +8,18 @@ public static class CapabilityGuards
     /// <summary>
     /// The tool-side switch: function-invocation middleware asks the registry
     /// before every tool call, so the model's request for a withdrawn tool is
-    /// answered with a refusal and the function never runs.
+    /// answered with a refusal and the function never runs. The operator's
+    /// reason stays in the audit; the model and the caller get a fixed message.
     /// </summary>
     public static AIAgent WithCapabilityGuard(this AIAgent agent, CapabilityRegistry registry) =>
         agent.AsBuilder()
             .Use(async (innerAgent, context, next, cancellationToken) =>
             {
                 string tool = context.Function.Name;
-                if (registry.IsWithdrawn(tool, out string reason))
+                if (registry.IsWithdrawn(tool, out _))
                 {
                     registry.RecordDenial(tool, "tool");
-                    return $"capability_withdrawn: '{tool}' is paused ({reason}). Nothing was submitted.";
+                    return $"capability_withdrawn: '{tool}' is paused. Nothing was submitted.";
                 }
                 return await next(context, cancellationToken);
             })
@@ -29,10 +30,10 @@ public static class CapabilityGuards
         where TBuilder : IEndpointConventionBuilder =>
         builder.AddEndpointFilter(async (context, next) =>
         {
-            if (!registry.IsWithdrawn(capability, out string reason)) return await next(context);
+            if (!registry.IsWithdrawn(capability, out _)) return await next(context);
             registry.RecordDenial(capability, "endpoint");
             return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "capability_withdrawn", detail: $"'{capability}' is paused ({reason}).");
+                title: "capability_withdrawn", detail: $"'{capability}' is paused.");
         });
 }
 

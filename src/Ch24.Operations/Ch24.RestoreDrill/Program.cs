@@ -75,18 +75,31 @@ internal static class RestoreChecks
         Expect($"DEFECT REPRODUCED: read by the 2.x code, op5's approval says {Drill.Money(r.Op5Approval.V2)} EUR " +
             $"(schema 3 stores {Drill.Money(r.Op5Approval.V3)} EUR as minor units); the {Drill.Money(r.Op5Approval.Claimed)} EUR claim would pass",
             r.Op5Approval.V2 == 5000m && r.Op5Approval.V3 == 50m && r.Op5Approval.Claimed <= r.Op5Approval.V2);
+        Expect($"the restore read its manifest back from {r.Manifest.File}.manifest.json: sha256, newest write, identity and counts as written",
+            r.Restored.Ok && r.Manifest.Sha256 == r.Written.Sha256 && r.Manifest.NewestWrite == r.Written.NewestWrite &&
+            r.Manifest.IdentityDigest == r.Written.IdentityDigest && r.Manifest.Counts.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .SequenceEqual(r.Written.Counts.OrderBy(kv => kv.Key, StringComparer.Ordinal)));
         Expect("3.1.0 holds op5: 450.00 claimed, 50.00 approved",
             r.Reconcile.Fates.Any(f => Drill.Label(f.Reference) == "op5" && f.State == "Held"));
 
         Dictionary<string, DeliveryStatus> final = r.Final.ToDictionary(d => Drill.Label(d.Reference), d => d.Status);
         Expect($"every operation has a stated end: {string.Join(", ", final.Select(kv => $"{kv.Key} {kv.Value}"))}",
             final.Count == 7 && final["op3"] == DeliveryStatus.Reconciled && final["op4"] == DeliveryStatus.Delivered &&
-            final["op5"] == DeliveryStatus.Pending && final["op6"] == DeliveryStatus.Reconciled && final["op7"] == DeliveryStatus.Reconciled);
+            final["op5"] == DeliveryStatus.Conflict && final["op6"] == DeliveryStatus.Reconciled && final["op7"] == DeliveryStatus.Reconciled);
         Expect($"written after the backup ({string.Join(", ", r.WrittenAfterBackup)}) = paid at the provider, missing from the restore " +
             $"({string.Join(", ", r.Reconcile.Uncertain.Select(u => Drill.Label(u.Reference)))}): both on the uncertainty list",
             r.Reconcile.Uncertain.Select(u => Drill.Label(u.Reference)).SequenceEqual(r.WrittenAfterBackup));
         Expect($"payments at the provider: {r.EffectsBeforeIncident} before the incident, {r.EffectsAfter} after (op4 sent once, nothing paid twice)",
             r.EffectsBeforeIncident == 5 && r.EffectsAfter == 6);
+        {
+            DeliveryWorker dispatcher = new(r.LivePath, new FakePaymentProvider(r.Journal));
+            DeliveryStatus op5 = await dispatcher.DeliverAsync(
+                new Delivery("contoso", Drill.Op(5), "E-1001", Drill.Money(450m), "EUR"), CancellationToken.None);
+            int resumed = (await dispatcher.ResumeAsync(CancellationToken.None)).Count;
+            long payments = new FakePaymentProvider(r.Journal).EffectCount();
+            Expect($"the hold is in the promoted store: dispatching op5 again -> {op5}, resume picks up {resumed} rows, provider payments {payments}",
+                op5 == DeliveryStatus.Conflict && resumed == 0 && payments == 6);
+        }
         Expect($"RTO measured {r.Rto.TotalSeconds.ToString("0.000", CultureInfo.InvariantCulture)} s <= lab target {DrillReport.RtoTarget.TotalSeconds:0} s; " +
             $"RPO {r.Rpo.TotalMinutes:0} min <= {DrillReport.RpoTarget.TotalMinutes:0} min",
             r.Rto > TimeSpan.Zero && r.Rto <= DrillReport.RtoTarget && r.Rpo == TimeSpan.FromMinutes(20) && r.Rpo <= DrillReport.RpoTarget);

@@ -22,6 +22,11 @@ public sealed record CapabilitySnapshot(DateTimeOffset At, long LastSeq, IReadOn
 /// Re-enabling needs the id of the evaluation run that cleared the candidate.
 /// Every change is passed to the propagators (for example the decision point
 /// at the effect), so a path that skips this registry still meets the switch.
+/// They run inside the lock: run after it, a concurrent withdraw and enable
+/// could reach the effect in the opposite order and leave it open.
+/// The on-call flag comes from the caller here (in production, from the
+/// identity provider's role claim), and the evaluation-run id is recorded,
+/// not looked up in the evaluation store.
 /// </summary>
 public sealed class CapabilityRegistry(TimeProvider clock)
 {
@@ -65,7 +70,6 @@ public sealed class CapabilityRegistry(TimeProvider clock)
         string action = withdraw ? "withdraw" : "enable";
         if (!by.OnCall) return Refuse(capability, by, incident, action, "not on call");
         if (string.IsNullOrWhiteSpace(incident)) return Refuse(capability, by, incident, action, "no incident id");
-        Action<string, bool, string>[] propagators;
         lock (_gate)
         {
             if (!_withdrawn.TryGetValue(capability, out string? current))
@@ -73,10 +77,10 @@ public sealed class CapabilityRegistry(TimeProvider clock)
             if ((current is not null) == withdraw) return ChangeResult.AlreadyInState;
             _withdrawn[capability] = withdraw ? detail : null;
             AddLocked(capability, action, by, incident, detail);
-            propagators = [.. _propagators];
+            // Under the lock, so the effect sees the changes in the registry's order.
+            foreach (Action<string, bool, string> p in _propagators) p(capability, withdraw, $"{incident}: {detail}");
+            return ChangeResult.Changed;
         }
-        foreach (Action<string, bool, string> p in propagators) p(capability, withdraw, $"{incident}: {detail}");
-        return ChangeResult.Changed;
     }
 
     private ChangeResult Refuse(string capability, Operator by, string incident, string action, string why)

@@ -13,11 +13,12 @@ public sealed class DrillClock(DateTimeOffset start) : TimeProvider
 }
 
 public sealed record DrillReport(
-    (long Bytes, long Tables, long Deliveries) FileCopy, BackupManifest Manifest,
+    (long Bytes, long Tables, long Deliveries) FileCopy, BackupManifest Written, BackupManifest Manifest,
     IReadOnlyList<(string Attempt, RestoreResult Result)> Attempts, RestoreResult Restored,
     (decimal V2, decimal V3, decimal Claimed) Op5Approval, ReconcileReport Reconcile,
     long EffectsBeforeIncident, long EffectsAfter, IReadOnlyList<Delivery> Final,
-    IReadOnlyList<string> WrittenAfterBackup, DateTimeOffset Incident, TimeSpan Rto, TimeSpan Rpo)
+    IReadOnlyList<string> WrittenAfterBackup, DateTimeOffset Incident, TimeSpan Rto, TimeSpan Rpo,
+    string LivePath, string Journal)
 {
     public static readonly TimeSpan RtoTarget = TimeSpan.FromSeconds(60);   // lab choice
     public static readonly TimeSpan RpoTarget = TimeSpan.FromMinutes(30);   // lab choice
@@ -92,7 +93,7 @@ public static class Drill
         log($"  09:18  File.Copy of contoso.db returned: {fileCopy.Item1} bytes");
 
         clock.At(9, 20);
-        BackupManifest manifest = Backups.Online(live, backups, clock.GetUtcNow());
+        BackupManifest written = Backups.Online(live, backups, clock.GetUtcNow()), manifest = written;
         backedUp = true;
         log($"  09:20  online backup {manifest.File}: newest write {manifest.NewestWrite:HH:mm}, schema {manifest.Schema}, sha256 {manifest.Sha256[..12]}");
 
@@ -106,7 +107,7 @@ public static class Drill
         foreach (string suffix in new[] { "", "-wal", "-shm" }) File.Delete(live.Path + suffix);
         log($"  09:35  INCIDENT: live store lost. Provider journal holds {effectsBefore} payments.");
         Stopwatch rto = Stopwatch.StartNew();
-
+        manifest = Backups.ReadManifest(backups);                // what survives the incident is the file
         List<(string, RestoreResult)> attempts =
         [
             ($"binary {Rollback}", Restores.Into(backups, manifest, Rollback, Path.Combine(work, "restore-a"), live.Path)),
@@ -134,8 +135,9 @@ public static class Drill
             db.Open();
             final = StoreFacts.Deliveries(db);
         }
-        return new(fileCopy, manifest, attempts, restored, op5, report, effectsBefore,
-            new FakePaymentProvider(journal).EffectCount(), final, afterBackup, incident, rto.Elapsed, incident - manifest.NewestWrite);
+        return new(fileCopy, written, manifest, attempts, restored, op5, report, effectsBefore,
+            new FakePaymentProvider(journal).EffectCount(), final, afterBackup, incident, rto.Elapsed, incident - manifest.NewestWrite,
+            live.Path, journal);
     }
 
     public static string Money(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);

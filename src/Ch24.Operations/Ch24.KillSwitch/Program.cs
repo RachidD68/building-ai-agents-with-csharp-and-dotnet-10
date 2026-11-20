@@ -89,6 +89,7 @@ internal static class KillSwitchSuite
             model.Turns[^1].Messages.Any(m => m.Text == "What do I need for a receipt?"));
         Expect($"HTTP POST /reimbursements: {(int)(await PostRaw(api, "E-1001", 10m))} capability_withdrawn; GET /faq: {(int)await Faq(api)}",
             api.LastStatus == HttpStatusCode.ServiceUnavailable && api.LastBody.Contains("capability_withdrawn") &&
+            !api.LastBody.Contains("re-index", StringComparison.Ordinal) &&
             await Faq(api) == HttpStatusCode.OK);
         Outcome direct = world.Service.Reimburse("mcp", World.Alice, new(Guid.NewGuid(), "E-1001", 10m, "EUR"));
         Expect($"a path that skips both guards meets the decision point: {direct}", direct.Reason == "tool_revoked");
@@ -128,7 +129,36 @@ internal static class KillSwitchSuite
             AIAgent extra = new ChatClientAgent(m, tools: [AIFunctionFactory.Create(ExportHistory, name: "export_history")])
                 .WithCapabilityGuard(registry);
             await extra.RunAsync("export everything");
-            Expect($"a tool nobody registered is refused (fail closed): {Last(m)}", !ran && Last(m).Contains("not registered"));
+            Expect($"a tool nobody registered is refused (fail closed): {Last(m)}",
+                !ran && Last(m).StartsWith("capability_withdrawn", StringComparison.Ordinal) &&
+                registry.IsWithdrawn("export_history", out string why) && why == "not registered");
+        }
+        {
+            World w = new();
+            CapabilityRegistry reg = NewRegistry(clock, w);
+            const int Races = 5000;
+            int disagree = 0;
+            for (int i = 0; i < Races; i++)
+            {
+                if (i % 2 == 0) reg.Withdraw(Capabilities.Reimburse, OnCallAna, Incident, "race");
+                else reg.Enable(Capabilities.Reimburse, OnCallAna, Incident, "eval-race");
+                using Barrier both = new(2);
+                await Task.WhenAll(
+                    Task.Run(() => { both.SignalAndWait(); reg.Enable(Capabilities.Reimburse, OnCallBen, Incident, "eval-race"); }),
+                    Task.Run(() => { both.SignalAndWait(); reg.Withdraw(Capabilities.Reimburse, OnCallAna, Incident, "race"); }));
+                if (reg.IsWithdrawn(Capabilities.Reimburse, out _) != w.Revocations.IsToolRevoked(Capabilities.Reimburse)) disagree++;
+            }
+            Expect($"{Races} withdraw-vs-enable races (Task.Run + Barrier): registry and effect disagree in {disagree}", disagree == 0);
+        }
+        {
+            World w = new();
+            CapabilityRegistry reg = NewRegistry(clock, w);
+            w.Revocations.RevokeTool(Capabilities.Reimburse, "SEC-77: tool token leaked");   // the security chapter's own revocation
+            reg.Withdraw(Capabilities.Reimburse, OnCallAna, Incident, "drill");
+            reg.Enable(Capabilities.Reimburse, OnCallAna, Incident, "eval-2026-11-20-r2");
+            Outcome o = w.Service.Reimburse("mcp", World.Alice, new(Guid.NewGuid(), "E-1001", 10m, "EUR"));
+            Expect($"a security revocation outlives the switch's withdraw and enable: switch enabled, direct path {o}",
+                !reg.IsWithdrawn(Capabilities.Reimburse, out _) && o.Reason == "tool_revoked");
         }
 
         Console.WriteLine("\n-- Where it fails --");
@@ -192,8 +222,9 @@ internal static class KillSwitchSuite
         registry.Propagate((capability, withdrawn, reason) =>
         {
             if (capability != Capabilities.Reimburse) return;
-            if (withdrawn) world.Revocations.RevokeTool(capability, reason);
-            else world.Revocations.RestoreTool(capability);
+            // Its own revocation source: an enable lifts this switch's revocation, never security's.
+            if (withdrawn) world.Revocations.RevokeTool(capability, "ops-switch", reason);
+            else world.Revocations.RestoreTool(capability, "ops-switch");
         });
         return registry;
     }

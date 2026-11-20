@@ -36,7 +36,10 @@ public static class Reconciler
     /// Brings every operation the restored store knows, and every payment the
     /// provider knows, to a stated end:
     ///  - Pending: held when its approval does not cover the amount, otherwise
-    ///    left for the normal dispatcher;
+    ///    left for the normal dispatcher. The hold is written to the store as
+    ///    Conflict, the delivery worker's state for "a person decides": no
+    ///    worker claims it (DeliverAsync claims Pending, ResumeAsync resumes
+    ///    Sending and OutcomeUnknown);
     ///  - Sending / OutcomeUnknown: Ch08's DeliveryWorker asks the provider by
     ///    reference and sends again only when the provider has no record;
     ///  - a payment in the statement with no row in the store (made after the
@@ -58,7 +61,12 @@ public static class Reconciler
                 decimal amount = decimal.Parse(d.Amount, CultureInfo.InvariantCulture);
                 if (approved is null || amount > approved)
                 {
-                    fates.Add(new(d.Reference, "Held", $"{d.Amount} {d.Currency} claimed, {approved?.ToString("0.00", CultureInfo.InvariantCulture) ?? "no"} approved; needs a new approval"));
+                    StoreSchema.Exec(db, null, """
+                        UPDATE deliveries SET status = 'Conflict', updated_at = $now
+                        WHERE tenant = $t AND operation_id = $op AND status = $was
+                        """, ("$t", d.Tenant), ("$op", d.OperationId.ToString("D")), ("$was", d.Status.ToString()),
+                        ("$now", DateTimeOffset.UtcNow.ToString("O")));
+                    fates.Add(new(d.Reference, "Held", $"{d.Amount} {d.Currency} claimed, {approved?.ToString("0.00", CultureInfo.InvariantCulture) ?? "no"} approved; stored as Conflict until a new approval"));
                     if (d.Status != DeliveryStatus.Pending)
                         uncertain.Add(new(d.Reference, d.Status.ToString(), "sent once, now over its approval: a person decides"));
                 }

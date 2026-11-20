@@ -38,18 +38,22 @@ public sealed class RuleModes
 /// <summary>
 /// Revoked tools and subjects, read at every decision. Nothing caches it at
 /// session start, so a revocation reaches sessions that are already open.
+/// A tool revocation is kept per source (security, an operations switch, ...):
+/// a source lifts only its own, and the tool stays revoked while any is active.
 /// </summary>
 public sealed class RevocationList
 {
-    private readonly ConcurrentDictionary<string, string> _tools = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<(string Tool, string Source), string> _tools = new();
     private readonly ConcurrentDictionary<string, string> _subjects = new(StringComparer.Ordinal);
 
-    public void RevokeTool(string tool, string reason) => _tools[tool] = reason;
-    public void RestoreTool(string tool) => _tools.TryRemove(tool, out _);
+    public void RevokeTool(string tool, string reason) => RevokeTool(tool, "security", reason);
+    public void RestoreTool(string tool) => RestoreTool(tool, "security");
+    public void RevokeTool(string tool, string source, string reason) => _tools[(tool, source)] = reason;
+    public void RestoreTool(string tool, string source) => _tools.TryRemove((tool, source), out _);
     public void RevokeSubject(string tenantId, string subjectId, string reason) => _subjects[$"{tenantId}/{subjectId}"] = reason;
     public void RestoreSubject(string tenantId, string subjectId) => _subjects.TryRemove($"{tenantId}/{subjectId}", out _);
 
-    public bool IsToolRevoked(string tool) => _tools.ContainsKey(tool);
+    public bool IsToolRevoked(string tool) => _tools.Keys.Any(k => k.Tool == tool);
     public bool IsSubjectRevoked(Caller caller) => _subjects.ContainsKey($"{caller.TenantId}/{caller.SubjectId}");
 }
 

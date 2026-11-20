@@ -13,6 +13,10 @@ FAQ (`search_faq`) stays up. The switch is code, read on every call:
 
 - `Withdraw` and `Enable` need an on-call operator and an incident id. `Enable` also needs the id of the evaluation run that cleared the candidate. Every attempt is audited, refused ones included.
 - A capability nobody registered counts as withdrawn (fail closed).
+- The propagators run inside the registry's lock, so the effect sees changes in the registry's order; run after it, a concurrent withdraw and enable can leave the effect open while the registry says withdrawn.
+- The propagator revokes under its own source (`ops-switch`) on the security chapter's `RevocationList`, so an enable never lifts a security revocation it did not set.
+- Callers and the model get a fixed refusal (`'reimburse' is paused`); the operator's reason stays in the audit.
+- Lab limits: the on-call flag is passed by the caller (in production it comes from the identity provider's role claim), and the evaluation-run id is recorded, not looked up in the evaluation store.
 - `Snapshot()` records the states before anything changes (preserve the facts first).
 - Nothing caches the states at session start, so a withdrawal reaches sessions that are already open, and the same session works again after `Enable`.
 
@@ -31,6 +35,8 @@ A scripted model (`AgenticAI.Testing.ScriptedToolChatClient`) does what the user
 - 20 concurrent runs after the withdrawal are all refused;
 - a call that was already past the tool-side check is denied at the effect;
 - an unregistered tool is refused;
+- 5000 withdraw-vs-enable races (`Task.Run` + `Barrier`) leave the registry and the effect in the same state;
+- a security revocation outlives an ops withdraw and enable;
 - re-enabling with no evaluation run is refused.
 
 Two failures are reproduced (`DEFECT REPRODUCED`):

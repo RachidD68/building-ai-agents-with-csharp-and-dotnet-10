@@ -46,6 +46,18 @@ public static class Backups
         return manifest;
     }
 
+    /// <summary>
+    /// The newest manifest in the backup folder, read from disk: at restore time
+    /// the process that took the backup is gone. Its SHA-256 sits beside the
+    /// backup, so it proves the file is intact, not who wrote it.
+    /// </summary>
+    public static BackupManifest ReadManifest(string folder)
+    {
+        string newest = Directory.GetFiles(folder, "contoso-*.db.manifest.json").Order(StringComparer.Ordinal).Last();
+        return JsonSerializer.Deserialize<BackupManifest>(System.IO.File.ReadAllText(newest), JsonSerializerOptions.Web)
+            ?? throw new InvalidDataException($"{newest} is empty");
+    }
+
     /// <summary>The reproduction: copy the main database file and call that a backup.</summary>
     public static string FileCopy(ContosoStore live, string folder)
     {

@@ -18,9 +18,9 @@ The simulated payment provider (`Ch08.UncertainOutcome.FakePaymentProvider`) kee
 | 09:25-09:30 | op6 paid; op7 accepted, response lost |
 | 09:35 | incident: the live store is deleted; the RTO clock starts |
 
-Then the binary is checked against the backup before any row is read: schema version × embedding model of the index. Binary 2.4.0 (schema 1-2) and 3.0.0 (another embedding model) are refused, and so is a restore over the live path. Binary 3.1.0 restores into an empty folder of its own and verifies SHA-256, `integrity_check`, schema, identity and counts. Next it reconciles, and finally it promotes the copy:
+After the incident the manifest is read back from disk (`<backup>.manifest.json`): the process that took the backup is gone. Its SHA-256 sits beside the backup, so it proves integrity, not authenticity. Then the binary is checked against the backup before any row is read: schema version × embedding model of the index. Binary 2.4.0 (schema 1-2) and 3.0.0 (another embedding model) are refused, and so is a restore over the live path. Binary 3.1.0 restores into an empty folder of its own and verifies SHA-256, `integrity_check`, schema, identity and counts. Next it reconciles, and finally it promotes the copy:
 
-- Pending op5 is held (its approval does not cover it);
+- Pending op5 is held (its approval does not cover it): written to the store as `Conflict`, which no `DeliveryWorker` claims; the self-test dispatches and resumes on the promoted store and the provider still holds six payments;
 - op3 and op4 go through Ch08's `DeliveryWorker.ResumeAsync`: found by reference, or sent again with the same reference;
 - op6 and op7 were paid after the recovery point. They are recorded from the provider's statement and put on the uncertainty list, because their approvals and conversations are gone.
 
@@ -40,6 +40,8 @@ Two failures are reproduced (`DEFECT REPRODUCED`):
 - `File.Copy` returns, and the copy has every table and none of the deliveries: they were still in `contoso.db-wal`, held open by the running service's connection;
 - schema 3 changed the meaning of `approvals.amount` (minor units) without renaming it, so the 2.x reader takes 50.00 EUR for 5000.00 EUR.
 
-The second run starts two reconcilers at once (`Task.Run` + `Barrier`). The provider still holds six payments.
+The second run starts two reconcilers at once (`Task.Run` + `Barrier`). `ResumeAsync` does not claim rows, so both may send op4; the provider's idempotency key on the reference absorbs the second, and it still holds six payments.
+
+The live-path guard compares full paths; it does not resolve junctions or symbolic links.
 
 Packages: `Microsoft.Data.Sqlite.Core` and `SQLitePCLRaw.bundle_e_sqlite3` (GA, pinned once in `Directory.Packages.props`). No model, no network. Wall-clock timestamps (`deliveries.updated_at`, the provider's `accepted_at`) make the backup's SHA-256 differ between runs. The rest of the output is fixed, except the RTO.
