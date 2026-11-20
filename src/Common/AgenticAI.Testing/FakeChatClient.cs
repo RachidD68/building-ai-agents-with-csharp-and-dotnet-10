@@ -8,7 +8,8 @@ public sealed record FakeReply(
     IReadOnlyList<string> Chunks,
     ChatFinishReason? FinishReason,
     Exception? Error = null,
-    bool HangAfterChunks = false)
+    bool HangAfterChunks = false,
+    bool EndQuietlyOnCancel = false)
 {
     /// <summary>A complete answer that ends with <c>Stop</c>, or with the reason given.</summary>
     public static FakeReply Text(string text, ChatFinishReason? finish = null) =>
@@ -22,6 +23,14 @@ public sealed record FakeReply(
 
     /// <summary>The chunks arrive, then the call waits until its token is cancelled.</summary>
     public static FakeReply Hang(params string[] chunksFirst) => new(chunksFirst, null, HangAfterChunks: true);
+
+    /// <summary>
+    /// The chunks arrive, the call waits for its token, and on cancellation it ends
+    /// normally, with no exception and no finish reason: a provider that swallows
+    /// the cancellation.
+    /// </summary>
+    public static FakeReply HangThenEndQuietly(params string[] chunksFirst) =>
+        new(chunksFirst, null, HangAfterChunks: true, EndQuietlyOnCancel: true);
 }
 
 /// <summary>What the client was sent on one call.</summary>
@@ -76,7 +85,7 @@ public sealed class FakeChatClient(params FakeReply[] script) : IChatClient
             Observe(call, cancellationToken);
             yield return new ChatResponseUpdate(ChatRole.Assistant, chunk);
         }
-        await FinishAsync(call, reply, cancellationToken);
+        if (await FinishAsync(call, reply, cancellationToken)) yield break;
         yield return new ChatResponseUpdate { Role = ChatRole.Assistant, FinishReason = reply.FinishReason };
     }
 
@@ -98,8 +107,14 @@ public sealed class FakeChatClient(params FakeReply[] script) : IChatClient
         }
     }
 
-    private static async Task FinishAsync(FakeCall call, FakeReply reply, CancellationToken token)
+    /// <summary>Returns true when the call ended quietly on cancellation.</summary>
+    private static async Task<bool> FinishAsync(FakeCall call, FakeReply reply, CancellationToken token)
     {
+        if (reply.EndQuietlyOnCancel && token.IsCancellationRequested)
+        {
+            call.SawCancellation = true;
+            return true;
+        }
         Observe(call, token);
         if (reply.HangAfterChunks)
         {
@@ -110,10 +125,12 @@ public sealed class FakeChatClient(params FakeReply[] script) : IChatClient
             catch (OperationCanceledException)
             {
                 call.SawCancellation = true;
+                if (reply.EndQuietlyOnCancel) return true;
                 throw;
             }
         }
         if (reply.Error is not null) throw reply.Error;
+        return false;
     }
 
     private static void Observe(FakeCall call, CancellationToken token)

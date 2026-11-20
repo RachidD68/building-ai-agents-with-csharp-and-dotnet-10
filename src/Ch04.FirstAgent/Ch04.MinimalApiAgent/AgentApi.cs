@@ -76,7 +76,7 @@ public static class AgentApi
 
         // No session: a throwaway one per request, so the endpoint is single-turn.
         RunOutcome outcome = await AgentRuns.RunAsync(
-            () => agent.RunAsync(request.Message!, session: null, options, budget.Token), requestAborted);
+            () => agent.RunAsync(request.Message!, session: null, options, budget.Token), requestAborted, budget.Token);
         log.Add("POST /chat", outcome);
 
         return outcome.Status switch
@@ -107,7 +107,7 @@ public static class AgentApi
         using CancellationTokenSource budget = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
         budget.CancelAfter(TimeSpan.FromSeconds(limits.TimeBudgetSeconds));
         ChatClientAgentRunOptions options = new(new ChatOptions { MaxOutputTokens = limits.MaxOutputTokens });
-        RunTracker tracker = new(requestAborted);
+        RunTracker tracker = new(requestAborted, budget.Token);
         try
         {
             await using IAsyncEnumerator<AgentResponseUpdate> updates =

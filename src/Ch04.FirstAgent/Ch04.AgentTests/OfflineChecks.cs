@@ -124,6 +124,35 @@ internal static class OfflineChecks
             t.Expect("the caller's token reached the model call and stopped it", hanging.Calls[0].SawCancellation);
         }
 
+        // A provider that ends the stream quietly once the token is cancelled: no
+        // exception, no finish reason. The live run against Ollama did exactly this.
+        using (CancellationTokenSource cts = new())
+        {
+            ChatClientAgent agent = ContosoPolicy.Create(new FakeChatClient(FakeReply.HangThenEndQuietly(chunks[0])));
+            RunOutcome blind = await AgentRuns.CollectAsync(
+                agent.RunStreamingAsync(Question, cancellationToken: cts.Token), CancellationToken.None, _ => cts.Cancel());
+            Show(blind);
+            t.Expect("DEFECT REPRODUCED: judged by the stream alone, a quietly ended cancelled run looks Completed",
+                blind.Status == RunStatus.Completed && blind.FinishReason is null);
+        }
+        using (CancellationTokenSource cts = new())
+        {
+            ChatClientAgent agent = ContosoPolicy.Create(new FakeChatClient(FakeReply.HangThenEndQuietly(chunks[0])));
+            RunOutcome quiet = await AgentRuns.CollectAsync(
+                agent.RunStreamingAsync(Question, cancellationToken: cts.Token), cts.Token, _ => cts.Cancel());
+            Show(quiet);
+            t.Expect("with the caller's token, the same quiet end is Cancelled", quiet.Status == RunStatus.Cancelled);
+        }
+        using (CancellationTokenSource budget = new(TimeSpan.FromMilliseconds(100)))
+        {
+            ChatClientAgent agent = ContosoPolicy.Create(new FakeChatClient(FakeReply.HangThenEndQuietly(chunks[0])));
+            RunOutcome quietBudget = await AgentRuns.CollectAsync(
+                agent.RunStreamingAsync(Question, cancellationToken: budget.Token), CancellationToken.None,
+                runToken: budget.Token);
+            t.Expect("a quiet end after the time budget ran out is Failed",
+                quietBudget.Status == RunStatus.Failed && quietBudget.Error is OperationCanceledException);
+        }
+
         HttpRequestException dropped = new("connection reset by the model server");
         RunOutcome failed = await Collect(FakeReply.Throw(dropped, chunks[0]));
         Show(failed);
