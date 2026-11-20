@@ -100,6 +100,7 @@ public sealed class ReimbursementDesk
     private readonly string _databasePath;
     private readonly PermissionDirectory _directory;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly SemaphoreSlim _dispatch = new(1, 1);
 
     public ReimbursementDesk(IChatClient model, string databasePath, IPaymentProvider provider,
         PermissionDirectory directory, Func<DateTimeOffset>? clock = null)
@@ -451,11 +452,21 @@ public sealed class ReimbursementDesk
     /// <summary>Hands each outbox row to the delivery worker. A row is marked only after the worker recorded its state.</summary>
     private async Task DispatchAsync(CancellationToken ct)
     {
-        foreach (OutboxRow row in Store.PendingOutbox())
+        // One dispatcher at a time in this process: a commit that waits here finds its
+        // own row delivered by the dispatcher before it, never half-way through a send.
+        await _dispatch.WaitAsync(ct);
+        try
         {
-            await Worker.DeliverAsync(new Delivery(row.Tenant, row.OperationId, row.Payload.EmployeeId,
-                row.Payload.Amount, row.Payload.Currency), ct);
-            Store.MarkDispatched(row.Id, _clock());
+            foreach (OutboxRow row in Store.PendingOutbox())
+            {
+                await Worker.DeliverAsync(new Delivery(row.Tenant, row.OperationId, row.Payload.EmployeeId,
+                    row.Payload.Amount, row.Payload.Currency), ct);
+                Store.MarkDispatched(row.Id, _clock());
+            }
+        }
+        finally
+        {
+            _dispatch.Release();
         }
     }
 
