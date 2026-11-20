@@ -120,6 +120,7 @@
     <Project Path="src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/src/Ch19.Observability/">
+    <Project Path="src/Ch19.Observability/Ch19.IncidentDiagnosis/Ch19.IncidentDiagnosis.csproj" />
     <Project Path="src/Ch19.Observability/Ch19.OpenTelemetryAgent/Ch19.OpenTelemetryAgent.csproj" />
   </Folder>
   <Folder Name="/src/Ch20.SecurityGovernance/">
