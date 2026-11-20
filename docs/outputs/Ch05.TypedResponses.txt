@@ -1,0 +1,97 @@
+# code eb5c375-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2)
+$ dotnet run
+
+=== Structured Output — Typed Responses ===
+
+--- Example 1: Weather Report ---
+
+Location     : Seattle, Washington
+Temperature  : 0°C
+Conditions   : Partly Cloudy
+Humidity     : 0%
+Wind Speed   : 19 km/h
+Summary      : Moderate chance of rain showers throughout the day, with a high of 12°C and a low of 6°C. Light drizzle expected in the afternoon.
+
+--- Example 2: Movie Review ---
+
+Title          : Inception
+Rating         : 0/10
+Genre          : Action, Adventure, Sci-Fi
+Strengths      : 
+Weaknesses     : 
+Recommendation : True, but with caution due to intense action sequences and mature themes.
+
+--- Example 3: Task List from Natural Language ---
+
+Input: I need to build a REST API for a bookstore. The main tasks are:
+setting up the project with ASP.NET Core, designing the database
+schema for books and authors, implementing CRUD endpoints,
+adding authentication with JWT, writing integration tests,
+and deploying to Azure App Service.
+
+Project: 
+
+  [High  ] 
+          Setting up the project with ASP.NET Core
+          Estimated: 
+  [Medium] 
+          Designing the database schema for books and authors
+          Estimated: 
+  [Medium] 
+          Implementing CRUD endpoints
+          Estimated: 
+  [Medium] 
+          Adding authentication with JWT
+          Estimated: 
+  [Low   ] 
+          Writing integration tests
+          Estimated: 
+  [Low   ] 
+          Deploying to Azure App Service
+          Estimated: 
+
+--- Raw JSON (for inspection) ---
+
+{
+  "projectName": "",
+  "tasks": [
+    {
+      "title": "",
+      "description": "Setting up the project with ASP.NET Core",
+      "priority": "High",
+      "estimatedTime": ""
+    },
+    {
+      "title": "",
+      "description": "Designing the database schema for books and authors",
+      "priority": "Medium",
+      "estimatedTime": ""
+    },
+    {
+      "title": "",
+      "description": "Implementing CRUD endpoints",
+      "priority": "Medium",
+      "estimatedTime": ""
+    },
+    {
+      "title": "",
+      "description": "Adding authentication with JWT",
+      "priority": "Medium",
+      "estimatedTime": ""
+    },
+    {
+      "title": "",
+      "description": "Writing integration tests",
+      "priority": "Low",
+      "estimatedTime": ""
+    },
+    {
+      "title": "",
+      "description": "Deploying to Azure App Service",
+      "priority": "Low",
+      "estimatedTime": ""
+    }
+  ]
+}
+
+=== Typed Responses demo complete! ===

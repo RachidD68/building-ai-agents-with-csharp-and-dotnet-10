@@ -1,0 +1,33 @@
+# code eb5c375-dirty | SDK 11.0.100 | Windows 11 | LlmProvider__Provider=ollama (llama3.2)
+$ dotnet run
+
+=== Structured Output — Robust Extraction ===
+
+--- Clean invoice ---
+INVOICE #INV-2026-0412
+From: Northwind Cloud Services
+For: Compute (320 hrs), Object storage (2 TB), Egress (140 GB)
+Total due: 4,820.00 USD — net 30, no discount.
+
+  Vendor     : 
+  Invoice #  : INV-2026-0412
+  Amount Due : 4,820.00 USD
+  Priority   : Standard
+  Confidence : 80% (self-reported, not calibrated)
+  Route      : manual review
+    ! No vendor identified — verify extraction.
+
+--- Overdue note ---
+Reminder: invoice AC-9981 from Acme Hardware for $1,275.50 is now 14 days
+past due. A 2% late fee applies. Please remit immediately to avoid suspension.
+
+  Vendor     : 
+  Invoice #  : AC-9981
+  Amount Due : 1,275.50 
+  Priority   : Standard
+  Confidence : 90% (self-reported, not calibrated)
+  Route      : manual review
+    ! No vendor identified — verify extraction.
+    ! No currency identified — may need manual categorization.
+
+=== Robust Extraction demo complete! ===

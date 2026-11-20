@@ -1,0 +1,47 @@
+# Ch05.DomainValidation --self-test
+# code: CodeSample eb5c375, Release build (dotnet build -c Release -warnaserror, SDK 11.0.100)
+# platform: Windows 11, exit 0
+
+=== Domain Validation — self-test (offline) ===
+
+-- What RunAsync<T> does (fake chat client) --
+  PASS  RunAsync<T> sends a JSON-schema response format named after the type
+  PASS  RunAsync<T> returns without parsing; FinishReason is readable on AgentResponse<T>
+  PASS  broken JSON throws JsonException only when .Result is read
+  PASS  DEFECT REPRODUCED: an empty reply throws InvalidOperationException, which catch (JsonException) misses
+
+-- Defect reproductions (the minimal typed call accepts them) --
+  PASS  DEFECT REPRODUCED: a missing amount key becomes 0m, which passes a <= 50 limit
+  PASS  DEFECT REPRODUCED: a USD claim against a EUR account deserializes without complaint
+  PASS  DEFECT REPRODUCED: a negative amount deserializes without complaint
+  PASS  DEFECT REPRODUCED: decimal.Parse("64,80") under en-US gives 6480
+  PASS  the shape-only fix exists: RespectRequiredConstructorParameters turns the missing key into a JsonException
+
+-- The ladder: shape, then meaning --
+  PASS  the Contoso taxi claim (64,80 in the text, 64.80 in JSON) -> Valid  [Valid: 64.80 EUR, Taxi (self-reported confidence 0.9, not used)]
+  PASS  the same claim under fr-FR and en-US current culture -> Valid both times  [Valid: 64.80 EUR, Taxi (self-reported confidence 0.9, not used)]
+  PASS  amount absent -> Missing [amount], never 0  [Missing: amount]
+  PASS  amount null and currency null -> Missing [amount, currency]  [Missing: amount, currency]
+  PASS  USD on a EUR account -> Invalid currency_mismatch  [Invalid: currency_mismatch: USD, the account is in EUR (self-reported confidence 0.9, not used)]
+  PASS  "eur" -> Invalid currency_not_iso (not silently upper-cased)  [Invalid: currency_not_iso: 'eur' (self-reported confidence 0.9, not used)]
+  PASS  amount 0 -> Invalid amount_not_positive  [Invalid: amount_not_positive: 0 (self-reported confidence 0.9, not used)]
+  PASS  amount -64.80 -> Invalid amount_not_positive  [Invalid: amount_not_positive: -64.80; amount_not_in_source: -64.80 (self-reported confidence 0.9, not used)]
+  PASS  lines 90 + 90 with a total of 190 -> Invalid lines_disagree_with_total  [Invalid: lines_disagree_with_total: lines add up to 180.00, total is 190.00 (self-reported confidence 0.97, not used)]
+  PASS  self-reported confidence 0.97 on that wrong total does not change the outcome  [Invalid: lines_disagree_with_total: lines add up to 180.00, total is 190.00 (self-reported confidence 0.97, not used)]
+  PASS  a line without an amount -> Invalid line_amount_missing  [Invalid: line_amount_missing (self-reported confidence 0.97, not used)]
+  PASS  "lines": null is read as no lines, not a crash  [Valid: 64.80 EUR, Taxi (self-reported confidence 0.9, not used)]
+  PASS  6480 (64,80 read with the wrong culture) -> Invalid amount_not_in_source  [Invalid: amount_not_in_source: 6480 (self-reported confidence 0.9, not used)]
+  PASS  several broken rules are all named, not just the first  [Invalid: currency_mismatch: USD, the account is in EUR; amount_not_positive: -5; amount_not_in_source: -5 (self-reported confidence 0.9, not used)]
+  PASS  source amounts: '1,275.50' -> 1275.50, '64,80' -> 64.80, '12 November' -> 12
+
+-- The pipeline: TryRunStructuredAsync, then the ladder (fake chat client) --
+  PASS  valid JSON -> Valid, one call  [Valid: 64.80 EUR, Taxi (self-reported confidence 0.9, not used); 1 call(s)]
+  PASS  prose, then valid JSON -> Valid after one retry  [Valid: 64.80 EUR, Taxi (self-reported confidence 0.9, not used); 2 call(s)]
+  PASS  prose twice -> Unreadable with the raw reply kept, two calls  [Unreadable (25 chars kept): Model did not return schema-conformant JSON after one retry: JsonException: 'I' is an invalid start of a value. Path: $ | LineNumber: 0 | BytePositionInLine: 0.; 2 call(s)]
+  PASS  "amount": "64,80" as a string twice -> Unreadable (strict number), two calls  [Unreadable (104 chars kept): Model did not return schema-conformant JSON after one retry: JsonException: The JSON value could not be converted to System.Nullable`1[System.Decimal]. Path: $.amount | LineNumber: 0 | BytePositionInLine: 38.; 2 call(s)]
+  PASS  empty reply twice -> Unreadable, not an exception  [Unreadable (0 chars kept): Model did not return schema-conformant JSON after one retry: InvalidOperationException: The response did not contain JSON to be deserialized.; 2 call(s)]
+  PASS  cut off at the output limit -> Truncated, no retry  [Truncated (26 chars kept); 1 call(s)]
+  PASS  stopped by the content filter -> Refused, no retry  [Refused (0 chars kept); 1 call(s)]
+  PASS  valid shape, missing amount -> Missing, no retry (a retry is for shape only)  [Missing: amount; 1 call(s)]
+
+RESULT 32/32
