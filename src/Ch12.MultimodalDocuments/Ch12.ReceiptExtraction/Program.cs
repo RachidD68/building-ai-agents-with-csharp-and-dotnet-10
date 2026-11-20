@@ -42,7 +42,20 @@ if (vision is null)
 }
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-return await LiveRun.RunAsync(new ReceiptReader(vision), corpus, VisionClient.Describe(config), cts.Token);
+try
+{
+    return await LiveRun.RunAsync(new ReceiptReader(vision), corpus, VisionClient.Describe(config), cts.Token);
+}
+catch (HttpRequestException ex)
+{
+    Console.WriteLine($"[error] The vision model could not be reached: {ex.Message}");
+    return 1;
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("[Cancelled]");
+    return 1;
+}
 
 /// <summary>The synthetic corpus: page images plus the ground truth a person reads on them.</summary>
 internal sealed record Corpus(string Folder, int Version, IReadOnlyList<CorpusDocument> Documents)
