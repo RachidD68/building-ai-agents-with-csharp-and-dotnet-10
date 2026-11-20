@@ -1,0 +1,22 @@
+# code ac87fe0 | SDK 11.0.100 | Windows 11 | env: none
+# note: scripted drill, offline, simulated effects
+$ dotnet run -- --drill
+=== Contoso v7: the handoff drill (offline, simulated effects) ===
+
+
+-- The handoff drill (qualification profile: every capability on, simulated provider)
+  PASS  v5 prepare: a claim AwaitingReview on a fresh store
+   a) restore a conversation after the API process is lost
+  PASS  alice opens a conversation and sends a turn: 201, 200
+  PASS  a new API process on the same store, alice's next turn: 200 "user turns seen: my taxi claim is waiting | is it approved yet?"
+   b) a valid id from another tenant
+  PASS  fabrikam/E-1001 (same subject, other tenant) on alice's conversation: 404; on her claim: 404
+   c) an approval shown before the account changed
+  PASS  rita approves what she saw at account version 7 after another claim committed: 409 stale_version; the screen now shows 8
+  PASS  business state: AwaitingReview, no decision recorded
+  PASS  she approves the current screen: 200 approved
+   d) a payment whose outcome the worker never recorded
+  PASS  the worker is killed after the provider accepted the payment: 1 payment in the provider's journal, the claim shows OutcomeUnknown
+  PASS  a new worker reconciles by reference: "by reference"; the claim is Reconciled; payments 1
+
+RESULT 9/9

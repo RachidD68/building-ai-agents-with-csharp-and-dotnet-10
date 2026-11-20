@@ -1,0 +1,50 @@
+# code ac87fe0 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 30/30 on Linux (runtime:10.0-noble, --network none), body identical
+$ dotnet run -- --self-test
+=== Qualification runner (self-test, offline) ===
+
+-- 1. Counting cases
+  PASS  result rule: two RESULT lines (11/11 and 11/11) count 22/22
+  PASS  result rule: 'RESULT 3/3 (partial)' and an indented RESULT are not counted
+  PASS  tally rule: 2 'as expected' and 1 'differs' lines count 2/3
+  PASS  ratio rule: 'Items: 21 evaluated, Passed 9/21' counts 9/21
+
+-- 2. A green command that selected zero cases
+  PASS  DEFECT REPRODUCED: an exit-code-only gate calls 'RESULT 0/0, exit 0' green
+  PASS  rule: refused (selected 0 cases (exit 0))
+  PASS  no RESULT line at all (a mistyped flag printed usage), exit 0: refused
+  PASS  exit 0 with RESULT 5/6: failed (exit 0 but 1 of 6 failed); exit 1 with 6/6: failed
+  PASS  build: no summary refused, 2 warnings failed, clean passed
+  PASS  provider step, exit 1 with Passed 9/21: completed 9/21 (the matrix judges it); exit 3: failed
+
+-- 3. A skill folder changed in place after qualification
+  PASS  frozen: refund-escalation 1.0.0 0d9015db07d0 matches its lock
+  PASS  DEFECT REPRODUCED: name and version unchanged, so a name@version check calls it the qualified skill
+  PASS  rule: content hash 021e7e347971 differs from the lock, the candidate is refused
+
+-- 4. A fake-client pass reported as model quality
+  PASS  DEFECT REPRODUCED: 'the step passed' marks the quality promise passed from a fake-model self-test
+  PASS  rule: refused (provider promise, but evidence-selftest ran with provider 'fake')
+  PASS  the same promise on the live step, threshold 1.0: failed 0/9
+  PASS  a PASS line: passed; a FAIL line: failed; a check that is not in the log: refused
+  PASS  a human row: pending-human, whatever the step did; a row with no test: refused
+
+-- 5. The manifest and the candidate identity
+  PASS  secret scan: a clean profile has no finding
+  PASS  secret scan: a key under 'apiKey' and a key in a URL (2 findings)
+  PASS  identity: SDK 10.0.100, 2 direct packages, prerelease Lib.B 2.0.0-preview.1, no problem
+  PASS  a CRLF to LF checkout of the same data keeps the identity
+  PASS  a lock file that resolves Lib.A 1.3.0 against a 1.2.0 pin: refused, identity 93972d7f != afd92a05
+  PASS  a data version with no file: refused
+
+-- 6. Budget, configuration and the model lock
+  PASS  1 min budget, 40 s steps: completed, stopped (stopped by the 20 s limit), not-run (budget exhausted before the step)
+  PASS  a cloud step with no endpoint configured: not-run (not configured: CH23_SELFTEST_UNSET_ENDPOINT is not set), 0 cases
+  PASS  8 runs race for the model lock (Task.Run, Barrier): 1 holds it; released, it can be taken again
+  PASS  released: the lock file is gone
+
+-- 7. The dossier
+  PASS  a failed row with no journal entry, or a capability disabled with no reason: the dossier is refused
+  PASS  rendered: the journal entry shows what the run observed (failed 0/9), the disabled capability its reason
+
+RESULT 30/30

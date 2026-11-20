@@ -1,0 +1,1199 @@
+{
+  "runner": "Ch23.QualificationRunner",
+  "schema": 1,
+  "modes": [
+    "offline",
+    "real"
+  ],
+  "startedUtc": "2026-11-20 21:28:19",
+  "finishedUtc": "2026-11-20 21:40:30",
+  "platform": "Microsoft Windows 10.0.26200 (X64)",
+  "sdkUsed": "11.0.100",
+  "candidateSha256": "ea7cd2d837d315cb20ce5292b4be3cd77b76d733e0f7774ac3c845fb93746525",
+  "candidate": {
+    "candidate": "contoso-v7",
+    "manifestSha256": "e19762ff0b9b1a07267c922e6202c34a18887b29a354791499534b0669760a32",
+    "globalJsonSdk": "10.0.100",
+    "packages": [
+      {
+        "id": "Azure.AI.OpenAI",
+        "version": "2.9.0-beta.1",
+        "prerelease": true
+      },
+      {
+        "id": "Azure.Identity",
+        "version": "1.21.0",
+        "prerelease": false
+      },
+      {
+        "id": "CommunityToolkit.VectorData.InMemory",
+        "version": "1.0.1",
+        "prerelease": false
+      },
+      {
+        "id": "Markdig",
+        "version": "1.3.2",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Agents.AI",
+        "version": "1.28.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Agents.AI.Harness",
+        "version": "1.28.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Agents.AI.Hosting",
+        "version": "1.28.0-preview.261106.1",
+        "prerelease": true
+      },
+      {
+        "id": "Microsoft.Agents.AI.OpenAI",
+        "version": "1.28.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Agents.AI.Workflows",
+        "version": "1.28.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.AspNetCore.TestHost",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Data.Sqlite.Core",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.AI",
+        "version": "10.11.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.AI.Abstractions",
+        "version": "10.11.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.AI.Evaluation",
+        "version": "10.11.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.AI.OpenAI",
+        "version": "10.11.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Configuration",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.DependencyInjection",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Hosting",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Http.Resilience",
+        "version": "10.7.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Logging",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Options",
+        "version": "10.0.13",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.Resilience",
+        "version": "10.7.0",
+        "prerelease": false
+      },
+      {
+        "id": "Microsoft.Extensions.VectorData.Abstractions",
+        "version": "10.10.0",
+        "prerelease": false
+      },
+      {
+        "id": "OllamaSharp",
+        "version": "5.4.25",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Api",
+        "version": "1.19.1",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Exporter.Console",
+        "version": "1.19.1",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+        "version": "1.19.1",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Extensions.Hosting",
+        "version": "1.19.1",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Instrumentation.AspNetCore",
+        "version": "1.19.0",
+        "prerelease": false
+      },
+      {
+        "id": "OpenTelemetry.Instrumentation.Http",
+        "version": "1.19.0",
+        "prerelease": false
+      },
+      {
+        "id": "SQLitePCLRaw.bundle_e_sqlite3",
+        "version": "2.1.13",
+        "prerelease": false
+      }
+    ],
+    "lockFiles": [
+      {
+        "project": "contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj",
+        "sha256": "a7f6440f31316c12ea1b07befb07eb2e163ca30cd923aaf270d55b2581fd8bbf"
+      },
+      {
+        "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+        "sha256": "761d0db0f78950c2317a9aebe768edc088fca3c7a4c49c70c6685f27d6b3e15b"
+      },
+      {
+        "project": "contoso/v4-receipts/Contoso.Receipts.csproj",
+        "sha256": "15d1eee540b02f587feb6b0602612785383087b0aaea625db142c4e76e318d46"
+      },
+      {
+        "project": "contoso/v5-durable-resume/Contoso.DurableResume.csproj",
+        "sha256": "4c624f8eb443a8a9dcb62af2f23015561c88761764ff8d1deb1852fbd0182b46"
+      },
+      {
+        "project": "contoso/v6-api-ui/Contoso.ApiUi.csproj",
+        "sha256": "b291e904e98dfb04e95af36169e446d25534c4681d6db588318b53ab8fe1c194"
+      },
+      {
+        "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+        "sha256": "3a314a525916361b2b11237755c4894b936965955ebedab4f20c823740b12211"
+      },
+      {
+        "project": "src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj",
+        "sha256": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46"
+      },
+      {
+        "project": "src/Ch08.AuthorizedActions/Ch08.IdempotentCommit/Ch08.IdempotentCommit.csproj",
+        "sha256": "8e52b28175a1569e958c73ec1b477aaee5e9b1028948223b2966009c369aa693"
+      },
+      {
+        "project": "src/Ch08.AuthorizedActions/Ch08.UncertainOutcome/Ch08.UncertainOutcome.csproj",
+        "sha256": "43166bc294c6c2a627d694a43e3903c09626505aee9969771cfc6d74d10583e0"
+      },
+      {
+        "project": "src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj",
+        "sha256": "cfe8d8365b834dfd259fd1f3392d308329307f402c35e0386129a648f1190132"
+      },
+      {
+        "project": "src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj",
+        "sha256": "f47ac7061ddef965dcc0bbff3ee6478f0d53a8b72c82a4916a154783866f335b"
+      },
+      {
+        "project": "src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj",
+        "sha256": "5690ce971aa33597b1a2be9d30ae80eb380b886ced6badfb13a9beeaee6da748"
+      },
+      {
+        "project": "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj",
+        "sha256": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46"
+      },
+      {
+        "project": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj",
+        "sha256": "99d7f2315d9cd58a283f9e3fa87f502a41103523b325faa94f102c33604a5200"
+      },
+      {
+        "project": "src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj",
+        "sha256": "fc895a669cfca41d787b849148c4e5535250f71e7dc6c65c2ced9f93d7c50bf4"
+      },
+      {
+        "project": "src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj",
+        "sha256": "0d333c8bc0edc941bbfe073e02fe614991d6504d52db32c5b5253c6b004d4213"
+      },
+      {
+        "project": "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj",
+        "sha256": "e7385787f5f72f7de276370eb7da0a5071c5e6d8265d8cf5545ea96006f71682"
+      },
+      {
+        "project": "src/Ch18.StreamingInterfaces/Ch18.SseStatusStream/Ch18.SseStatusStream.csproj",
+        "sha256": "dfb37d2e7f2d0d9415d4cc236c49ed86a26822ac0ce2ffe1bc1ca27573546c8d"
+      },
+      {
+        "project": "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj",
+        "sha256": "3376455c81311a410902d21e74e418f9c198e40ed3c9d3779e3b9bb79b01c0df"
+      },
+      {
+        "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+        "sha256": "5d4eb05db460ac067aa1925b2b5b255b4a16905da17030b2cbb295120fedb2ab"
+      },
+      {
+        "project": "src/Ch22.CostCapacity/Ch22.CostModel/Ch22.CostModel.csproj",
+        "sha256": "3aa9c6c7c49b2a1a1f78ca967bef87a3e6b58a8b7abd2bf9d2db8aade71cb005"
+      },
+      {
+        "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj",
+        "sha256": "d0f726d403b9dba9c198025e36369048c38eb96dab7db00c1dc8b0e47700bd7e"
+      },
+      {
+        "project": "src/Common/AgenticAI.Common.Azure/AgenticAI.Common.Azure.csproj",
+        "sha256": "79d8b3d1c9bf64d3322f72168dbe61a9adcb02ab2e94b87e503cb157bc46bf83"
+      },
+      {
+        "project": "src/Common/AgenticAI.Common/AgenticAI.Common.csproj",
+        "sha256": "cb787e3b1fb5a687b6418c426936f3f7a141a9a4dabf6bda47ef69f889f438aa"
+      },
+      {
+        "project": "src/Common/AgenticAI.Testing/AgenticAI.Testing.csproj",
+        "sha256": "3aa9c6c7c49b2a1a1f78ca967bef87a3e6b58a8b7abd2bf9d2db8aade71cb005"
+      }
+    ],
+    "prompts": [
+      {
+        "id": "faq-agent",
+        "sha256": "abbfff59a12fa0ed548aadb4b9576ec1d010f39643bf18a1542510bb040899f4",
+        "chars": 449
+      },
+      {
+        "id": "policy-evidence-agent",
+        "sha256": "df0cef48bfd9ca66db5820ede9ff62f3456b62471fb61d2ff49927e2a32a60b9",
+        "chars": 365
+      },
+      {
+        "id": "policy-faq-version",
+        "sha256": "ef1ced164faca4ee0ee202573868f5d77a968459943ae799b6db8756e13d5f5c",
+        "chars": 14
+      }
+    ],
+    "skills": [
+      {
+        "name": "refund-escalation",
+        "version": "1.0.0",
+        "sha256": "a088211eacd410b54ec587ac92981cf8d802f48fc52793acb4def5531638d1c6",
+        "locked": "a088211eacd410b54ec587ac92981cf8d802f48fc52793acb4def5531638d1c6",
+        "match": true
+      }
+    ],
+    "data": [
+      {
+        "id": "faq-handbook",
+        "path": "src/Ch10.RAGBaseline/Ch10.FaqAgent/docs",
+        "files": 11,
+        "sha256": "93b334e4f3b4384d6a27a0ca6f0577d7d570736f927aafff1cf1a38c3d5b8159"
+      },
+      {
+        "id": "policy-corpus",
+        "path": "src/Ch11.RAGPermissions/corpus",
+        "files": 20,
+        "sha256": "ae27fbdc72ec901ce2d0346f51c3beac6f1c10491a888cbaee6caa6c8a866dc4"
+      },
+      {
+        "id": "evidence-cases.v1",
+        "path": "src/Ch21.Evaluation/Ch21.EvidenceEval/cases/evidence-cases.v1.json",
+        "files": 1,
+        "sha256": "a210b87531274958d3e50878f3ed407e6af750f405e4b67db937e0b7045d0c65"
+      },
+      {
+        "id": "workload.contoso-claims.v1",
+        "path": "src/Ch22.CostCapacity/Ch22.LoadProfile/data/workload.contoso-claims.v1.json",
+        "files": 1,
+        "sha256": "5bd37021de8c4de9f91dc6211068ad3f969811dfa8270ac26bd8647300905a42"
+      },
+      {
+        "id": "capabilities",
+        "path": "contoso/v7-qualified/release/capabilities.json",
+        "files": 1,
+        "sha256": "ddfd12accf9f4ef434dda70933f374ce69a889465aa3f65459ea5138f40cf73f"
+      }
+    ],
+    "profile": {
+      "provider": "ollama",
+      "chatModel": "llama3.2",
+      "embeddingModel": "nomic-embed-text",
+      "endpoint": "http://localhost:11434",
+      "configurationProfile": "release"
+    },
+    "problems": [],
+    "sha256": "ea7cd2d837d315cb20ce5292b4be3cd77b76d733e0f7774ac3c845fb93746525"
+  },
+  "identityUnchangedAfterRun": true,
+  "model": {
+    "name": "llama3.2:latest",
+    "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+    "sizeBytes": 2019393189,
+    "responseModelId": "llama3.2",
+    "note": null
+  },
+  "layers": [
+    {
+      "id": "build",
+      "title": "Restore and build",
+      "mode": "offline",
+      "proves": "the candidate restores from its lock files and compiles with no warning",
+      "doesNotProve": "any behaviour",
+      "status": "passed",
+      "steps": [
+        {
+          "id": "restore:Contoso.Qualified",
+          "kind": "restore",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet restore contoso/v7-qualified/Contoso.Qualified.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 4,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Contoso.Qualified.log"
+        },
+        {
+          "id": "build:Contoso.Qualified",
+          "kind": "build",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet build contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 11.4,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Contoso.Qualified.log"
+        },
+        {
+          "id": "restore:Contoso.FaqEvidence",
+          "kind": "restore",
+          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+          "command": "dotnet restore contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.2,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Contoso.FaqEvidence.log"
+        },
+        {
+          "id": "build:Contoso.FaqEvidence",
+          "kind": "build",
+          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+          "command": "dotnet build contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 6.7,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Contoso.FaqEvidence.log"
+        },
+        {
+          "id": "restore:Ch15.ExternalEffects",
+          "kind": "restore",
+          "project": "src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj",
+          "command": "dotnet restore src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.7,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch15.ExternalEffects.log"
+        },
+        {
+          "id": "build:Ch15.ExternalEffects",
+          "kind": "build",
+          "project": "src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj",
+          "command": "dotnet build src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.2,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch15.ExternalEffects.log"
+        },
+        {
+          "id": "restore:Ch15.DurableReview",
+          "kind": "restore",
+          "project": "src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj",
+          "command": "dotnet restore src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.8,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch15.DurableReview.log"
+        },
+        {
+          "id": "build:Ch15.DurableReview",
+          "kind": "build",
+          "project": "src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj",
+          "command": "dotnet build src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.4,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch15.DurableReview.log"
+        },
+        {
+          "id": "restore:Ch15.RestartTests",
+          "kind": "restore",
+          "project": "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj",
+          "command": "dotnet restore src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch15.RestartTests.log"
+        },
+        {
+          "id": "build:Ch15.RestartTests",
+          "kind": "build",
+          "project": "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj",
+          "command": "dotnet build src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.8,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch15.RestartTests.log"
+        },
+        {
+          "id": "restore:Ch16.SkillLifecycle",
+          "kind": "restore",
+          "project": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj",
+          "command": "dotnet restore src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.6,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch16.SkillLifecycle.log"
+        },
+        {
+          "id": "build:Ch16.SkillLifecycle",
+          "kind": "build",
+          "project": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj",
+          "command": "dotnet build src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.7,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch16.SkillLifecycle.log"
+        },
+        {
+          "id": "restore:Ch17.IdentityTests",
+          "kind": "restore",
+          "project": "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj",
+          "command": "dotnet restore src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.8,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch17.IdentityTests.log"
+        },
+        {
+          "id": "build:Ch17.IdentityTests",
+          "kind": "build",
+          "project": "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj",
+          "command": "dotnet build src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch17.IdentityTests.log"
+        },
+        {
+          "id": "restore:Ch20.ThreatRegisterTests",
+          "kind": "restore",
+          "project": "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj",
+          "command": "dotnet restore src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.1,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch20.ThreatRegisterTests.log"
+        },
+        {
+          "id": "build:Ch20.ThreatRegisterTests",
+          "kind": "build",
+          "project": "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj",
+          "command": "dotnet build src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.3,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch20.ThreatRegisterTests.log"
+        },
+        {
+          "id": "restore:Ch21.EvidenceEval",
+          "kind": "restore",
+          "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+          "command": "dotnet restore src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.7,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch21.EvidenceEval.log"
+        },
+        {
+          "id": "build:Ch21.EvidenceEval",
+          "kind": "build",
+          "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+          "command": "dotnet build src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch21.EvidenceEval.log"
+        },
+        {
+          "id": "restore:Ch22.LoadProfile",
+          "kind": "restore",
+          "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj",
+          "command": "dotnet restore src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj --locked-mode",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 0.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restore_Ch22.LoadProfile.log"
+        },
+        {
+          "id": "build:Ch22.LoadProfile",
+          "kind": "build",
+          "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj",
+          "command": "dotnet build src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj -c Release --no-restore -warnaserror -tl:off -nologo",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 1,
+          "total": 1,
+          "seconds": 1.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/build_Ch22.LoadProfile.log"
+        }
+      ]
+    },
+    {
+      "id": "contracts",
+      "title": "Offline contracts",
+      "mode": "offline",
+      "proves": "the rules hold on scripted inputs: abstention, citations, permissions, threats, skill gates",
+      "doesNotProve": "anything about a real model\u0027s answers",
+      "status": "passed",
+      "steps": [
+        {
+          "id": "threat-register",
+          "kind": "run",
+          "project": "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj",
+          "command": "dotnet run --project src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 16,
+          "total": 16,
+          "seconds": 3.1,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/threat-register.log"
+        },
+        {
+          "id": "evidence-scorer",
+          "kind": "run",
+          "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+          "command": "dotnet run --project src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 23,
+          "total": 23,
+          "seconds": 2,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/evidence-scorer.log"
+        },
+        {
+          "id": "skill-lifecycle",
+          "kind": "run",
+          "project": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj",
+          "command": "dotnet run --project src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 18,
+          "total": 18,
+          "seconds": 2.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/skill-lifecycle.log"
+        },
+        {
+          "id": "load-profile",
+          "kind": "run",
+          "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj",
+          "command": "dotnet run --project src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 17,
+          "total": 17,
+          "seconds": 6.1,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/load-profile.log"
+        },
+        {
+          "id": "reimbursement",
+          "kind": "run",
+          "project": "contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj",
+          "command": "dotnet run --project contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 33,
+          "total": 33,
+          "seconds": 5.8,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/reimbursement.log"
+        },
+        {
+          "id": "faq-evidence",
+          "kind": "run",
+          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+          "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 22,
+          "total": 22,
+          "seconds": 6.8,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/faq-evidence.log"
+        },
+        {
+          "id": "receipts",
+          "kind": "run",
+          "project": "contoso/v4-receipts/Contoso.Receipts.csproj",
+          "command": "dotnet run --project contoso/v4-receipts/Contoso.Receipts.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 12,
+          "total": 12,
+          "seconds": 3.4,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/receipts.log"
+        }
+      ]
+    },
+    {
+      "id": "integration",
+      "title": "Integration: persistence, identity, transport",
+      "mode": "offline",
+      "proves": "state survives process loss on one machine, tokens and tenants are enforced over HTTP, the stream resumes",
+      "doesNotProve": "model quality, load, a real payment provider, more than one machine",
+      "status": "passed",
+      "steps": [
+        {
+          "id": "durable-resume",
+          "kind": "run",
+          "project": "contoso/v5-durable-resume/Contoso.DurableResume.csproj",
+          "command": "dotnet run --project contoso/v5-durable-resume/Contoso.DurableResume.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 11,
+          "total": 11,
+          "seconds": 13.4,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/durable-resume.log"
+        },
+        {
+          "id": "restart-tests",
+          "kind": "run",
+          "project": "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj",
+          "command": "dotnet run --project src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "none",
+          "exitCode": 0,
+          "passed": 33,
+          "total": 33,
+          "seconds": 84.7,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/restart-tests.log"
+        },
+        {
+          "id": "identity-tests",
+          "kind": "run",
+          "project": "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj",
+          "command": "dotnet run --project src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 22,
+          "total": 22,
+          "seconds": 4.2,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/identity-tests.log"
+        },
+        {
+          "id": "api-ui",
+          "kind": "run",
+          "project": "contoso/v6-api-ui/Contoso.ApiUi.csproj",
+          "command": "dotnet run --project contoso/v6-api-ui/Contoso.ApiUi.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 25,
+          "total": 25,
+          "seconds": 11.3,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/api-ui.log"
+        },
+        {
+          "id": "qualified",
+          "kind": "run",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet run --project contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-build --no-launch-profile -- --self-test",
+          "provider": "fake",
+          "exitCode": 0,
+          "passed": 18,
+          "total": 18,
+          "seconds": 11.5,
+          "status": "passed",
+          "reason": null,
+          "log": "logs/qualified.log"
+        }
+      ]
+    },
+    {
+      "id": "real-provider",
+      "title": "Real provider",
+      "mode": "real",
+      "proves": "what this model did on these cases, in this run",
+      "doesNotProve": "another model, other data, the same result on the next run",
+      "status": "incomplete",
+      "steps": [
+        {
+          "id": "model-identity",
+          "kind": "probe",
+          "project": null,
+          "command": "in-process model identity probe",
+          "provider": "ollama",
+          "exitCode": 0,
+          "passed": 2,
+          "total": 2,
+          "seconds": 27,
+          "status": "completed",
+          "reason": null,
+          "log": "logs/model-identity.log"
+        },
+        {
+          "id": "faq-live",
+          "kind": "run",
+          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+          "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile --",
+          "provider": "ollama",
+          "exitCode": 0,
+          "passed": 3,
+          "total": 3,
+          "seconds": 182.7,
+          "status": "completed",
+          "reason": null,
+          "log": "logs/faq-live.log"
+        },
+        {
+          "id": "evidence-live",
+          "kind": "run",
+          "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+          "command": "dotnet run --project src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-build --no-launch-profile --",
+          "provider": "ollama",
+          "exitCode": -532462766,
+          "passed": 0,
+          "total": 0,
+          "seconds": 241.1,
+          "status": "refused",
+          "reason": "selected 0 cases (exit -532462766)",
+          "log": "logs/evidence-live.log"
+        },
+        {
+          "id": "faq-azure",
+          "kind": "run",
+          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+          "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile --",
+          "provider": "azure",
+          "exitCode": null,
+          "passed": 0,
+          "total": 0,
+          "seconds": 0,
+          "status": "not-run",
+          "reason": "not configured: LlmProvider__AzureOpenAI__Endpoint is not set",
+          "log": null
+        }
+      ]
+    },
+    {
+      "id": "workload",
+      "title": "Workload",
+      "mode": "real",
+      "proves": "queueing and admission limits on this workstation, with this model",
+      "doesNotProve": "the capacity of another machine, provider or model",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "load-live",
+          "kind": "run",
+          "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj",
+          "command": "dotnet run --project src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj -c Release --no-build --no-launch-profile --",
+          "provider": "ollama",
+          "exitCode": 0,
+          "passed": 30,
+          "total": 32,
+          "seconds": 55.4,
+          "status": "completed",
+          "reason": null,
+          "log": "logs/load-live.log"
+        }
+      ]
+    }
+  ],
+  "matrix": [
+    {
+      "id": "F1",
+      "promise": "With no relevant evidence, the FAQ desk abstains and does not call the model",
+      "evidence": "contract",
+      "test": "faq-evidence: abstained: nothing scored at or above the threshold, the model was not called",
+      "data": "faq-handbook",
+      "expected": "NoEvidence, model not called",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/faq-evidence.log"
+    },
+    {
+      "id": "F2",
+      "promise": "A caller of another organization is refused before any search",
+      "evidence": "contract",
+      "test": "faq-evidence: refused before any search: the handbook is Contoso\u0027s",
+      "data": "faq-handbook",
+      "expected": "NotPermitted",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/faq-evidence.log"
+    },
+    {
+      "id": "F3",
+      "promise": "A valid document the caller may not read is never supplied",
+      "evidence": "contract",
+      "test": "faq-evidence: the management draft is indexed but never supplied, even to a manager",
+      "data": "policy-corpus",
+      "expected": "draft not in any evidence",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/faq-evidence.log"
+    },
+    {
+      "id": "F4",
+      "promise": "An answer citing an id this request never received is withheld",
+      "evidence": "contract",
+      "test": "faq-evidence: an answer citing an id this request never received is withheld",
+      "data": "policy-corpus",
+      "expected": "citation_not_supplied, not cached",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/faq-evidence.log"
+    },
+    {
+      "id": "F5",
+      "promise": "No answer or evidence crosses an organization, under concurrent questions",
+      "evidence": "contract",
+      "test": "faq-evidence: no answer or evidence crosses an organization",
+      "data": "policy-corpus",
+      "expected": "0 crossings",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/faq-evidence.log"
+    },
+    {
+      "id": "F6",
+      "promise": "On the live model, every FAQ scenario ends as expected",
+      "evidence": "provider",
+      "test": "faq-live",
+      "data": "faq-handbook, policy-corpus",
+      "expected": "all \u0027as expected\u0027",
+      "status": "passed",
+      "observed": "3/3",
+      "artifact": "logs/faq-live.log"
+    },
+    {
+      "id": "F7",
+      "promise": "On the live model, the agent abstains exactly when no authorized evidence answers",
+      "evidence": "provider",
+      "test": "evidence-live: /^\\s\u002Babstention\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 1",
+      "data": "evidence-cases.v1",
+      "expected": "every item",
+      "status": "not-run",
+      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "artifact": "logs/evidence-live.log"
+    },
+    {
+      "id": "F8",
+      "promise": "On the live model, answers state the expected policy value",
+      "evidence": "provider",
+      "test": "evidence-live: /^\\s\u002Bfact\\.value\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 0.8",
+      "data": "evidence-cases.v1",
+      "expected": "\u003E= 0.8 of applicable items",
+      "status": "not-run",
+      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "artifact": "logs/evidence-live.log"
+    },
+    {
+      "id": "F9",
+      "promise": "On the live model, the stated value is in a cited supporting chunk",
+      "evidence": "provider",
+      "test": "evidence-live: /^\\s\u002Bevidence\\.support\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 0.8",
+      "data": "evidence-cases.v1",
+      "expected": "\u003E= 0.8 of applicable items",
+      "status": "not-run",
+      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "artifact": "logs/evidence-live.log"
+    },
+    {
+      "id": "F10",
+      "promise": "The same FAQ scenarios hold on the Azure OpenAI deployment",
+      "evidence": "provider",
+      "test": "faq-azure",
+      "data": "faq-handbook, policy-corpus",
+      "expected": "all \u0027as expected\u0027",
+      "status": "not-run",
+      "observed": "step not-run: not configured: LlmProvider__AzureOpenAI__Endpoint is not set",
+      "artifact": null
+    },
+    {
+      "id": "C1",
+      "promise": "A valid but unauthorized claim id answers 404, like an unknown one",
+      "evidence": "integration",
+      "test": "api-ui: bob (same tenant, not his claim): 404",
+      "data": "v5 store (fresh)",
+      "expected": "404",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/api-ui.log"
+    },
+    {
+      "id": "C2",
+      "promise": "The same subject in another tenant sees neither the claim nor the conversation",
+      "evidence": "integration",
+      "test": "qualified: fabrikam/E-1001 (same subject, other tenant) on alice\u0027s conversation: 404; on her claim: 404",
+      "data": "v5 store (fresh)",
+      "expected": "404, 404",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
+    },
+    {
+      "id": "C3",
+      "promise": "An approval of what the reviewer saw before the account changed is rejected",
+      "evidence": "integration",
+      "test": "qualified: rita approves what she saw at account version",
+      "data": "v5 store (fresh)",
+      "expected": "409 stale_version",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
+    },
+    {
+      "id": "C4",
+      "promise": "A payment whose outcome was never recorded is reconciled and paid once",
+      "evidence": "integration",
+      "test": "restart-tests: v5 after-accept: one committed operation, one payment",
+      "data": "v5 store (fresh)",
+      "expected": "1 operation, 1 payment",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/restart-tests.log"
+    },
+    {
+      "id": "C5",
+      "promise": "A conversation survives the loss of the API process",
+      "evidence": "integration",
+      "test": "qualified: a new API process on the same store, alice\u0027s next turn",
+      "data": "conversation store (fresh)",
+      "expected": "both turns seen",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
+    },
+    {
+      "id": "C6",
+      "promise": "A capability shipped disabled is refused with its recorded reason",
+      "evidence": "integration",
+      "test": "qualified: rita approves: 503 capability_disabled (claims.decide)",
+      "data": "capabilities",
+      "expected": "503 capability_disabled",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
+    },
+    {
+      "id": "C7",
+      "promise": "A token signed with another key is refused",
+      "evidence": "integration",
+      "test": "identity-tests: signed with another key: 401",
+      "data": "minted tokens",
+      "expected": "401",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/identity-tests.log"
+    },
+    {
+      "id": "C8",
+      "promise": "On the live model, no forbidden action tool is called",
+      "evidence": "provider",
+      "test": "evidence-live: /^\\s\u002Baction\\.allowed\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 1",
+      "data": "evidence-cases.v1",
+      "expected": "every action item",
+      "status": "not-run",
+      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "artifact": "logs/evidence-live.log"
+    },
+    {
+      "id": "S1",
+      "promise": "Every threat in the register has a passing test",
+      "evidence": "contract",
+      "test": "threat-register",
+      "data": "threat register",
+      "expected": "n/n",
+      "status": "passed",
+      "observed": "16/16",
+      "artifact": "logs/threat-register.log"
+    },
+    {
+      "id": "W1",
+      "promise": "At the declared concurrency (4), at least 75% of requests are accepted",
+      "evidence": "workload",
+      "test": "load-live: /^\\s{1,3}4\\s\u002B(?\u003Ctotal\u003E\\d\u002B)\\s\u002B(?\u003Cpass\u003E\\d\u002B)\\s/ \u003E= 0.75",
+      "data": "workload.contoso-claims.v1",
+      "expected": "\u003E= 0.75 accepted",
+      "status": "passed",
+      "observed": "8/8",
+      "artifact": "logs/load-live.log"
+    },
+    {
+      "id": "H1",
+      "promise": "An engineer who did not build it runs the drill and explains the business state from the documents alone",
+      "evidence": "human",
+      "test": null,
+      "data": "this release folder",
+      "expected": "a recorded walkthrough",
+      "status": "pending-human",
+      "observed": "human acceptance is recorded apart; the runner never marks it",
+      "artifact": null
+    },
+    {
+      "id": "H2",
+      "promise": "Finance accepts a release that takes no approvals",
+      "evidence": "human",
+      "test": null,
+      "data": "release dossier",
+      "expected": "a signed decision record",
+      "status": "pending-human",
+      "observed": "human acceptance is recorded apart; the runner never marks it",
+      "artifact": null
+    }
+  ],
+  "totals": {
+    "steps": 37,
+    "stepsPassed": 32,
+    "stepsCompleted": 3,
+    "stepsRefused": 1,
+    "stepsNotRun": 1,
+    "stepsFailed": 0,
+    "cases": 307,
+    "casesPassed": 305,
+    "rows": 22,
+    "rowsPassed": 15,
+    "rowsFailed": 0,
+    "rowsNotRun": 5,
+    "rowsRefused": 0,
+    "rowsPendingHuman": 2
+  },
+  "budgets": [
+    {
+      "budgetMinutes": null,
+      "spentSeconds": 194.1,
+      "modelLockSeconds": 0
+    },
+    {
+      "budgetMinutes": 25,
+      "spentSeconds": 506.2,
+      "modelLockSeconds": 506.3
+    }
+  ]
+}

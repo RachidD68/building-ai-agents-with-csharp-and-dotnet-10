@@ -1,0 +1,34 @@
+# code ac87fe0 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 18/18 on Linux (aspnet:10.0-noble, --network none), body identical
+$ dotnet run -- --self-test
+=== Contoso v7: the qualified version (self-test, offline) ===
+
+-- 1. The release profile: what ships, what is refused and why
+  PASS  v5 prepare, then alice reads her claim: AwaitingReview
+  PASS  rita's review screen still answers (claims.read): 64.8 EUR
+  PASS  rita approves: 503 capability_disabled (claims.decide)
+  PASS  POST /decision: 503; with no token: 401 (authentication runs before the gate)
+  PASS  the claim is still AwaitingReview: nothing was recorded
+  PASS  GET /release: candidate contoso-v7, profile release, disabled: claims.decide
+
+-- 2. Refusals at start
+  PASS  a capability disabled with no reason: release profile refused: claims.decide is disabled with no reason
+  PASS  an unknown profile 'prod': release profile refused: unknown profile 'prod' (release or qualification)
+  PASS  a mapped route in no capability stops the start: release profile refused: routes in no capability: GET /agents.
+
+-- 3. The handoff drill (qualification profile: every capability on, simulated provider)
+  PASS  v5 prepare: a claim AwaitingReview on a fresh store
+   a) restore a conversation after the API process is lost
+  PASS  alice opens a conversation and sends a turn: 201, 200
+  PASS  a new API process on the same store, alice's next turn: 200 "user turns seen: my taxi claim is waiting | is it approved yet?"
+   b) a valid id from another tenant
+  PASS  fabrikam/E-1001 (same subject, other tenant) on alice's conversation: 404; on her claim: 404
+   c) an approval shown before the account changed
+  PASS  rita approves what she saw at account version 7 after another claim committed: 409 stale_version; the screen now shows 8
+  PASS  business state: AwaitingReview, no decision recorded
+  PASS  she approves the current screen: 200 approved
+   d) a payment whose outcome the worker never recorded
+  PASS  the worker is killed after the provider accepted the payment: 1 payment in the provider's journal, the claim shows OutcomeUnknown
+  PASS  a new worker reconciles by reference: "by reference"; the claim is Reconciled; payments 1
+
+RESULT 18/18
