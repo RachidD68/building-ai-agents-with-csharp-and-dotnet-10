@@ -13,7 +13,8 @@
 // to approve her own claim at a higher amount, the reviewer's edited approval
 // arrives twice at once, the payment provider's response is lost, and a right
 // is revoked while a claim waits. One reimbursement, one simulated payment,
-// one operation id.
+// one operation id. The self-test adds reviews that must be refused at any
+// amount (no role, own claim, another tenant) and a crash between the steps.
 //
 //   dotnet run                    against the configured model (Ollama llama3.2)
 //   dotnet run -- --self-test     a scripted model, no network; RESULT n/n
@@ -91,7 +92,9 @@ internal static class Scenario
             "Taxi from the airport to the Fabrikam office on 12 November, receipt attached: 64.80 EUR.");
 
         Console.WriteLine("\n-- 1. Alice submits the taxi claim, and double-clicks --");
-        ClaimStatus[] submits = await Task.WhenAll(desk.SubmitAsync(alice, taxi, ct), desk.SubmitAsync(alice, taxi, ct));
+        ClaimStatus[] submits = await Task.WhenAll(
+            Task.Run(() => desk.SubmitAsync(alice, taxi, ct)),
+            Task.Run(() => desk.SubmitAsync(alice, taxi, ct)));
         ClaimStatus first = desk.Status(Tenant, taxi.SubmissionId);
         Show(first);
         Expect("the claim waits for a reviewer (over the low-value limit)",
@@ -106,17 +109,41 @@ internal static class Scenario
 
         decimal? proposed = desk.AmountOfRecord(Tenant, taxi.SubmissionId);
         Console.WriteLine("\n-- 2. Alice, a finance reviewer too, raises her own claim to 450.00 and approves it --");
-        ClaimStatus self = await desk.ReviewAsync(alice, Tenant, taxi.SubmissionId, true, 450.00m, ct);
+        ClaimStatus self = await desk.ReviewAsync(alice, taxi.SubmissionId, true, 450.00m, ct);
         Show(self);
         Expect("refused: separation of duties, still awaiting review",
             self is { State: ClaimState.AwaitingReview, Reason: "separation_of_duties" });
         Expect("the refused edit stored nothing: the amount of record is unchanged",
             desk.AmountOfRecord(Tenant, taxi.SubmissionId) == proposed);
+        if (assert)
+        {
+            // Who may decide is checked for every amount, including one the
+            // low-value policy would allow and one the policy denies, and only
+            // inside the reviewer's own tenant. None of these may store anything.
+            directory.Grant("fabrikam", "mallory", Roles.FinanceReviewer);
+            Caller mallory = directory.Authenticate("fabrikam", "mallory");
+            (string Who, Caller Reviewer, decimal Amount, string Reason)[] refusedReviews =
+            [
+                ("Bob, no reviewer role, edits to 50.00", bob, 50.00m, "reviewer_not_authorized"),
+                ("Bob edits to 0", bob, 0m, "reviewer_not_authorized"),
+                ("Bob edits to 9999", bob, 9999m, "reviewer_not_authorized"),
+                ("Alice edits her own claim to 49.99", alice, 49.99m, "separation_of_duties"),
+                ("Rita edits to 9999", rita, 9999m, "invalid_amount"),
+                ("Mallory, a fabrikam reviewer, approves", mallory, 64.80m, "unknown_claim"),
+            ];
+            foreach ((string who, Caller reviewer, decimal amount, string reason) in refusedReviews)
+            {
+                ClaimStatus r = await desk.ReviewAsync(reviewer, taxi.SubmissionId, true, amount, ct);
+                Expect($"{who}: {reason}, nothing stored, the claim still waits",
+                    r.Reason == reason && desk.AmountOfRecord(Tenant, taxi.SubmissionId) == proposed &&
+                    desk.Status(Tenant, taxi.SubmissionId).State == ClaimState.AwaitingReview);
+            }
+        }
 
         Console.WriteLine("\n-- 3. Rita edits the amount to 60.00 and approves, twice at once; the provider's response is lost --");
         ClaimStatus[] reviews = await Task.WhenAll(
-            Task.Run(() => desk.ReviewAsync(rita, Tenant, taxi.SubmissionId, true, 60.00m, ct)),
-            Task.Run(() => desk.ReviewAsync(rita, Tenant, taxi.SubmissionId, true, 60.00m, ct)));
+            Task.Run(() => desk.ReviewAsync(rita, taxi.SubmissionId, true, 60.00m, ct)),
+            Task.Run(() => desk.ReviewAsync(rita, taxi.SubmissionId, true, 60.00m, ct)));
         ClaimStatus afterReview = desk.Status(Tenant, taxi.SubmissionId);
         Show(afterReview);
         EmployeeAccount? account = desk.Store.LoadAccount(Tenant, "E-1001");
@@ -166,7 +193,7 @@ internal static class Scenario
         ClaimStatus hotelStatus = await restarted.SubmitAsync(bob, hotel, ct);
         Show(hotelStatus);
         directory.Revoke(Tenant, "E-2002", Permissions.SubmitReimbursement);
-        ClaimStatus revoked = await restarted.ReviewAsync(rita, Tenant, hotel.SubmissionId, true, null, ct);
+        ClaimStatus revoked = await restarted.ReviewAsync(rita, hotel.SubmissionId, true, null, ct);
         Show(revoked);
         if (assert)
             Expect("the commit reloads Bob's rights: denied (missing_permission), nothing paid",
@@ -175,6 +202,31 @@ internal static class Scenario
 
         Console.WriteLine($"\nSimulated payments in the provider journal: {Effects(journal)}");
         if (!assert) return 0;
+
+        // The review, the commit and the claim's state are separate transactions.
+        // Crash after each of the first two, on a fresh database, and restart.
+        Console.WriteLine("\n-- 9. The process crashes after Rita's review, then after the commit, and restarts --");
+        foreach (string point in new[] { "after_review", "after_commit" })
+        {
+            string crashDb = Path.Combine(root, $"{point}.db"), crashJournal = Path.Combine(root, $"{point}-provider.db");
+            var crashing = new ReimbursementDesk(model, crashDb, new FakePaymentProvider(crashJournal), directory)
+            {
+                CrashPoint = step => { if (step == point) throw new SimulatedCrash(step); },
+            };
+            crashing.Store.SeedAccount(new EmployeeAccount(Tenant, "E-1001", "EUR", 500m, 7));
+            await crashing.SubmitAsync(alice, taxi, ct);
+            try { await crashing.ReviewAsync(rita, taxi.SubmissionId, true, null, ct); }
+            catch (SimulatedCrash) { }
+            ClaimStatus stranded = crashing.Status(Tenant, taxi.SubmissionId);
+            var repaired = new ReimbursementDesk(model, crashDb, new FakePaymentProvider(crashJournal), directory);
+            await repaired.ResumeAsync(ct);
+            ClaimStatus after = repaired.Status(Tenant, taxi.SubmissionId);
+            Console.WriteLine($"   {point}: {stranded.State} ({stranded.Reason}) -> after restart {after.State} ({after.Reason})");
+            Expect($"crash {point}: the restart finishes the claim, one operation, one payment",
+                stranded.State == ClaimState.AwaitingReview && after.State == ClaimState.Delivered &&
+                repaired.Store.Count("operations") == 1 && Effects(crashJournal) == 1);
+        }
+
         Console.WriteLine($"RESULT {s_passed}/{s_total}");
         return s_passed == s_total ? 0 : 1;
     }
@@ -192,6 +244,9 @@ internal static class Scenario
         Console.WriteLine($"  {(ok ? "PASS" : "FAIL")}  {name}");
     }
 }
+
+/// <summary>Thrown from the self-test's crash hook: the process "dies" at that step.</summary>
+internal sealed class SimulatedCrash(string step) : Exception($"simulated crash {step}");
 
 /// <summary>
 /// The scripted model for --self-test: it answers each claim with the JSON

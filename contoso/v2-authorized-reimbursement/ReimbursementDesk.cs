@@ -144,30 +144,34 @@ public sealed class ReimbursementDesk
     }
 
     /// <summary>
-    /// A reviewer decides, optionally with an edited amount. The reviewer's role
-    /// comes from the authenticated caller, the checks run before anything is
-    /// stored, and an edit is stored only together with a valid decision.
+    /// A reviewer decides, optionally with an edited amount. The claim is looked
+    /// up in the reviewer's own tenant, the reviewer is checked before anything
+    /// else, and an edit is stored only together with a valid decision.
     /// </summary>
-    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, string tenant, Guid operationId,
+    public async Task<ClaimStatus> ReviewAsync(Caller reviewer, Guid operationId,
         bool approve, decimal? editedAmount, CancellationToken ct)
     {
+        string tenant = reviewer.TenantId;                // from authentication, never from the client
         (Caller requester, ReimbursementProposal proposal)? pending = LoadProposal(tenant, operationId);
         if (pending is null || Status(tenant, operationId).State != ClaimState.AwaitingReview)
             return Status(tenant, operationId);
         (Caller requester, ReimbursementProposal proposal) = pending.Value;
-        if (editedAmount is { } amount) proposal = proposal with { Amount = amount };   // not stored yet
 
-        string role = reviewer.Permissions.Contains(Roles.FinanceReviewer) ? Roles.FinanceReviewer : "";
-        var approval = new ApprovalRecord(
-            ReimbursementPolicy.Digest(requester.TenantId, requester.SubjectId, proposal),
-            requester.TenantId, requester.SubjectId, reviewer.SubjectId, role,
+        // Who may decide, checked directly: for every amount, and for a rejection too.
+        string? refused = !reviewer.Permissions.Contains(Roles.FinanceReviewer) ? "reviewer_not_authorized"
+            : reviewer.SubjectId == requester.SubjectId ? "separation_of_duties" : null;
+        if (refused is not null)
+            return Status(tenant, operationId) with { Reason = refused };    // nothing stored: still waiting
+
+        if (editedAmount is { } amount) proposal = proposal with { Amount = amount };   // not stored yet
+        var approval = new ApprovalRecord(ReimbursementPolicy.Digest(tenant, requester.SubjectId, proposal),
+            tenant, requester.SubjectId, reviewer.SubjectId, Roles.FinanceReviewer,
             ReimbursementPolicy.Version, _clock().AddHours(24), approve);
-        // Who may decide is checked for a rejection too, so evaluate as if approving.
-        PolicyResult check = ReimbursementPolicy.Evaluate(requester,
-            Store.LoadAccount(requester.TenantId, requester.SubjectId)!, proposal,
-            approval with { Approved = true }, _clock());
-        if (check.Reason is "separation_of_duties" or "reviewer_not_authorized")
-            return Status(tenant, operationId) with { Reason = check.Reason };   // nothing stored: still waiting
+        // An edited amount must pass the policy before it is stored.
+        if (editedAmount is not null && ReimbursementPolicy.Evaluate(requester,
+                Store.LoadAccount(tenant, requester.SubjectId)!, proposal, approval with { Approved = true },
+                _clock()) is { Decision: Decision.Deny } edit)
+            return Status(tenant, operationId) with { Reason = edit.Reason };  // nothing stored: still waiting
 
         // One decision per claim: the first valid review claims the approval row
         // and stores the reviewed amount in the same transaction. A second
@@ -181,11 +185,73 @@ public sealed class ReimbursementDesk
     /// <summary>The amount currently on record for a claim, or null when there is no proposal.</summary>
     public decimal? AmountOfRecord(string tenant, Guid operationId) => LoadProposal(tenant, operationId)?.Item2.Amount;
 
-    /// <summary>After a restart: settle every payment whose outcome is unknown.</summary>
+    /// <summary>After a restart: repair claims a crash left between steps, then settle every unknown payment.</summary>
     public async Task<IReadOnlyList<ReconcileResult>> ResumeAsync(CancellationToken ct)
     {
+        await RepairClaimsAsync(ct);                  // claims stranded between review, commit and state
         await DispatchAsync(ct);                      // outbox rows a crash left behind
         return await Worker.ResumeAsync(ct);
+    }
+
+    /// <summary>Test hook: called after each step's transaction; the self-test throws from it to simulate a crash.</summary>
+    internal Action<string>? CrashPoint { get; set; }
+
+    /// <summary>
+    /// The review, the commit and the claim's state are written in separate
+    /// transactions, so a crash can leave a claim behind its own records. A
+    /// claim whose operation committed is marked Committed; a claim with a
+    /// stored decision but no operation is finished now, and an approval goes
+    /// through CommitAsync, which runs the policy again like any commit.
+    /// </summary>
+    private async Task RepairClaimsAsync(CancellationToken ct)
+    {
+        foreach ((string tenant, Guid op, bool committed, bool? approved) in StrandedClaims())
+        {
+            if (LoadProposal(tenant, op) is not { } pending) continue;
+            (Caller requester, ReimbursementProposal proposal) = pending;
+            if (committed)
+                Finish(requester, op, ClaimState.Committed, "committed_before_restart");
+            else if (approved == false)
+                Finish(requester, op, ClaimState.Rejected, "approval_rejected");
+            else if (LoadApproval(tenant, op) is { } approval)
+                await CommitAsync(requester, proposal, approval, ct);
+        }
+    }
+
+    private List<(string Tenant, Guid OperationId, bool Committed, bool? Approved)> StrandedClaims()
+    {
+        using SqliteConnection db = Open();
+        using SqliteCommand cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT c.tenant, c.operation_id, o.operation_id IS NOT NULL, a.approved
+            FROM claims c
+            LEFT JOIN operations o ON o.tenant = c.tenant AND o.operation_id = c.operation_id
+            LEFT JOIN approvals a ON a.tenant = c.tenant AND a.operation_id = c.operation_id
+            WHERE c.state IN ('Submitted', 'AwaitingReview')
+              AND (o.operation_id IS NOT NULL OR a.approved IS NOT NULL)
+            """;
+        using SqliteDataReader r = cmd.ExecuteReader();
+        List<(string, Guid, bool, bool?)> rows = [];
+        while (r.Read())
+            rows.Add((r.GetString(0), Guid.Parse(r.GetString(1)), r.GetInt64(2) == 1,
+                r.IsDBNull(3) ? null : r.GetInt64(3) == 1));
+        return rows;
+    }
+
+    private ApprovalRecord? LoadApproval(string tenant, Guid operationId)
+    {
+        using SqliteConnection db = Open();
+        using SqliteCommand cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT digest, requester, reviewer, reviewer_role, policy_version, expires_at, approved " +
+                          "FROM approvals WHERE tenant = $tenant AND operation_id = $op";
+        cmd.Parameters.AddWithValue("$tenant", tenant);
+        cmd.Parameters.AddWithValue("$op", operationId.ToString("D"));
+        using SqliteDataReader r = cmd.ExecuteReader();
+        return r.Read()
+            ? new ApprovalRecord(r.GetString(0), tenant, r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4),
+                DateTimeOffset.Parse(r.GetString(5), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                r.GetInt64(6) == 1)
+            : null;
     }
 
     public ClaimStatus Status(string tenant, Guid operationId)
@@ -251,6 +317,7 @@ public sealed class ReimbursementDesk
             return Finish(requester, proposal.OperationId, ClaimState.Rejected, policy.Reason);
 
         CommitResult commit = Store.Submit(requester.TenantId, requester.SubjectId, proposal, _clock());
+        CrashPoint?.Invoke("after_commit");
         if (commit.Status is CommitStatus.Committed or CommitStatus.Replayed)
             Finish(requester, proposal.OperationId, ClaimState.Committed, policy.Reason);
         else
@@ -327,6 +394,7 @@ public sealed class ReimbursementDesk
             """, ("$amount", ReimbursementPolicy.CanonicalAmount(p.Amount)), ("$note", (object?)editNote ?? DBNull.Value),
             ("$tenant", a.TenantId), ("$op", p.OperationId.ToString("D")));
         tx.Commit();
+        CrashPoint?.Invoke("after_review");
         return true;
     }
 
