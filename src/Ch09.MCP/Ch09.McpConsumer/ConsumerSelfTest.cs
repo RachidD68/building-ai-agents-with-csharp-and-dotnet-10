@@ -41,7 +41,7 @@ internal static class ConsumerSelfTest
         IList<McpClientTool> tools = await mcp.ListToolsAsync();
         string names = string.Join(", ", tools.Select(t => t.Name).Order());
         Expect("ListToolsAsync over stdio finds both catalog tools", names == "InventoryCheck, ProductLookup", $"tools: {names}");
-        Expect("the server's name arrives in the handshake", mcp.ServerInfo?.Name == "ContosoProductServer",
+        Expect("the client knows which server it reached (ServerInfo)", mcp.ServerInfo?.Name == "ContosoProductServer",
             $"server: {mcp.ServerInfo?.Name}");
         Expect("McpClientTool is an AIFunction: it can go straight into an agent's tools",
             tools.All(t => t is AIFunction));
@@ -66,7 +66,7 @@ internal static class ConsumerSelfTest
             refused is not null && refused.Contains("not found", StringComparison.OrdinalIgnoreCase),
             $"tool result: {OneLine(refused)}");
 
-        Expect("the server logged to stderr, so stdout stayed protocol-only", !stderr.IsEmpty,
+        Expect("the server's log lines arrived on stderr, not in the protocol stream on stdout", !stderr.IsEmpty,
             $"stderr lines: {stderr.Count}; first: {OneLine(stderr.FirstOrDefault())}");
 
         Console.WriteLine($"\nRESULT {s_passed}/{s_total}");
