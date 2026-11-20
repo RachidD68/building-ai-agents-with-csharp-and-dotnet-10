@@ -1,0 +1,24 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from which concurrent request wins, where there is one
+# Ch17.AspNetCoreHost --self-test
+# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Ch17.AspNetCoreHost.dll --self-test, exit 0
+
+=== Ch17.AspNetCoreHost: self-test (offline) ===
+
+-- Identity key from a validated token
+  PASS  MapInboundClaims = false keeps "sub" and "tid": key contoso/alice
+  PASS  a token without "tid" has no identity key (the route answers 403)
+
+-- Rate-limit partition (two users behind one IP)
+  claim types after the default inbound mapping: http://schemas.microsoft.com/identity/claims/tenantid, http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+  PASS  DEFECT REPRODUCED: the first edition's key ("sub" or the IP) gives both users 10.0.0.1
+  PASS  with the default mapping the host finds no identity key: it refuses (403), it never guesses
+  PASS  the fix: alice and bob behind 10.0.0.1 get two partitions
+  PASS  the same subject in two tenants gets two partitions (never "sub" alone)
+  PASS  an anonymous caller falls back to its address
+
+-- One retry owner (the provider answers 503 every time)
+  PASS  DEFECT REPRODUCED: SDK retries on top of the resilience handler: 16 sends for one call
+  PASS  the fix (AgenticAI.Common's OpenAI arm, maxRetries: 0): 4 sends for one call
+
+RESULT 9/9

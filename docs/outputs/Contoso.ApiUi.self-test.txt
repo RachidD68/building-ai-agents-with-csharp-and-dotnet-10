@@ -1,0 +1,30 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from which concurrent request wins, where there is one
+# Contoso.ApiUi --self-test
+# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Contoso.ApiUi.dll --self-test, exit 0
+
+=== Contoso v6: the API over v5 (self-test, offline) ===
+
+-- 1. v5 prepare (child process): Alice's taxi claim waits for review
+  PASS  prepare exits 0 with the claim AwaitingReview
+
+-- 2. Who can see the claim (GET /claims/{id})
+  PASS  alice (the requester): 200 AwaitingReview
+  PASS  rita (finance reviewer, same tenant): 200
+  PASS  bob (same tenant, not his claim): 404
+  PASS  fabrikam/E-1001 (same subject, other tenant): 404
+  PASS  no token: 401
+
+-- 3. Who can decide (POST /claims/{id}/decision); the reviewer is the token's subject
+  PASS  alice approves her own claim: 403 separation_of_duties
+  PASS  bob sends {"reviewer":"rita"} in the body: 404 (he cannot see it; the field is never read)
+  PASS  fabrikam/rita (same subject as the reviewer, other tenant): 404
+  PASS  rita approves twice at once (Task.Run): 409 already_decided and 200 rita
+
+-- 4. v5 resume (child process) pays once; the API reports it
+  PASS  resume exits 0, [DELIVERED]
+  PASS  alice: Delivered
+  PASS  a decision after payment: 409 not_awaiting_review
+  PASS  one payment in the provider's journal: 1
+
+RESULT 14/14

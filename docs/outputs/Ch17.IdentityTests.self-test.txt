@@ -1,0 +1,37 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from which concurrent request wins, where there is one
+# Ch17.IdentityTests --self-test
+# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Ch17.IdentityTests.dll --self-test, exit 0
+
+=== Ch17.IdentityTests (TestServer, minted tokens, fake model, offline) ===
+
+-- 1. Authentication: the token is validated before any route runs
+  PASS  no token: 401
+  PASS  wrong audience: 401
+  PASS  expired: 401
+  PASS  signed with another key: 401
+  PASS  valid token without "tid": 403 (no identity key, no conversation)
+  PASS  no audience configured: a valid token is refused (401), not accepted for any audience
+
+-- 2. Conversations: the id round trip, and who can load it
+  PASS  A resumes A's second turn: "user turns seen: my claim is CLM-7 | which claim did I mention?"
+  PASS  DEFECT REPRODUCED: the single-turn route forgets the first request: "user turns seen: which claim did I mention?"
+  PASS  B (same tenant) posting to A's conversation id: 404
+  PASS  fabrikam/alice (same "sub", other tenant): 404
+  PASS  B's DELETE of A's id is a no-op: 204
+  PASS  A's conversation is intact and holds no B or F text
+
+-- 3. Two concurrent turns on one conversation (Task.Run, both inside the model together)
+  PASS  one turn saved, one refused: 409 and 200
+  PASS  the refused turn overwrote nothing: "user turns seen: first | right [gate] | next"
+
+-- 4. Quotas: two users behind one IP (limit 3 per window)
+  PASS  DEFECT REPRODUCED: first-edition key + default claim mapping: B is refused after A's 3 calls (429)
+  PASS  the fix: A's fourth call is refused (429)
+  PASS  B, same IP, still has a quota (200)
+  PASS  fabrikam/alice, same "sub", still has a quota (200)
+
+-- 5. Health probes never reach the model
+  PASS  100 liveness probes and one readiness probe: 200, 0 model calls
+
+RESULT 19/19

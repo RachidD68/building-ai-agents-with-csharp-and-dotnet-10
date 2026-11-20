@@ -1,0 +1,37 @@
+# note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from which concurrent request wins, where there is one
+# Ch17.A2APreview --self-test
+# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree)
+# platform: Windows 11, dotnet Ch17.A2APreview.dll --self-test, exit 0
+
+=== Ch17.A2APreview: self-test (TestServer, fake model, offline) ===
+
+-- Routes the A2A hosting maps
+  DELETE /a2a/expense-assistant/tasks/{id}/pushNotificationConfigs/{configId}
+  GET /.well-known/agent-card.json
+  GET /a2a/expense-assistant/extendedAgentCard
+  GET /a2a/expense-assistant/tasks
+  GET /a2a/expense-assistant/tasks/{id}
+  GET /a2a/expense-assistant/tasks/{id}/pushNotificationConfigs
+  GET /a2a/expense-assistant/tasks/{id}/pushNotificationConfigs/{configId}
+  POST /a2a/expense-assistant
+  POST /a2a/expense-assistant/message:send
+  POST /a2a/expense-assistant/message:stream
+  POST /a2a/expense-assistant/tasks/{id}:cancel
+  POST /a2a/expense-assistant/tasks/{id}:subscribe
+  POST /a2a/expense-assistant/tasks/{id}/pushNotificationConfigs
+
+-- The agent card
+  PASS  anonymous GET /.well-known/agent-card.json returns "expense-assistant"
+  PASS  two interfaces, JSON-RPC and HTTP+JSON, both at /a2a/expense-assistant
+  PASS  the card declares a bearer scheme and requires it
+  PASS  no task-mode option: A2AServerRegistrationOptions has no AgentRunMode property
+
+-- The bindings, without and with a token
+  PASS  JSON-RPC without a token: 401
+  PASS  JSON-RPC with a token: a message comes back, not a task
+  PASS  HTTP+JSON with a token: the same message
+  (A2AException: HTTP 401: Unauthorized)
+  PASS  HTTP+JSON without a token fails (401)
+  PASS  the task routes the SDK still maps are behind the token too: GET /tasks 401
+
+RESULT 9/9

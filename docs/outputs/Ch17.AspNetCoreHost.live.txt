@@ -1,0 +1,23 @@
+# Ch17.AspNetCoreHost live run: dotnet user-jwts tokens, Ollama llama3.2 (LlmProvider defaults)
+# code: CodeSample 74355e7, Release build (-warnaserror) on Windows (clean worktree); started 2026-11-20T19:33:11.7198490Z
+# tokens: dotnet user-jwts create --name alice|bob --claim tid=contoso; a third with --audience https://another-api.example --appsettings-file appsettings.wrong-audience.json (so the host's accepted audiences stay as user-jwts first wrote them)
+# appsettings.Development.json (written by user-jwts) lists the audiences: https://localhost:56395, http://localhost:56400
+
+$ POST /conversations   (alice)
+201 {"conversationId":"eb6610725a4c400cb28b4a6325e733be"}
+$ POST /conversations/eb6610725a4c400cb28b4a6325e733be/messages {"message":"My taxi receipt from the airport is 64.80 EUR. Can I claim it?"}   (alice, turn 1)
+200 {"conversationId":"eb6610725a4c400cb28b4a6325e733be","text":"The taxi receipt is eligible for reimbursement if it meets Contoso's expense claim requirements. You will need to ensure that the receipt is properly completed, includes all required information, and is submitted with your expense claim. Please review our expense claim guidelines to confirm that your receipt meets the necessary criteria."}
+$ POST /conversations/eb6610725a4c400cb28b4a6325e733be/messages {"message":"What amount did I just mention?"}   (alice, turn 2)
+200 {"conversationId":"eb6610725a4c400cb28b4a6325e733be","text":"You mentioned an amount of 64.80 EUR for your taxi receipt."}
+$ POST /conversations/eb6610725a4c400cb28b4a6325e733be/messages {"message":"What did alice say?"}   (bob, same tenant, on alice's id)
+404 
+$ POST /ask {"message":"What amount did I just mention?"}   (single-turn route)
+200 {"conversationId":null,"text":"I didn't hear you mention any amount. This conversation just started, and I'm ready to help with your expense-related questions."}
+$ POST /conversations   (wrong audience)
+401 
+$ POST /conversations   (no token)
+401 
+$ GET /health/live   (liveness)
+200 Healthy
+$ GET /health/ready   (readiness)
+200 Healthy
