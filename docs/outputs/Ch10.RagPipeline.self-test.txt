@@ -1,4 +1,4 @@
-# code a199e94 | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
+# code b146d9d | SDK 11.0.100 | Windows 11 | no provider (offline self-test; the Linux container run is identical)
 $ dotnet run -- --self-test
 
 === RAG pipeline: self-test (fixed vectors) ===
@@ -12,6 +12,8 @@ $ dotnet run -- --self-test
   PASS  DEFECT REPRODUCED: the in-memory store accepts a vector that does not match its schema
   a 768-dimension query against it: threw ArgumentException
   PASS  the mismatch surfaces only at query time, after ingestion
+  a 1536-dimension query (the same wrong model): returned 1 hit(s)
+  PASS  DEFECT REPRODUCED: with the same wrong model on both paths, the store never complains
 
 -- 3. The fix: the dimension check at startup --
   The embedding model returned 1536 dimensions, but DocumentChunk declares 768.
@@ -26,4 +28,4 @@ $ dotnet run -- --self-test
   PASS  hits come back best first
   PASS  scores are cosine similarities: 1.0000, 0.7071, 0.0000
 
-RESULT 8/8
+RESULT 9/9
