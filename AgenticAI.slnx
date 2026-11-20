@@ -118,6 +118,7 @@
     <Project Path="src/Ch17.HostingIdentity/Ch17.AspNetCoreHost/Ch17.AspNetCoreHost.csproj" />
     <Project Path="src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.AppHost/Ch17.AspireOrchestration.AppHost.csproj" />
     <Project Path="src/Ch17.HostingIdentity/Ch17.AspireOrchestration/Ch17.AspireOrchestration.ServiceDefaults/Ch17.AspireOrchestration.ServiceDefaults.csproj" />
+    <Project Path="src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj" />
   </Folder>
   <Folder Name="/src/Ch19.Observability/">
     <Project Path="src/Ch19.Observability/Ch19.IncidentDiagnosis/Ch19.IncidentDiagnosis.csproj" />
