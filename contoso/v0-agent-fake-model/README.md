@@ -23,7 +23,7 @@ dotnet run --project contoso/v0-agent-fake-model -- --self-test   # fake model, 
 
 ## What later snapshots take from this one
 
-- `AgenticAI.Testing.FakeChatClient` as the scripted model of every Contoso self-test. v2 still has its own `ScriptedProposalClient` (keyed by claim text, with an outage counter); folding it onto `FakeChatClient` needs a reply chosen by the message, which the fake does not do yet.
-- `RunOutcome` / `RunTracker` for any streamed answer the API and interface snapshot shows to a user, so a cancelled or cut-off answer is never displayed as a finished one.
+- `AgenticAI.Testing.FakeChatClient`, reused by later chapters' self-tests (Ch16 and Ch20 use it directly; Ch21 and Ch24 use the same library's `ScriptedToolChatClient`). The later Contoso snapshots script their own models instead: v1 has `ScriptedExpenseModel`, v2 `ScriptedProposalClient`, and the later snapshots keep their own scripted proposals or readings.
+- The split between a finished response and a finished operation. `RunOutcome` / `RunTracker` stay in this snapshot; the interface snapshot (v6) makes the same split with the operation states streamed by `Ch18.SseStatusStream`, so a closed connection is never shown as a finished operation.
 - The policy facts above, unchanged: v2's `ReimbursementPolicy.LowValueLimit` (50.00) and `finance-reviewer` role are the same rules.
 - v1 (owned conversation) replaces the single-turn desk with a conversation the application owns and stores.
