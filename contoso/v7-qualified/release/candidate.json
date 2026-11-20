@@ -1,0 +1,165 @@
+{
+  "candidate": "contoso-v7",
+  "description": "Contoso v7: v6's claims API and interface over v5's durable store, v3's FAQ desks, and the inputs reused from the durable-execution, skills, hosting, security, evaluation and capacity chapters. Simulated payment provider only.",
+  "profile": {
+    "provider": "ollama",
+    "chatModel": "llama3.2",
+    "embeddingModel": "nomic-embed-text",
+    "endpoint": "http://localhost:11434",
+    "configurationProfile": "release"
+  },
+  "identity": {
+    "projects": [
+      "contoso/v7-qualified/Contoso.Qualified.csproj",
+      "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
+      "src/Ch15.DurableExecution/Ch15.ExternalEffects/Ch15.ExternalEffects.csproj",
+      "src/Ch15.DurableExecution/Ch15.DurableReview/Ch15.DurableReview.csproj",
+      "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj",
+      "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj",
+      "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj",
+      "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj",
+      "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
+      "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj"
+    ],
+    "prompts": [
+      { "id": "faq-agent", "project": "src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj", "type": "Ch10.FaqAgent.FaqAgentFactory", "field": "Instructions" },
+      { "id": "policy-evidence-agent", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "type": "Ch11.AuthorizedSearch.EvidenceAgent", "field": "Instructions" },
+      { "id": "policy-faq-version", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "type": "Contoso.FaqEvidence.PolicyFaq", "field": "PromptVersion" }
+    ],
+    "skills": [
+      { "folder": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/skills", "lock": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/skills.lock.json" }
+    ],
+    "data": [
+      { "id": "faq-handbook", "path": "src/Ch10.RAGBaseline/Ch10.FaqAgent/docs" },
+      { "id": "policy-corpus", "path": "src/Ch11.RAGPermissions/corpus" },
+      { "id": "evidence-cases.v1", "path": "src/Ch21.Evaluation/Ch21.EvidenceEval/cases/evidence-cases.v1.json" },
+      { "id": "workload.contoso-claims.v1", "path": "src/Ch22.CostCapacity/Ch22.LoadProfile/data/workload.contoso-claims.v1.json" },
+      { "id": "capabilities", "path": "contoso/v7-qualified/release/capabilities.json" }
+    ]
+  },
+  "layers": [
+    {
+      "id": "build",
+      "title": "Restore and build",
+      "mode": "offline",
+      "proves": "the candidate restores from its lock files and compiles with no warning",
+      "doesNotProve": "any behaviour",
+      "generate": "restore-build"
+    },
+    {
+      "id": "contracts",
+      "title": "Offline contracts",
+      "mode": "offline",
+      "proves": "the rules hold on scripted inputs: abstention, citations, permissions, threats, skill gates",
+      "doesNotProve": "anything about a real model's answers",
+      "steps": [
+        { "id": "threat-register", "kind": "run", "project": "src/Ch20.SecurityGovernance/Ch20.ThreatRegisterTests/Ch20.ThreatRegisterTests.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "evidence-scorer", "kind": "run", "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "skill-lifecycle", "kind": "run", "project": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/Ch16.SkillLifecycle.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "load-profile", "kind": "run", "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "reimbursement", "kind": "run", "project": "contoso/v2-authorized-reimbursement/Contoso.AuthorizedReimbursement.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "faq-evidence", "kind": "run", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "receipts", "kind": "run", "project": "contoso/v4-receipts/Contoso.Receipts.csproj", "args": ["--self-test"], "provider": "fake" }
+      ]
+    },
+    {
+      "id": "integration",
+      "title": "Integration: persistence, identity, transport",
+      "mode": "offline",
+      "proves": "state survives process loss on one machine, tokens and tenants are enforced over HTTP, the stream resumes",
+      "doesNotProve": "model quality, load, a real payment provider, more than one machine",
+      "steps": [
+        { "id": "durable-resume", "kind": "run", "project": "contoso/v5-durable-resume/Contoso.DurableResume.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "restart-tests", "kind": "run", "project": "src/Ch15.DurableExecution/Ch15.RestartTests/Ch15.RestartTests.csproj", "args": ["--self-test"], "provider": "none" },
+        { "id": "identity-tests", "kind": "run", "project": "src/Ch17.HostingIdentity/Ch17.IdentityTests/Ch17.IdentityTests.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "api-ui", "kind": "run", "project": "contoso/v6-api-ui/Contoso.ApiUi.csproj", "args": ["--self-test"], "provider": "fake" },
+        { "id": "qualified", "kind": "run", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "args": ["--self-test"], "provider": "fake" }
+      ]
+    },
+    {
+      "id": "real-provider",
+      "title": "Real provider",
+      "mode": "real",
+      "proves": "what this model did on these cases, in this run",
+      "doesNotProve": "another model, other data, the same result on the next run",
+      "steps": [
+        { "id": "model-identity", "kind": "probe", "provider": "ollama", "maxSeconds": 120 },
+        { "id": "faq-live", "kind": "run", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "provider": "ollama",
+          "count": { "kind": "tally", "pass": "^\\s+as expected", "fail": "^\\s+differs" }, "maxSeconds": 400, "completedExitCodes": [0, 1] },
+        { "id": "evidence-live", "kind": "run", "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj", "provider": "ollama",
+          "count": { "kind": "ratio", "pattern": "Passed (?<pass>\\d+)/(?<total>\\d+)" }, "maxSeconds": 900, "completedExitCodes": [0, 1] },
+        { "id": "faq-azure", "kind": "run", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "provider": "azure",
+          "env": { "LlmProvider__Provider": "azure" }, "requiresEnv": ["LlmProvider__AzureOpenAI__Endpoint"],
+          "count": { "kind": "tally", "pass": "^\\s+as expected", "fail": "^\\s+differs" }, "maxSeconds": 400, "completedExitCodes": [0, 1] }
+      ]
+    },
+    {
+      "id": "workload",
+      "title": "Workload",
+      "mode": "real",
+      "proves": "queueing and admission limits on this workstation, with this model",
+      "doesNotProve": "the capacity of another machine, provider or model",
+      "steps": [
+        { "id": "load-live", "kind": "run", "project": "src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj", "provider": "ollama",
+          "count": { "kind": "ratio", "pattern": "^\\s{1,3}\\d+\\s+(?<total>\\d+)\\s+(?<pass>\\d+)\\s+\\d+\\s+\\d+\\s+\\d+\\s" }, "maxSeconds": 400 }
+      ]
+    }
+  ],
+  "matrix": [
+    { "id": "F1", "promise": "With no relevant evidence, the FAQ desk abstains and does not call the model", "evidence": "contract",
+      "step": "faq-evidence", "check": "abstained: nothing scored at or above the threshold, the model was not called", "data": "faq-handbook", "expected": "NoEvidence, model not called" },
+    { "id": "F2", "promise": "A caller of another organization is refused before any search", "evidence": "contract",
+      "step": "faq-evidence", "check": "refused before any search: the handbook is Contoso's", "data": "faq-handbook", "expected": "NotPermitted" },
+    { "id": "F3", "promise": "A valid document the caller may not read is never supplied", "evidence": "contract",
+      "step": "faq-evidence", "check": "the management draft is indexed but never supplied, even to a manager", "data": "policy-corpus", "expected": "draft not in any evidence" },
+    { "id": "F4", "promise": "An answer citing an id this request never received is withheld", "evidence": "contract",
+      "step": "faq-evidence", "check": "an answer citing an id this request never received is withheld", "data": "policy-corpus", "expected": "citation_not_supplied, not cached" },
+    { "id": "F5", "promise": "No answer or evidence crosses an organization, under concurrent questions", "evidence": "contract",
+      "step": "faq-evidence", "check": "no answer or evidence crosses an organization", "data": "policy-corpus", "expected": "0 crossings" },
+    { "id": "F6", "promise": "On the live model, every FAQ scenario ends as expected", "evidence": "provider",
+      "step": "faq-live", "threshold": 1.0, "data": "faq-handbook, policy-corpus", "expected": "all 'as expected'" },
+    { "id": "F7", "promise": "On the live model, the agent abstains exactly when no authorized evidence answers", "evidence": "provider",
+      "step": "evidence-live", "ratio": "^\\s+abstention\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 1.0, "data": "evidence-cases.v1", "expected": "every item" },
+    { "id": "F8", "promise": "On the live model, answers state the expected policy value", "evidence": "provider",
+      "step": "evidence-live", "ratio": "^\\s+fact\\.value\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 0.8, "data": "evidence-cases.v1", "expected": ">= 0.8 of applicable items" },
+    { "id": "F9", "promise": "On the live model, the stated value is in a cited supporting chunk", "evidence": "provider",
+      "step": "evidence-live", "ratio": "^\\s+evidence\\.support\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 0.8, "data": "evidence-cases.v1", "expected": ">= 0.8 of applicable items" },
+    { "id": "F10", "promise": "The same FAQ scenarios hold on the Azure OpenAI deployment", "evidence": "provider",
+      "step": "faq-azure", "threshold": 1.0, "data": "faq-handbook, policy-corpus", "expected": "all 'as expected'" },
+    { "id": "C1", "promise": "A valid but unauthorized claim id answers 404, like an unknown one", "evidence": "integration",
+      "step": "api-ui", "check": "bob (same tenant, not his claim): 404", "data": "v5 store (fresh)", "expected": "404" },
+    { "id": "C2", "promise": "The same subject in another tenant sees neither the claim nor the conversation", "evidence": "integration",
+      "step": "qualified", "check": "fabrikam/E-1001 (same subject, other tenant) on alice's conversation: 404; on her claim: 404", "data": "v5 store (fresh)", "expected": "404, 404" },
+    { "id": "C3", "promise": "An approval of what the reviewer saw before the account changed is rejected", "evidence": "integration",
+      "step": "qualified", "check": "rita approves what she saw at account version", "data": "v5 store (fresh)", "expected": "409 stale_version" },
+    { "id": "C4", "promise": "A payment whose outcome was never recorded is reconciled and paid once", "evidence": "integration",
+      "step": "restart-tests", "check": "v5 after-accept: one committed operation, one payment", "data": "v5 store (fresh)", "expected": "1 operation, 1 payment" },
+    { "id": "C5", "promise": "A conversation survives the loss of the API process", "evidence": "integration",
+      "step": "qualified", "check": "a new API process on the same store, alice's next turn", "data": "conversation store (fresh)", "expected": "both turns seen" },
+    { "id": "C6", "promise": "A capability shipped disabled is refused with its recorded reason", "evidence": "integration",
+      "step": "qualified", "check": "rita approves: 503 capability_disabled (claims.decide)", "data": "capabilities", "expected": "503 capability_disabled" },
+    { "id": "C7", "promise": "A token signed with another key is refused", "evidence": "integration",
+      "step": "identity-tests", "check": "signed with another key: 401", "data": "minted tokens", "expected": "401" },
+    { "id": "C8", "promise": "On the live model, no forbidden action tool is called", "evidence": "provider",
+      "step": "evidence-live", "ratio": "^\\s+action\\.allowed\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 1.0, "data": "evidence-cases.v1", "expected": "every action item" },
+    { "id": "S1", "promise": "Every threat in the register has a passing test", "evidence": "contract",
+      "step": "threat-register", "data": "threat register", "expected": "n/n" },
+    { "id": "W1", "promise": "At the declared concurrency (4), at least 75% of requests are accepted", "evidence": "workload",
+      "step": "load-live", "ratio": "^\\s{1,3}4\\s+(?<total>\\d+)\\s+(?<pass>\\d+)\\s", "threshold": 0.75, "data": "workload.contoso-claims.v1", "expected": ">= 0.75 accepted" },
+    { "id": "H1", "promise": "An engineer who did not build it runs the drill and explains the business state from the documents alone", "evidence": "human",
+      "data": "this release folder", "expected": "a recorded walkthrough" },
+    { "id": "H2", "promise": "Finance accepts a release that takes no approvals", "evidence": "human",
+      "data": "release dossier", "expected": "a signed decision record" }
+  ],
+  "limits": [
+    "Payments are simulated (FakePaymentProvider); no real payment provider is integrated, and claims.decide ships disabled.",
+    "The gate is on the HTTP API. v5's worker command line keeps its review verb; the release runbook does not hand it out.",
+    "The real-provider layer ran one small local model once; its counts describe that run only.",
+    "No cloud provider has credentials on the qualification machine: the Azure OpenAI step is compiled and declared, not run.",
+    "The host agent behind /ask and /conversations has no real-provider evaluation in this campaign; the evaluated answer paths are v3's FAQ desks and the evidence cases.",
+    "The evidence-evaluation agent's instructions are inline in its Program.cs, not a constant, so the runner does not hash them; the commit and lock files identify them.",
+    "The refund-escalation skill is frozen with the candidate, but no v7 route loads it.",
+    "Event logs and the FAQ indexes are in memory: a restarted process rebuilds them.",
+    "One machine: no test covers two API instances or two workers on different hosts."
+  ]
+}

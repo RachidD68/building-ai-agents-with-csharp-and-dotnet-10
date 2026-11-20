@@ -156,6 +156,9 @@
     <Project Path="src/Ch22.CostCapacity/Ch22.LoadProfile/Ch22.LoadProfile.csproj" />
     <Project Path="src/Ch22.CostCapacity/Ch22.ModelRouting/Ch22.ModelRouting.csproj" />
   </Folder>
+  <Folder Name="/src/Ch23.Qualification/">
+    <Project Path="src/Ch23.Qualification/Ch23.QualificationRunner/Ch23.QualificationRunner.csproj" />
+  </Folder>
   <Folder Name="/src/Ch24.Operations/">
     <Project Path="src/Ch24.Operations/Ch24.KillSwitch/Ch24.KillSwitch.csproj" />
     <Project Path="src/Ch24.Operations/Ch24.RestoreDrill/Ch24.RestoreDrill.csproj" />
@@ -276,5 +279,8 @@
   </Folder>
   <Folder Name="/contoso/v6-api-ui/">
     <Project Path="contoso/v6-api-ui/Contoso.ApiUi.csproj" />
+  </Folder>
+  <Folder Name="/contoso/v7-qualified/">
+    <Project Path="contoso/v7-qualified/Contoso.Qualified.csproj" />
   </Folder>
 </Solution>

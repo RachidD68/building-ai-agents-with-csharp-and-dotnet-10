@@ -1,0 +1,48 @@
+{
+  "profile": "release",
+  "candidate": "contoso-v7",
+  "capabilities": [
+    {
+      "name": "claims.read",
+      "routes": [
+        "GET /claims/{id}",
+        "GET /claims/{id}/events",
+        "GET /claims/{id}/snapshot",
+        "GET /claims/{id}/review"
+      ],
+      "enabled": true,
+      "reason": null
+    },
+    {
+      "name": "claims.decide",
+      "routes": [
+        "POST /claims/{id}/decision",
+        "POST /claims/{id}/approval"
+      ],
+      "enabled": false,
+      "reason": "An approved claim is paid by the v5 worker through the simulated FakePaymentProvider. No real payment provider is integrated or qualified, so this release takes no approvals."
+    },
+    {
+      "name": "conversations",
+      "routes": [
+        "POST /ask",
+        "POST /conversations",
+        "POST /conversations/{conversationId}/messages",
+        "DELETE /conversations/{conversationId}"
+      ],
+      "enabled": true,
+      "reason": null
+    },
+    {
+      "name": "operations",
+      "routes": [
+        "ANY /health/live",
+        "ANY /health/ready",
+        "GET /agents",
+        "GET /release"
+      ],
+      "enabled": true,
+      "reason": null
+    }
+  ]
+}
