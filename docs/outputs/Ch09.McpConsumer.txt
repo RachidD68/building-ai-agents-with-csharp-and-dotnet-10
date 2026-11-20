@@ -1,0 +1,25 @@
+# Ch09.McpConsumer (stdio, live)
+# code: CodeSample ba4fe73, Release build
+# platform: Windows 11, dotnet bin/Release/net10.0/Ch09.McpConsumer.dll, Ollama llama3.2, 2026-11-20 14:03:06Z, exit 0, 65 s
+# note: the book prints the third answer as a model error: neither tool finds a product by name, and the catalog's Webcam Pro is CAM-PRO-007 at 89.99 with 120 units, not the keyboard's data
+
+=== MCP Consumer: Discovering Tools from an MCP Server ===
+
+Launching MCP server: Ch09.McpServer.dll
+Connected to: ContosoProductServer v1.0.0
+
+Discovered 2 tools from MCP server:
+  - ProductLookup: Looks up detailed product information by product ID. Returns the product name, SKU, category, price, and stock level.
+  - InventoryCheck: Checks the current inventory level for a product by its SKU (stock-keeping unit). Returns the stock count and availability status.
+
+You: Look up product 1003 and tell me about it.
+Agent: The product 1003 is a "Contoso 27" 4K Monitor, with a SKU of MON-4K-003. It falls under the category of Electronics. The current price is $449.99 and it is currently in stock with a quantity of 45 units available.
+
+You: Check the inventory for SKU KB-ERG-001.
+Agent: The inventory for SKU KB-ERG-001 indicates that the Contoso Ergonomic Keyboard is currently in stock. There are 150 units available, and the unit price is $79.99.
+
+You: Is the webcam pro in stock? What's its price?
+Agent: The Contoso Ergonomic Keyboard (Webcam Pro) is in stock. The current price is $79.99. There are 150 units available.
+
+=== MCP Consumer demo complete! ===
+
