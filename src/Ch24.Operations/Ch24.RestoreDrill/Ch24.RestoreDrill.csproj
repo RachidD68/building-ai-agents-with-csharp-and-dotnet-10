@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A timed restore drill on temporary storage: back up the durable stores
+       with SQLite's online backup, wipe them, refuse a binary that cannot read
+       the backup's schema or index, restore into an isolated folder, reconcile
+       the pending payments against the provider, and print the measured
+       recovery time and recovery point. The simulated provider and the
+       delivery worker are the authorized-actions chapter's
+       (Ch08.UncertainOutcome), used as they are. No model, no network. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Ch08.AuthorizedActions/Ch08.UncertainOutcome/Ch08.UncertainOutcome.csproj" />
+  </ItemGroup>
+
+</Project>

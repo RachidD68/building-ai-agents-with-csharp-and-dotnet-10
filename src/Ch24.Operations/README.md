@@ -1,77 +1,14 @@
-# Your Next Steps
+# Operating and evolving agents
 
-Congratulations on completing the book! You now have a solid foundation in
-building agentic AI applications with .NET. Here are resources and areas
-to explore as you continue your journey.
+| Project | What it shows |
+|---|---|
+| `Ch24.KillSwitch` | Withdraw one capability (the reimbursement tool) at the tool, the HTTP boundary and the effect, while the read-only FAQ and the open conversations stay up; withdrawal and re-enable audited; re-enable only with an evaluation run |
+| `Ch24.RestoreDrill` | Back up the durable stores, lose them, refuse an incompatible binary, schema or index pairing, restore into an isolated folder, reconcile pending payments with the provider, and measure RTO and RPO |
 
-## Emerging Protocols and Standards
+Both run offline with `--self-test` (`RESULT n/n`, exit code 1 on any failure).
 
-### Agent-to-Agent (A2A) Protocol
-Standardizes how AI agents discover and communicate with each other over HTTP.
-- Specification: https://a2a-protocol.org/latest/
-- See the hosting chapter (Ch17.A2APreview) for integration using the official SDK
+The chapter's exercises extend these two projects. The provider-outage runbook starts from the hosting chapter's `Ex01.HealthCheckApi`.
 
-### Model Context Protocol (MCP)
-Enables AI agents to access external tools, data sources, and services.
-- Specification: https://modelcontextprotocol.io/
-- See the MCP chapter (Ch09.MCP) for server and client implementations
+## Contributing to the Microsoft Agent Framework
 
-### AG-UI (Agent-Generated User Interfaces)
-An emerging pattern where agents dynamically generate UI components
-based on context, enabling richer human-agent interactions beyond text.
-
-## Enterprise Governance Patterns
-
-As you bring agents to production, consider these governance areas:
-
-- **Cost management** — Token budgets, rate limiting, model tiering
-- **Audit logging** — Record all agent interactions for compliance
-- **Access control** — Role-based permissions for agent capabilities
-- **Content policies** — Automated moderation and safety guardrails (the security chapter)
-- **Model versioning** — Pin model versions, test before upgrading
-- **Data residency** — Ensure data stays in required geographic regions
-- **Responsible AI** — Fairness testing, bias detection, transparency
-
-## Contributing to MAF Open Source
-
-The Microsoft Agent Framework is open source and welcomes contributions:
-- GitHub: https://github.com/microsoft/agent-framework
-- Issues and feature requests
-- Documentation improvements
-- Sample projects and extensions
-
-## Community Resources
-
-- **Discord** — Join the MAF community for discussions and support
-- **Stack Overflow** — Tag: `microsoft-agents-framework`
-- **Microsoft Learn** — Official documentation and tutorials
-  https://learn.microsoft.com/en-us/dotnet/ai/
-
-## Further Reading
-
-### Books and Documentation
-- Microsoft.Extensions.AI documentation
-- Azure AI Services documentation
-- OpenTelemetry .NET documentation
-
-### Key NuGet Packages
-- `Microsoft.Agents.AI` — Core agent framework
-- `Microsoft.Agents.AI.Hosting` — ASP.NET Core hosting
-- `Microsoft.Agents.AI.Workflows` — Workflow orchestration
-- `Microsoft.Extensions.AI` — AI abstractions and middleware
-- `ModelContextProtocol` — MCP client and server
-
-### Architecture Patterns
-- Retrieval Augmented Generation (RAG) — the RAG chapter
-- Multi-agent orchestration — the multi-agent chapter
-- Workflow-based agents — the workflows chapter
-- Middleware pipelines — the security chapter
-- Observability and tracing — the observability chapter
-
-## What's Next for You
-
-1. **Build something real** — Pick a problem at work and prototype an agent
-2. **Start small** — Single agent, one tool, one data source
-3. **Add guardrails early** — Safety and observability from day one
-4. **Iterate** — Use the critic agent pattern to improve quality
-5. **Share** — Blog about your experience, contribute to open source
+The framework is open source: <https://github.com/microsoft/agent-framework>. A useful issue carries a minimal repro: the package versions, a scripted `IChatClient` instead of a live model where possible, and the output you expected next to the output you got.

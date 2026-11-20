@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Withdraw one capability while the service and its conversations stay up.
+       A capability registry is read by function-invocation middleware (the
+       tool) and by an endpoint filter (the HTTP boundary), and a withdrawal is
+       passed down to the policy decision point of the security chapter, which
+       checks it again at the effect. GA packages only. No model, no network
+       beyond 127.0.0.1, no API key. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The decision point at the effect (ReimbursementService, RevocationList, World). -->
+    <ProjectReference Include="../../Ch20.SecurityGovernance/Ch20.PolicyEnforcement/Ch20.PolicyEnforcement.csproj" />
+    <!-- Scripted model that asks for tool calls. -->
+    <ProjectReference Include="../../Common/AgenticAI.Testing/AgenticAI.Testing.csproj" />
+  </ItemGroup>
+
+</Project>
