@@ -1,4 +1,4 @@
-# code 591b926 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
+# code 5f7b4c3 | SDK 11.0.100 | Windows 11 (Linux runtime:10.0-noble: identical)
 $ dotnet run -- --self-test
 
 === Threat register: self-test ===
