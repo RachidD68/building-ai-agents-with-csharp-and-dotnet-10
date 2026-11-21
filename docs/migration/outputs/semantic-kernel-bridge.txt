@@ -1,0 +1,9 @@
+# Book/reports/v2/verify/AppC.MigrationSnippets | Microsoft.Agents.AI 1.28.0, Microsoft.Extensions.AI 10.11.0, Microsoft.SemanticKernel.Core 1.77.0 | SDK 11.0.100 | Windows 11 | scripted IChatClient, no model, no network
+$ dotnet run -c Release
+tool name the model sees: weather_GetWeather
+  before weather_GetWeather([city, Seattle])
+  after  weather_GetWeather -> 12 C and overcast in Seattle
+agent: It is 12 C and overcast in Seattle.
+  no Kernel: InvalidOperationException: No service for type 'System.Collections.Generic.IEnumerable`1[Microsoft.SemanticKernel.KernelPlugin]' has been registered.
+agent (no Kernel): It is Error: Function failed..
+rewritten tool name: _Main_g_GetWeather_0_2
