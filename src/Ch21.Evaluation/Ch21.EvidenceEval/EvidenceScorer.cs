@@ -99,7 +99,7 @@ public static partial class EvidenceScorer
 
     /// <summary>Every "n days" the text states, digits or words, with whether a negation precedes it.</summary>
     public static IReadOnlyList<DayCount> DayCounts(string text) =>
-        [.. DayPattern().Matches(text.Replace('’', '\'')).Select(m => new DayCount(
+        [.. DayPattern.Matches(text.Replace('’', '\'')).Select(m => new DayCount(
             ParseNumber(m.Groups["n"].Value), m.Value.Trim(), m.Groups["neg"].Success))];
 
     private static int ParseNumber(string token)
@@ -120,10 +120,14 @@ public static partial class EvidenceScorer
     // An optional negation within the three words before it is captured as "neg": a fixed
     // list (not, no, never, cannot, any "n't" contraction, rather than, instead of), after
     // curly apostrophes are straightened. "No fewer than 15 days" also counts as negated.
-    [GeneratedRegex(@"(?:(?<neg>\b(?:not|no|never|cannot|\w+n't|rather than|instead of)\b)(?:\s+\S+){0,2}?\s+)?" +
-                    @"(?<![\w.-])(?<n>\d+|(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)" +
-                    @"\s+(?:[a-z]+\s+){0,2}?days?\b", RegexOptions.IgnoreCase)]
-    private static partial Regex DayPattern();
+    // Interpreted on purpose: the source-generated (and RegexOptions.Compiled) form of this
+    // pattern throws IndexOutOfRangeException on some live answers (e.g. "rather than . s"),
+    // while the interpreted engine returns the same matches and no match for that text.
+    private static readonly Regex DayPattern = new(
+        @"(?:(?<neg>\b(?:not|no|never|cannot|\w+n't|rather than|instead of)\b)(?:\s+\S+){0,2}?\s+)?" +
+        @"(?<![\w.-])(?<n>\d+|(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)" +
+        @"\s+(?:[a-z]+\s+){0,2}?days?\b",
+        RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 }
 
 public sealed record DayCount(int Value, string Text, bool Negated);

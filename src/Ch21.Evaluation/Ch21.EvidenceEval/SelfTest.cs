@@ -127,6 +127,12 @@ internal static class SelfTest
         Check(Math.Abs(perRun - 0.075) < 1e-9 && Math.Abs(perItem - 0.30) < 1e-9,
             "paraphrases of one item are not independent trials: the bound is 0.30, not 0.075");
 
+        Console.WriteLine("\n-- 7. Scorer robustness (live answer that crashed the generated regex) --");
+        bool survived;
+        try { survived = EvidenceScorer.DayCounts("rather than . s").Count == 0; }
+        catch (IndexOutOfRangeException) { survived = false; }
+        Check(survived, "\"rather than . s\" scores without throwing and states no day count");
+
         Console.WriteLine($"\nRESULT {passed}/{total}");
         return passed == total ? 0 : 1;
     }
