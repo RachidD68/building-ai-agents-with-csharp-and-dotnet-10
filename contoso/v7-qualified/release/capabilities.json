@@ -1,6 +1,6 @@
 {
   "profile": "release",
-  "candidate": "contoso-v7",
+  "candidate": "contoso-v7.1",
   "capabilities": [
     {
       "name": "claims.read",

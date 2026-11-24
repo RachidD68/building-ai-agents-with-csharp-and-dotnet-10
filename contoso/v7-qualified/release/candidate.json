@@ -1,6 +1,6 @@
 {
-  "candidate": "contoso-v7",
-  "description": "Contoso v7: v6's claims API and interface over v5's durable store, v3's FAQ desks, and the inputs reused from the durable-execution, skills, hosting, security, evaluation and capacity chapters. Simulated payment provider only.",
+  "candidate": "contoso-v7.1",
+  "description": "Contoso v7: v6's claims API and interface over v5's durable store, v3's FAQ desks, and the inputs reused from the durable-execution, skills, hosting, security, evaluation and capacity chapters. Simulated payment provider only. Supersedes contoso-v7, whose evidence-live step crashed in the evidence scorer (FJ-01); the scorer fix is CodeSample 956c463.",
   "profile": {
     "provider": "ollama",
     "chatModel": "llama3.2",
