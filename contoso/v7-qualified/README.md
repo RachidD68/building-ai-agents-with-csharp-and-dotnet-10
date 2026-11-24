@@ -63,8 +63,8 @@ The release folder names candidate `contoso-v7.2`. The first candidate,
 step evaluated the evaluation chapter's demonstration agent, which offers the
 approve tool to every caller and checks no citation. `contoso-v7.2` (fixes
 78bc373, manifest 81bc32b) evaluates the configuration above: every row that
-applies passed, F10 (Azure) was not run, and H1 and H2 wait for people. The nine
-value answers were cited by the contract's attachment, not by the model (FJ-03).
+applies passed, F10 (Azure) was not run, and H1 and H2 wait for people. Each of
+the nine value answers passed F9 only after the contract attached its citation (FJ-03).
 That supports calling `contoso-v7.2` qualified within the limits below, no
 further. The runs of record are `docs/outputs/Ch23.release-dossier.md`,
 `Ch23.contoso-v7.1.release-dossier.md` and `Ch23.contoso-v7.release-dossier.md`.
