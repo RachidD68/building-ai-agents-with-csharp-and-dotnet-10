@@ -1,144 +1,230 @@
-# Building AI Agents with C# and .NET 10
+# Building AI Agents with C# and .NET 10, Second Edition
 
 <p align="center">
   <img src="assets/cover-front.png" alt="Building AI Agents with C# and .NET 10 — cover" width="420">
 </p>
 
-<p align="center"><strong>A Developer's First Guide to the Microsoft Agent Framework</strong></p>
+<p align="center"><strong>From First Agent to Reliable Production Systems with Microsoft Agent Framework</strong></p>
 
-<p align="center"><em>From your first call to an LLM to a production-hosted, observable, safety-filtered multi-agent system — in C# 14 and .NET 10.</em></p>
-
-<p align="center"><strong>📖 <a href="https://leanpub.com/buildingAIAgentsWithCSandNet10">Get the book on Leanpub</a></strong></p>
-
-<p align="center"><sub>This repository hosts the companion code, errata, and reader feedback for the book.</sub></p>
+<p align="center"><sub>Companion code, errata and reader feedback for the second edition, by Rachid Dahir. The first edition's code is under the tag <code>v1.1.0-maf-1.28.0</code> (see <a href="#first-edition">First edition</a>).</sub></p>
 
 ---
 
-## Errata
+## What's in the book
 
-Corrections in the companion code, with what to change in the printed listings, are in **[ERRATA.md](./ERRATA.md)**. Severity A means "correct before publication or announce as an erratum" in the technical review (or, outside it, a fresh clone did not build or a sample returned a wrong result); B means "correct in the next update". ERRATA.md explains the IDs.
+The book builds AI agents in C# with the **Microsoft Agent Framework (MAF) 1.28** on **.NET 10** (LTS) and **C# 14**. It has six parts, 24 chapters and seven appendices, and one running example, Contoso's expense assistant, grows through eight versions (v0 to v7) from a first agent to a qualified release candidate. Payments are simulated: no sample moves real money.
 
-These rows are first-edition errata, so their chapter numbers and project names are the first edition's. The projects now carry second-edition names (for example `Ch08.ShellTool` is `Ch07.ShellTool`); Appendix F of the second edition maps every first-edition project to its new folder.
+The appendices are: A, C# Essentials for AI Development; B, Package Manifest and Qualification Scope; C, Migrating from Semantic Kernel and AutoGen (the full guides are in [`docs/migration`](./docs/migration/README.md)); D, Glossary; E, Exercise Solutions and Project Mapping; F, Troubleshooting by Symptom; and G, References and Evidence.
 
-| Area / chapter | Severity | What was wrong | Fix | Fixed in |
-|---|---|---|---|---|
-| Ch10, Ch14, Ch16 · RAG provider (B1) | A | `RagContextProvider` needed a mutable `CurrentQuery`: Chapter 14 never set it (no retrieval), Chapter 16 set it on a shared singleton (requests could swap context) | Reads the question from the call's `InvokingContext`; `CurrentQuery` removed | v1.1.0 (companion code) |
-| Ch08 · `Ch08.ShellTool` (R02) | A | Allow-list let `dotnet` and `find` run arbitrary code; "sandbox" wording; on Windows every viewer failed to start and the model invented results | Read-only viewers in a scratch folder; not called a sandbox; a missing program is reported, `dir`/`type` run through cmd with metacharacters refused | v1.1.0 (companion code) |
-| Ch13 · `Ch13.ApprovalWorkflow` (R03) | A | Empty input, typos or end of input approved the document | Only `approve`, `revise` or `reject`; anything else stays pending | v1.1.0 (companion code) |
-| Ch08 · `Ch08.ToolApproval` (R04) | A | An approved refund could run twice | Idempotent per order | v1.1.0 (companion code) |
-| Ch16 · `Ch16.ToolApproval` (R05) | A | Refunds of -10 and 0 were auto-approved; culture-dependent parsing | Only `0 < amount <= 50`, invariant parsing | v1.1.0 (companion code) |
-| Ch04 · configuration (R06) | B | User secrets, Azure key, `ANTHROPIC_API_KEY` and README keys did not work as described | Working recipe and `--config-check` | v1.1.0 (companion code) |
-| Ch18 · evals (R07) | A | `Contains("15")` passed "115 days" and was called a grounding check | Exact value check with counterexamples | v1.1.0 (companion code) |
-| Ch13 · checkpoint resume (R08) | B | "Restart" ran in one process with in-memory checkpoints; demos approved implicitly, even an empty draft | `prepare`/`resume` across two processes on a file store; simulated decisions labelled, empty drafts never approved | v1.1.0 (companion code) |
-| Ch14 · hosted routes (R09) | B | Routes were single-turn without saying so | Documented as single-turn | v1.1.0 (companion code) |
-| Common · retries (R10) | B | SDK and HTTP handler both retried: up to 16 requests per call | One retry owner | v1.1.0 (companion code) |
-| Ch14 · rate limiting (R11) | B | Every authenticated user fell back to the IP partition | Partition by user id, then IP | v1.1.0 (companion code) |
-| Ch10, Ch18 · vector size (R13b) | B | 1536 dimensions declared, 768 produced | 768, checked at startup | v1.1.0 (companion code) |
-| Ch07 · confidence (R14) | B | Model confidence trusted and used as a gate | Self-reported, range-checked, never a gate on its own | v1.1.0 (companion code) |
-| Repository · Aspire, CI (R15) | B | Aspire behind Chapter 14, `ServiceDefaults` unused, no CI, no lock files | Aligned and wired; lock files and CI workflow | v1.1.0 (companion code) |
-| Security pins | A | Aspire < 13.6.5, MessagePack 3.1.7 and System.Text.Json 11 previews failed NuGet audit, so restore failed | Aspire 13.6.5, MessagePack 3.1.12, Microsoft.Extensions.* 10.0.13 | MessagePack in v1.0.1; Aspire and System.Text.Json in v1.0.2 (with Microsoft.Extensions.* 11.0.0); v1.1.0 uses Microsoft.Extensions.* 10.0.13 |
-| `global.json` | A | A machine with only a newer SDK could not build | `rollForward: latestMajor` | v1.0.2 (companion code); carried into v1.1.0 |
-| All · MAF 1.28 | B | Pinned to an earlier Agent Framework release | MAF 1.28.0, MCP 2.4.0 | v1.1.0 (companion code) |
-| README · exercise solutions | B | Claimed a worked answer for every exercise | Says which exercises have solutions | v1.1.0 (companion code) |
-| Ch04 · project count | B | "50+ projects"; README sub-totals ambiguous | 127 projects: 125 runnable + 2 libraries | v1.1.0 (companion code) |
-
----
-
-## What's in this book
-
-The **Microsoft Agent Framework (MAF)** is Microsoft's unified, production-minded SDK for building AI agents in .NET — the consolidation of Semantic Kernel and AutoGen into one stack. This is the developer's first guide to it, built on **Microsoft Agent Framework 1.28.0** and **.NET 10 / C# 14**.
-
-Across twenty-four chapters in six parts you go from your first call to an LLM, through tools and function calling, the Model Context Protocol, retrieval-augmented generation, and **multimodal agents** (vision), into multi-agent orchestration and workflows, all the way to hosting, observability, safety guardrails, agent skills, and evaluation. Every concept is anchored in a runnable companion project in this repository, and every code listing targets **MAF 1.28.0**. The core packages are generally available; where a chapter uses an API Microsoft still marks experimental, or a package published only as a preview, the book says so and the project opts in explicitly (Appendix B lists every package and its status).
-
-By the final chapter you will have built the Contoso FAQ agent — a small but real production system — and developed the intuition to design, build, and ship your own.
-
-## Who this book is for
-
-This book is written for .NET developers who want to build AI-powered agent systems without abandoning the tools and patterns they already know. You should be comfortable with C# fundamentals, have written at least one ASP.NET Core service or console application, and have a working relationship with dependency injection. If you can write a class, use LINQ, and navigate your IDE without a tutorial, you're ready.
-
-No prior machine-learning background is assumed. The book explains what you need to know about how LLMs behave, from a developer's point of view, as you go.
-
-## Table of Contents
-
-| # | Chapter | Part |
-|---|---------|------|
-| 1 | Choosing the Right Amount of Agency | **I — Understand and Start** |
-| 2 | Models, Context and Capabilities | I |
-| 3 | A Reproducible Development Environment | I |
-| 4 | Your First Agent and Its First Test | I |
-| 5 | Typed Responses and Domain Validation | **II — Contracts and Authorized Actions** |
-| 6 | Conversations, Memory and Data Ownership | II |
-| 7 | Tools and Bounded Execution | II |
-| 8 | Authorizing and Committing Agent Actions | II |
-| 9 | MCP Across Trust Boundaries | **III — Knowledge and Documents** |
-| 10 | Building a Grounded RAG Baseline | III |
-| 11 | RAG With Permissions, Freshness and Evidence | III |
-| 12 | Reliable Multimodal Document Processing | III |
-| 13 | Choosing a Multi-Agent Topology | **IV — Composition and Durable Execution** |
-| 14 | Workflows, Branches and Human Review | IV |
-| 15 | Durable Execution and External Effects | IV |
-| 16 | Skills, Harnesses and Capability Lifecycle | IV |
-| 17 | Hosting, Identity and Tenant Isolation | **V — Interfaces, Security and Observation** |
-| 18 | Streaming Interfaces and Approval Experiences | V |
-| 19 | Observability, Quality and Incident Diagnosis | V |
-| 20 | Security Policies and Governance | V |
-| 21 | Evaluation With Evidence and Uncertainty | **VI — Qualification and Operations** |
-| 22 | Cost, Latency and Capacity Engineering | VI |
-| 23 | Qualifying the Contoso Agent System | VI |
-| 24 | Operating and Evolving Agents | VI |
-
-Plus 8 appendices (A — C# Essentials for AI Development, B — Package Manifest and Qualification Scope, C — Semantic Kernel to MAF Migration, D — AutoGen to MAF Migration, E — Glossary, F — Exercise Solutions and Project Mapping, G — Troubleshooting by Symptom, H — References and Evidence), followed by a keyword index.
-
----
+Most samples have a `--self-test` mode. It runs against a scripted chat client, needs no model and no key, prints `RESULT n/n` and exits non-zero when a check fails, so the [build workflow](.github/workflows/build.yml) runs them all.
 
 ## Companion code
 
-**129 projects** in `AgenticAI.slnx`: **124 runnable projects**, that is 79 chapter samples under [`src/`](./src) and 45 worked exercise solutions under [`exercises/`](./exercises), plus five shared libraries under `src/` (the four `AgenticAI.Common*` libraries described below and the Aspire `ServiceDefaults`). Each one is self-contained — you don't need to run everything to follow along, so pick the project for the chapter you're reading.
+<!-- The two generated blocks below are written by tools/readme-counts.ps1 from AgenticAI.slnx.
+     CI fails when they disagree with the solution. After adding or removing a project, run:
+     pwsh tools/readme-counts.ps1 -Write -->
+<!-- BEGIN generated:counts -->
+**177 projects** in `AgenticAI.slnx`:
 
-### Target stack
+- **122** under [`src/`](./src): the samples of 24 chapters, Appendix A, and the shared libraries in `src/Common`
+- **47** worked exercise solutions under [`exercises/`](./exercises), in 18 folders
+- **8** Contoso versions under [`contoso/`](./contoso) (v0-v7)
 
-- **.NET 10** (LTS) / **C# 14**
-- **Microsoft Agent Framework 1.28.0** (the first paperback printing was verified against 1.20.0; a few printed listings changed for 1.28.0, and [ERRATA.md](./ERRATA.md) says what to change in each)
-- **Microsoft.Extensions.AI** (as pinned in `Directory.Packages.props`)
-- Visual Studio 2026, or VS Code with the C# Dev Kit
+171 are runnable and 6 are libraries (`AgenticAI.Common`, `AgenticAI.Common.Anthropic`, `AgenticAI.Common.Azure`, `AgenticAI.Common.Foundry`, `AgenticAI.Testing`, `Ch17.AspireOrchestration.ServiceDefaults`). 124 projects have an offline `--self-test` mode.
+<!-- END generated:counts -->
 
-Every package version is pinned centrally in `Directory.Packages.props` (Central Package Management); individual `.csproj` files reference packages without version numbers. The one exception is the Aspire AppHost (`src/Ch17.HostingIdentity/Ch17.AspireOrchestration/…AppHost`), which opts out because the Aspire SDK adds its own package references; it pins Aspire 13.6.5 and a few patched transitive packages itself. The full, themed package list is **Appendix B** of the book.
+Each project is self-contained, so pick the one for the chapter you're reading. Open `AgenticAI.slnx` once and every project loads together.
+
+### Projects by chapter
+
+Folder and project names carry the second-edition chapter number. The **Exercises** column counts the worked solutions in that chapter's `exercises/ChNN.Exercises` folder; where a chapter has none, its exercises extend the chapter's projects in place, and Appendix E has the solution notes.
+
+<!-- BEGIN generated:projects -->
+#### Part I: Understand and Start
+
+10 chapter projects, 7 exercise projects.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 1 | Choosing the Right Amount of Agency | [`src/Ch01.Agency`](./src/Ch01.Agency) (1): `Ch01.FirstGlimpse` | 0 |
+| 2 | Models, Context and Capabilities | [`src/Ch02.ModelsContext`](./src/Ch02.ModelsContext) (2): `Ch02.CapabilityProfile`, `Ch02.TokenExplorer` | [2](./exercises/Ch02.Exercises) |
+| 3 | A Reproducible Development Environment | [`src/Ch03.DevEnvironment`](./src/Ch03.DevEnvironment) (3): `Ch03.AnthropicCall`, `Ch03.FirstLlmCall`, `Ch03.FoundryAgent` | [2](./exercises/Ch03.Exercises) |
+| 4 | Your First Agent and Its First Test | [`src/Ch04.FirstAgent`](./src/Ch04.FirstAgent) (4): `Ch04.AgentTests`, `Ch04.BasicAgent`, `Ch04.MinimalApiAgent`, `Ch04.StreamingAgent` | [3](./exercises/Ch04.Exercises) |
+
+#### Part II: Contracts and Authorized Actions
+
+23 chapter projects, 12 exercise projects.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 5 | Typed Responses and Domain Validation | [`src/Ch05.TypedResponses`](./src/Ch05.TypedResponses) (5): `Ch05.DomainValidation`, `Ch05.EntityExtraction`, `Ch05.ResponseFormat`, `Ch05.RobustExtraction`, `Ch05.TypedResponses` | [3](./exercises/Ch05.Exercises) |
+| 6 | Conversations, Memory and Data Ownership | [`src/Ch06.ConversationsMemory`](./src/Ch06.ConversationsMemory) (7): `Ch06.AgentSessionDemo`, `Ch06.ContextBudget`, `Ch06.ContextProviderDemo`, `Ch06.PersistentSession`, `Ch06.ServiceManagedState`, `Ch06.SessionOwnership`, `Ch06.StatelessDemo` | [5](./exercises/Ch06.Exercises) |
+| 7 | Tools and Bounded Execution | [`src/Ch07.Tools`](./src/Ch07.Tools) (7): `Ch07.CalculatorTool`, `Ch07.DatabaseLookupTool`, `Ch07.FileAccess`, `Ch07.LoopControl`, `Ch07.ShellTool`, `Ch07.ToolChoice`, `Ch07.WeatherTool` | [3](./exercises/Ch07.Exercises) |
+| 8 | Authorizing and Committing Agent Actions | [`src/Ch08.AuthorizedActions`](./src/Ch08.AuthorizedActions) (4): `Ch08.ActionPolicy`, `Ch08.IdempotentCommit`, `Ch08.ToolApproval`, `Ch08.UncertainOutcome` | [1](./exercises/Ch08.Exercises) |
+
+#### Part III: Knowledge and Documents
+
+19 chapter projects, 9 exercise projects.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 9 | MCP Across Trust Boundaries | [`src/Ch09.MCP`](./src/Ch09.MCP) (6): `Ch09.KnowledgeBaseMcp`, `Ch09.McpAccessTests`, `Ch09.McpConsumer`, `Ch09.McpHttpServer`, `Ch09.McpServer`, `Ch09.ProtectedMcpServer` | [4](./exercises/Ch09.Exercises) |
+| 10 | Building a Grounded RAG Baseline | [`src/Ch10.RAGBaseline`](./src/Ch10.RAGBaseline) (5): `Ch10.EmbeddingsDemo`, `Ch10.FaqAgent`, `Ch10.HostedFilesRag`, `Ch10.RagPipeline`, `Ch10.RetrievalEval` | [2](./exercises/Ch10.Exercises) |
+| 11 | RAG With Permissions, Freshness and Evidence | [`src/Ch11.RAGPermissions`](./src/Ch11.RAGPermissions) (4): `Ch11.AuthorizedSearch`, `Ch11.HybridRetrieval`, `Ch11.ScopedCache`, `Ch11.VersionedIngestion` | 0 |
+| 12 | Reliable Multimodal Document Processing | [`src/Ch12.MultimodalDocuments`](./src/Ch12.MultimodalDocuments) (4): `Ch12.ImageToTypedData`, `Ch12.Multimodal.Tests`, `Ch12.ReceiptExtraction`, `Ch12.VisionBasics` | [3](./exercises/Ch12.Exercises) |
+
+#### Part IV: Composition and Durable Execution
+
+29 chapter projects, 5 exercise projects.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 13 | Choosing a Multi-Agent Topology | [`src/Ch13.MultiAgentTopology`](./src/Ch13.MultiAgentTopology) (9): `Ch13.ConcurrentOrchestration`, `Ch13.GroupChatOrchestration`, `Ch13.HandoffOrchestration`, `Ch13.MagenticOrchestrator`, `Ch13.MultiAgent.Tests`, `Ch13.OrchestratorPattern`, `Ch13.SequentialPipeline`, `Ch13.StreamingPipeline`, `Ch13.TopologyComparison` | [2](./exercises/Ch13.Exercises) |
+| 14 | Workflows, Branches and Human Review | [`src/Ch14.Workflows`](./src/Ch14.Workflows) (9): `Ch14.AgentWorkflow`, `Ch14.ApprovalWorkflow`, `Ch14.CheckpointedApproval`, `Ch14.ConditionalWorkflow`, `Ch14.LoopEngineering`, `Ch14.ParallelAnalysis`, `Ch14.SequentialWorkflow`, `Ch14.SubWorkflow`, `Ch14.WorkflowTests` | [2](./exercises/Ch14.Exercises) |
+| 15 | Durable Execution and External Effects | [`src/Ch15.DurableExecution`](./src/Ch15.DurableExecution) (3): `Ch15.DurableReview`, `Ch15.ExternalEffects`, `Ch15.RestartTests` | [1](./exercises/Ch15.Exercises) |
+| 16 | Skills, Harnesses and Capability Lifecycle | [`src/Ch16.SkillsHarnesses`](./src/Ch16.SkillsHarnesses) (8): `Ch16.AgentSkills`, `Ch16.CodingAgent`, `Ch16.HarnessBackgroundAgents`, `Ch16.HarnessBasics`, `Ch16.HarnessComposition`, `Ch16.HarnessFiles`, `Ch16.HarnessLoop`, `Ch16.SkillLifecycle` | 0 |
+
+#### Part V: Interfaces, Security and Observation
+
+22 chapter projects, 9 exercise projects.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 17 | Hosting, Identity and Tenant Isolation | [`src/Ch17.HostingIdentity`](./src/Ch17.HostingIdentity) (5): `Ch17.A2APreview`, `Ch17.AspireOrchestration.AppHost`, `Ch17.AspireOrchestration.ServiceDefaults`, `Ch17.AspNetCoreHost`, `Ch17.IdentityTests` | [3](./exercises/Ch17.Exercises) |
+| 18 | Streaming Interfaces and Approval Experiences | [`src/Ch18.StreamingInterfaces`](./src/Ch18.StreamingInterfaces) (5): `Ch18.AguiClient`, `Ch18.AguiServer`, `Ch18.ApprovalUi`, `Ch18.InterfaceTests`, `Ch18.SseStatusStream` | 0 |
+| 19 | Observability, Quality and Incident Diagnosis | [`src/Ch19.Observability`](./src/Ch19.Observability) (2): `Ch19.IncidentDiagnosis`, `Ch19.OpenTelemetryAgent` | [2](./exercises/Ch19.Exercises) |
+| 20 | Security Policies and Governance | [`src/Ch20.SecurityGovernance`](./src/Ch20.SecurityGovernance) (10): `Ch20.ConsumptionLimits`, `Ch20.ContentSafety`, `Ch20.CriticAgent`, `Ch20.IndirectInjection`, `Ch20.InputSanitization`, `Ch20.MessageInjector`, `Ch20.MiddlewarePipeline`, `Ch20.OutputHandling`, `Ch20.PolicyEnforcement`, `Ch20.ThreatRegisterTests` | [4](./exercises/Ch20.Exercises) |
+
+#### Part VI: Qualification and Operations
+
+12 chapter projects, 1 exercise project.
+
+| Ch | Chapter | Projects | Exercises |
+|---:|---|---|---|
+| 21 | Evaluation With Evidence and Uncertainty | [`src/Ch21.Evaluation`](./src/Ch21.Evaluation) (6): `Ch21.EvalSuite`, `Ch21.EvalTests`, `Ch21.EvidenceEval`, `Ch21.FaqEval`, `Ch21.JudgeCalibration`, `Ch21.RedTeam` | 0 |
+| 22 | Cost, Latency and Capacity Engineering | [`src/Ch22.CostCapacity`](./src/Ch22.CostCapacity) (3): `Ch22.CostModel`, `Ch22.LoadProfile`, `Ch22.ModelRouting` | [1](./exercises/Ch22.Exercises) |
+| 23 | Qualifying the Contoso Agent System | [`src/Ch23.Qualification`](./src/Ch23.Qualification) (1): `Ch23.QualificationRunner` | 0 |
+| 24 | Operating and Evolving Agents | [`src/Ch24.Operations`](./src/Ch24.Operations) (2): `Ch24.KillSwitch`, `Ch24.RestoreDrill` | 0 |
+
+#### Outside the chapters
+
+| Folder | Projects |
+|---|---|
+| [`src/AppA.CSharpEssentials`](./src/AppA.CSharpEssentials), Appendix A | 2: `AppA.ConsoleApp`, `AppA.MinimalApi` |
+| [`exercises/AppA.Exercises`](./exercises/AppA.Exercises), Appendix A | 4: `Ex01.RecordPatterns`, `Ex02.AsyncFileProcessor`, `Ex03.MinimalApiCrud`, `Ex04.JsonRoundTrip` |
+| [`src/Common`](./src/Common), shared libraries | 5: `AgenticAI.Common`, `AgenticAI.Common.Anthropic`, `AgenticAI.Common.Azure`, `AgenticAI.Common.Foundry`, `AgenticAI.Testing` |
+| [`contoso/`](./contoso), the running example | 8: `Contoso.AgentFakeModel`, `Contoso.OwnedConversation`, `Contoso.AuthorizedReimbursement`, `Contoso.FaqEvidence`, `Contoso.Receipts`, `Contoso.DurableResume`, `Contoso.ApiUi`, `Contoso.Qualified` |
+<!-- END generated:projects -->
+
+`Ch13.MagenticOrchestrator` and `exercises/AppA.Exercises/Ex02.AsyncFileProcessor` are in the repository but not printed in the book.
+
+### Contoso, v0 to v7
+
+Each version has its own folder under [`contoso/`](./contoso) and a README. v0, v1 and v2 stand alone. From v3 on, a version references the one it extends: v3 and v4 build on v2, v5 on v4, v6 on v5 and v7 on v6. Opening v5 brings v4 and v2 along, so any version runs without the earlier chapters.
+
+| Version | Folder | Built in | What it adds |
+|---|---|---|---|
+| v0 · Agent and fake model | [`v0-agent-fake-model`](./contoso/v0-agent-fake-model) | Chapter 4 | The assistant as an agent with instructions, checked against a scripted fake model before any model is called |
+| v1 · Owned conversation | [`v1-owned-conversation`](./contoso/v1-owned-conversation) | Chapter 6 | Conversations that survive a restart, belong to one employee and can be deleted |
+| v2 · Authorized reimbursement | [`v2-authorized-reimbursement`](./contoso/v2-authorized-reimbursement) | Chapter 8 | The model proposes a reimbursement, application policy decides, and the commit happens once, with an explicit outcome when the result is uncertain |
+| v3 · FAQ with evidence | [`v3-faq-evidence`](./contoso/v3-faq-evidence) | Chapters 10 and 11 | Policy answers grounded in handbook passages the employee may see, with citations checked against what was retrieved; no evidence, no answer |
+| v4 · Receipts | [`v4-receipts`](./contoso/v4-receipts) | Chapter 12 | Receipt images read into typed fields and validated; an amount nobody can read goes to a reviewer, not to payment |
+| v5 · Durable resume | [`v5-durable-resume`](./contoso/v5-durable-resume) | Chapter 15 | A claim waiting for review survives the loss of its process; the payment happens once or ends as an explicit unknown |
+| v6 · API and interface | [`v6-api-ui`](./contoso/v6-api-ui) | Chapters 17 and 18 | An HTTP API with a validated identity on every request, and an interface that shows operation state and lets a reviewer approve exact arguments |
+| v7 · Qualified version | [`v7-qualified`](./contoso/v7-qualified) | Chapter 23 | v6 frozen as an identifiable candidate, with a candidate manifest, an acceptance matrix, a release dossier and its known limits |
+
+## Recommended path
+
+New to agents? Read the book in order: Parts I and II are the base everything else stands on, and Chapter 8 is the one the rest of the book keeps returning to. In the code, start with:
+
+1. `src/Ch03.DevEnvironment/Ch03.FirstLlmCall`: one call to a model, and `--config-check` to see which settings load.
+2. `src/Ch04.FirstAgent/Ch04.BasicAgent` and `Ch04.AgentTests`: the first agent and its first test.
+3. `src/Ch05.TypedResponses/Ch05.DomainValidation`: a typed result checked first for shape, then against the domain rules.
+4. `src/Ch06.ConversationsMemory/Ch06.SessionOwnership`: a stored conversation that belongs to one person.
+5. `src/Ch07.Tools/Ch07.LoopControl`: the limits on the tool-calling loop.
+6. `src/Ch08.AuthorizedActions/Ch08.ActionPolicy` and `Ch08.IdempotentCommit`: the application decides, and the commit happens once.
+7. `contoso/v0-agent-fake-model` to `contoso/v2-authorized-reimbursement`: the same ideas composed into one assistant.
+
+Run each with `--self-test` where it has one (all of these except `Ch04.BasicAgent`), then against a model. The full outputs of the runs printed in the book, self-tests and live runs, are in [`docs/outputs`](./docs/outputs/README.md); the book trims them to fifteen lines.
+
+## Build
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later. The code targets .NET 10 (LTS), and any .NET 10+ SDK, including .NET 11, builds it: `global.json` asks for 10.0.100 with `rollForward: latestMajor`, so the newest installed SDK at or above 10.0.100 is used.
-- A model provider. The samples default to **Ollama** running locally — zero cost, no API key — using **llama3.2**. They also support Azure OpenAI, OpenAI, Anthropic, and Microsoft Foundry. The development-environment chapter walks through each one.
-- For the **multimodal** samples, a vision-capable model — `ollama pull llava` locally, or a cloud GPT-5.6-class model.
-
-For the zero-config local default:
+- A **.NET SDK at or above 10.0.100**. [`global.json`](./global.json) asks for `10.0.100` with `rollForward: latestMajor`, so the newest installed SDK at or above it builds the code, a .NET 11 SDK included. Every project targets `net10.0` with C# 14 (`Directory.Build.props`).
+- For live runs, a model provider. The samples default to **Ollama** on your own machine, with no key: `llama3.2` for chat, `nomic-embed-text` for embeddings and `llava` for images.
 
 ```bash
 ollama pull llama3.2
+ollama pull nomic-embed-text
+ollama pull llava
 ```
 
-### Clone & build
+The self-tests need none of this.
+
+### Clone, restore and build
 
 ```bash
 git clone https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10.git
 cd building-ai-agents-with-csharp-and-dotnet-10
-dotnet build AgenticAI.slnx
+dotnet restore AgenticAI.slnx --locked-mode
+dotnet build AgenticAI.slnx --configuration Release --no-restore -warnaserror
 ```
 
 On Windows, if the clone fails with "Filename too long", run `git config --global core.longpaths true` and clone again.
 
-Open `AgenticAI.slnx` once and every chapter's projects load together.
+Every project except the Aspire AppHost commits a `packages.lock.json`, and `--locked-mode` fails if the dependency graph has drifted from it. The AppHost has no lock file, because its SDK pulls per-OS packages, and restores normally in the same command. After changing a version in `Directory.Packages.props`, a plain `dotnet restore AgenticAI.slnx` refreshes the lock files.
 
-Every project except the Aspire AppHost commits a `packages.lock.json`. `dotnet restore AgenticAI.slnx --locked-mode` restores exactly those versions and fails if the dependency graph has drifted; after changing a version in `Directory.Packages.props`, a plain `dotnet restore AgenticAI.slnx` refreshes the lock files. The [build workflow](.github/workflows/build.yml) does the same on Windows and Ubuntu, builds with warnings as errors, runs every offline `--self-test` and the console test harnesses, and fails on any vulnerable package. It also runs weekly, because a new NuGet advisory can break a build that nobody touched.
+Every package version is pinned once, in `Directory.Packages.props` (Central Package Management); the `.csproj` files carry no version numbers. The exceptions are the Aspire AppHost, which pins its own Aspire packages, and the Hosting override in `Ch18.AguiServer` described under [Framework exceptions](#framework-exceptions). Appendix B of the book lists every package with its version and status.
 
-### Run a sample
+### Run the self-tests
+
+One project:
+
+```bash
+dotnet run --project src/Ch08.AuthorizedActions/Ch08.ActionPolicy -- --self-test
+```
+
+The four console test harnesses run with no argument:
+
+```bash
+dotnet run --project src/Ch12.MultimodalDocuments/Ch12.Multimodal.Tests
+dotnet run --project src/Ch13.MultiAgentTopology/Ch13.MultiAgent.Tests
+dotnet run --project src/Ch14.Workflows/Ch14.WorkflowTests
+dotnet run --project src/Ch21.Evaluation/Ch21.EvalTests
+```
+
+The [build workflow](.github/workflows/build.yml) does all of it on Windows and Ubuntu: a locked restore, a Release build with warnings as errors, every `--self-test` it finds by searching for `args.Contains("--self-test")` (so a new one is picked up without editing the workflow), the four harnesses, a check that `AgenticAI.Common` resolves only GA packages (`pwsh tools/check-ga.ps1`), a check that this README's project counts match `AgenticAI.slnx` (`pwsh tools/readme-counts.ps1`), and a scan that fails on any vulnerable package. It also runs weekly, because a new NuGet advisory can break a build nobody touched.
+
+### Run a sample against a model
 
 ```bash
 dotnet run --project src/Ch04.FirstAgent/Ch04.BasicAgent
 ```
 
-### Configuration
+## What was run, and what was only compiled
 
-Provider settings live in each project's `appsettings.json`, under `LlmProvider`. Keys belong in [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables — never in source control. Every sample shares one user-secrets store, so a value you set once works in every chapter, and no `dotnet user-secrets init` is needed. Run these from any project folder:
+The book's Preface and Appendix B state the qualification scope. In short:
+
+- **Built:** a locked restore and a Release build with warnings as errors, finishing clean.
+- **Self-tests:** run on Windows 11 and, for the samples that could, in a .NET 10 Linux container with its network off.
+- **Live runs:** against a **local Ollama only** (`llama3.2`, `nomic-embed-text`, `llava`). Your model will word its answers differently; the checks that matter are in the self-tests.
+- **Compiled but not run:** **Azure OpenAI, OpenAI, Anthropic, Microsoft Foundry, Azure AI Content Safety and the Azure Monitor exporter** compile, and their configuration checks and offline tests run, but no request reached those services. **Microsoft Entra ID** never issued a token: the hosting tests use tokens minted locally with `dotnet user-jwts`. The **Aspire AppHost** compiles but was not run. **macOS** was not tested.
+
+Treat the cloud paths as code you still have to qualify against your own subscription.
+
+## Framework exceptions
+
+Every `Microsoft.Agents.AI*` package is on 1.28.0 (the preview packages on `1.28.0-preview.261106.1`), with two exceptions:
+
+- **Declarative workflows are pinned at 1.20.** `Microsoft.Agents.AI.Workflows.Declarative` is `1.20.0`, because 1.28.0 was not in the offline package cache this repository restores from. 1.20.0 runs on Workflows 1.28.0, and `Ch14.WorkflowTests` exercises that pairing.
+- **AG-UI is on a 1.5 preview.** `Microsoft.Agents.AI.AGUI` and `Microsoft.Agents.AI.Hosting.AGUI.AspNetCore` are `1.5.0-preview.260507.1`, the only AG-UI build in that cache. Its hosting package is compiled against `Microsoft.Agents.AI.Hosting` 1.5 (with Hosting 1.28, `MapAGUI` throws a `TypeLoadException`), so `Ch18.AguiServer` sets `VersionOverride="1.5.0-preview.260507.1"` on `Microsoft.Agents.AI.Hosting`. Only `Ch18.AguiServer` and `Ch18.AguiClient` reference AG-UI.
+
+The comments in `Directory.Packages.props` record both, and when to re-pin.
+
+## Configuration
+
+Provider settings live in each project's `appsettings.json`, under `LlmProvider`. Keys belong in [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables, never in source control. Every sample shares one user-secrets store, so a value you set once works in every chapter, and no `dotnet user-secrets init` is needed. Run these from any project folder:
 
 ```bash
 cd src/Ch03.DevEnvironment/Ch03.FirstLlmCall
@@ -154,7 +240,9 @@ dotnet user-secrets set "LlmProvider:AzureOpenAI:Endpoint" "https://YOUR-RESOURC
 dotnet user-secrets set "LlmProvider:AzureOpenAI:Model" "YOUR-DEPLOYMENT-NAME"
 ```
 
-User secrets load in the Development environment, which each sample's launch profile sets (`dotnet run` and Visual Studio both use it). Environment variables work everywhere: `LlmProvider__Provider`, `LlmProvider__OpenAI__ApiKey`, and for Anthropic either `LlmProvider__Anthropic__ApiKey` or `ANTHROPIC_API_KEY`. Microsoft Foundry also signs in through `DefaultAzureCredential`.
+User secrets load in the Development environment, which each sample's launch profile sets (`dotnet run` and Visual Studio both use it). Environment variables work everywhere: `LlmProvider__Provider`, `LlmProvider__OpenAI__ApiKey`, and for Anthropic either `LlmProvider__Anthropic__ApiKey` or `ANTHROPIC_API_KEY`. Microsoft Foundry signs in through `DefaultAzureCredential`.
+
+Not sure which settings a sample will use? `dotnet run -- --config-check` lists each one and where it comes from (appsettings.json, user secrets or an environment variable) without printing values or calling a model.
 
 ### Shared libraries
 
@@ -166,6 +254,7 @@ The provider wiring is split so the default path stays generally available:
 | `src/Common/AgenticAI.Common.Azure` | the `azure` provider: `services.AddAzureOpenAIProvider()` | prerelease (`Azure.AI.OpenAI` is a beta) |
 | `src/Common/AgenticAI.Common.Foundry` | `AddFoundryAgent(...)`, a Microsoft Foundry `AIAgent` | preview (`Microsoft.Agents.AI.Foundry`, `Azure.AI.Projects`) |
 | `src/Common/AgenticAI.Common.Anthropic` | `AddAnthropicAgent(...)`, a Claude `AIAgent` | GA |
+| `src/Common/AgenticAI.Testing` | `FakeChatClient` and `ScriptedToolChatClient`, the scripted clients the self-tests run on (the second can ask for tool calls), and `RecordingChatClient`, which records the calls made to a real client | GA |
 
 Each sample references only the libraries it uses. To run a sample that references only `AgenticAI.Common` against Azure OpenAI, add a project reference to `src/Common/AgenticAI.Common.Azure` and one line next to `AddLlmChatClient`:
 
@@ -176,66 +265,58 @@ builder.Services.AddLlmChatClient(builder.Configuration);
 
 Without it, `"Provider": "azure"` stops at startup with a message that says exactly this.
 
-Not sure which settings a sample will use? `dotnet run -- --config-check` lists each one and where it comes from — appsettings.json, user secrets or an environment variable — without printing values or calling a model.
+## First edition
 
-### Repository layout
-
-| Folder | Chapter | Topic |
-|--------|---------|-------|
-| `src/Common/` | — | Shared configuration, DI, provider wiring, resilience: a GA-only core plus the Azure, Foundry and Anthropic add-ons |
-| `src/Ch01.Agency/` | 1 | Choosing the Right Amount of Agency |
-| `src/Ch02.ModelsContext/` | 2 | Models, Context and Capabilities |
-| `src/Ch03.DevEnvironment/` | 3 | A Reproducible Development Environment |
-| `src/Ch04.FirstAgent/` | 4 | Your First Agent and Its First Test |
-| `src/Ch05.TypedResponses/` | 5 | Typed Responses and Domain Validation |
-| `src/Ch06.ConversationsMemory/` | 6 | Conversations, Memory and Data Ownership |
-| `src/Ch07.Tools/` | 7 | Tools and Bounded Execution |
-| `src/Ch08.AuthorizedActions/` | 8 | Authorizing and Committing Agent Actions |
-| `src/Ch09.MCP/` | 9 | MCP Across Trust Boundaries |
-| `src/Ch10.RAGBaseline/` | 10 | Building a Grounded RAG Baseline |
-| `src/Ch12.MultimodalDocuments/` | 12 | Reliable Multimodal Document Processing |
-| `src/Ch13.MultiAgentTopology/` | 13 | Choosing a Multi-Agent Topology (`Ch13.MagenticOrchestrator` is online only: kept here, not printed in the book) |
-| `src/Ch14.Workflows/` | 14 | Workflows, Branches and Human Review |
-| `src/Ch16.SkillsHarnesses/` | 16 | Skills, Harnesses and Capability Lifecycle |
-| `src/Ch17.HostingIdentity/` | 17 | Hosting, Identity and Tenant Isolation |
-| `src/Ch19.Observability/` | 19 | Observability, Quality and Incident Diagnosis |
-| `src/Ch20.SecurityGovernance/` | 20 | Security Policies and Governance |
-| `src/Ch21.Evaluation/` | 21 | Evaluation With Evidence and Uncertainty |
-| `src/Ch24.Operations/` | 24 | Operating and Evolving Agents (a reading list, no project yet) |
-| `src/AppA.CSharpEssentials/` | App. A | C# Essentials for AI Development |
-| `contoso/` | — | The Contoso expense assistant, one snapshot folder per milestone (so far `v2-authorized-reimbursement`, the authorized-actions chapter); simulated effects only |
-| `exercises/` | — | Worked exercise solutions, one `ChNN.Exercises` folder per chapter plus `AppA.Exercises` (indexed in Appendix F) |
-
-Chapters with no folder yet have no companion project in the repository so far. Folder and project names carry the second-edition chapter number; the book refers to them by name.
-
-## Exercise solutions
-
-The [`exercises/`](./exercises) folder holds 45 worked exercise solutions, grouped in one `ChNN.Exercises` folder per chapter (plus `AppA.Exercises` for Appendix A); each MCP-chapter solution is an MCP server plus a consumer, side by side. **Appendix F** indexes them by chapter and difficulty, and maps each first-edition exercise to its new folder.
-
-Not every exercise in the book has a solution here: reflective exercises have no code, and Appendix F marks the exercises that have no companion project.
-
-Each solution runs on its own:
+The first edition's companion code, in its v1.1 update on MAF 1.28.0, is under the tag **`v1.1.0-maf-1.28.0`**:
 
 ```bash
-dotnet run --project exercises/Ch07.Exercises/Ex01.UnitConverterTool
+git checkout v1.1.0-maf-1.28.0
 ```
 
-Try the exercise yourself first, from the brief in its chapter, before you reach for the code here.
+Its errata are in that tag's `ERRATA.md` and `README.md`.
 
-## Errata & feedback
+The second edition renumbered the chapters, renamed the folders, and merged, absorbed or retired a few projects. [`docs/first-edition-map.md`](./docs/first-edition-map.md) lists where each of the first edition's 127 projects went; Appendix E of the book prints the same map. By folder:
 
-Found a typo, an outdated API, a code sample that doesn't compile, or a factual mistake? Help make the next printing better:
+| First edition | Second edition |
+|---|---|
+| `src/Ch01.FirstGlimpse` | `src/Ch01.Agency` |
+| `src/Ch02.CSharpEssentials` | `src/AppA.CSharpEssentials` (now Appendix A) |
+| `src/Ch03.HowLLMsWork` | `src/Ch02.ModelsContext` |
+| `src/Ch04.DevEnvironment` | `src/Ch03.DevEnvironment` |
+| `src/Ch05.HelloAgent` | `src/Ch04.FirstAgent` |
+| `src/Ch06.ConversationsMemory` | `src/Ch06.ConversationsMemory` (`Ch06.HistoryReduction` absorbed into `Ch06.ContextBudget`) |
+| `src/Ch07.StructuredOutput` | `src/Ch05.TypedResponses` |
+| `src/Ch08.ToolsFunctionCalling` | `src/Ch07.Tools`; `Ch08.ToolApproval` moved to `src/Ch08.AuthorizedActions` |
+| `src/Ch09.MCP` | `src/Ch09.MCP` |
+| `src/Ch10.IntroRAG` | `src/Ch10.RAGBaseline` (`Ch10.FaqAgent.CustomProvider` absorbed into `Ch10.FaqAgent`) |
+| `src/Ch11.Multimodal` | `src/Ch12.MultimodalDocuments` |
+| `src/Ch12.MultiAgent` | `src/Ch13.MultiAgentTopology` (`Ch12.ContentPipeline` absorbed into `Ch13.SequentialPipeline`) |
+| `src/Ch13.Workflows` | `src/Ch14.Workflows` (`Ch13.A2AInputRequest` retired: A2A task mode is out of scope) |
+| `src/Ch14.Hosting` | `src/Ch17.HostingIdentity` |
+| `src/Ch15.Observability` | `src/Ch19.Observability` |
+| `src/Ch16.SafetyGuardrails` | `src/Ch20.SecurityGovernance`; `Ch16.ToolApproval` merged into `src/Ch08.AuthorizedActions/Ch08.ToolApproval` |
+| `src/Ch17.AgentSkills` | `src/Ch16.SkillsHarnesses` |
+| `src/Ch18.EvalSuite`, `src/Ch18.EvalTests`, `src/Ch18.FaqEval` | `src/Ch21.Evaluation` |
+| `src/Ch19.AgentHarness` | `src/Ch16.SkillsHarnesses` |
+| `src/Common` | `src/Common` (split into a GA-only core and add-ons) |
+| `exercises/ChNN.Exercises` | renumbered with their chapters; the map lists each one |
 
-- 📋 [**Open an errata report**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues/new?template=errata.yml) — guided form that asks for the page number, chapter, and what's wrong.
-- 🔍 [**Browse known errata**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues?q=is%3Aissue+label%3Aerrata) — see what's already been reported before filing a duplicate.
+## Errata and feedback
 
-For general feedback, questions about the companion code, or suggestions, use [the Issues tab](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues) without the `errata` label.
+Second-edition corrections are in **[ERRATA.md](./ERRATA.md)**.
+
+Found a typo, an outdated API, a code sample that doesn't compile, or a factual mistake?
+
+- [**Open an errata report**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues/new?template=errata.yml): a form that asks for the edition, page, chapter and what's wrong.
+- [**Browse known errata**](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues?q=is%3Aissue+label%3Aerrata) before filing a duplicate.
+
+For questions about the companion code or suggestions, use [the Issues tab](https://github.com/RachidD68/building-ai-agents-with-csharp-and-dotnet-10/issues) without the `errata` label.
 
 ## License
 
-- The **companion code** in this repository is released under the [MIT License](./LICENSE) — use it, fork it, build on it freely.
-- The **book** itself is sold separately — [available on Leanpub](https://leanpub.com/buildingAIAgentsWithCSandNet10); the full copyright page is inside the book.
+- The **companion code** in this repository is released under the [MIT License](./LICENSE).
+- The **book** is sold separately on Leanpub; the copyright page is inside the book.
 
 ---
 
-<p align="center"><sub>Built with .NET 10 LTS · C# 14 · Microsoft Agent Framework 1.28.0 · Last updated 2026</sub></p>
+<p align="center"><sub>.NET 10 LTS · C# 14 · Microsoft Agent Framework 1.28</sub></p>

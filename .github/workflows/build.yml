@@ -42,6 +42,12 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      # README.md's project counts and tables are generated from AgenticAI.slnx:
+      # fail if they disagree, or if a .csproj on disk is missing from the
+      # solution. Fix with: pwsh tools/readme-counts.ps1 -Write
+      - name: Check README project counts
+        run: pwsh -NoProfile -File tools/readme-counts.ps1
+
       # The projects target net10.0. global.json asks for 10.0.100 with
       # rollForward latestMajor, so a newer SDK already on the runner image
       # (for example .NET 11) may be the one that builds; "dotnet --info"
