@@ -1,0 +1,28 @@
+# code 2d0ea40 | SDK 11.0.100 | Windows 11 | Release build, --self-test (fake model, no outside network)
+$ dotnet Ch04.MinimalApiAgent.dll --self-test
+
+=== Contoso expense help: HTTP endpoints (self-test) ===
+
+-- POST /chat --
+  PASS  an empty message is 400 validation_error and no model call
+  PASS  a message over the size budget is 400 and no model call
+  PASS  a good request is 200 completed, labelled single-turn
+  PASS  the next request carries no history from the first
+  PASS  a cut-off answer is 200 with status truncated
+  PASS  a provider error is 502 provider_error, not a validation error
+  PASS  a model that outlives the time budget is 504 time_budget
+  PASS  a provider timeout inside the budget is 502 provider_error, not 504
+  PASS  a content-filter block is 502 content_filter
+
+-- GET /chat/stream --
+  PASS  a missing message is 400 before any event, and no model call
+   delta: Claims up to  | delta: 50.00 EUR  | delta: are automatic. | done: {"status":"completed","reason":""}
+  PASS  deltas carry the text and the last event is done/completed
+   delta: Claims up to  | done: {"status":"failed","reason":"provider_error"}
+  PASS  an error mid-stream still ends with done/failed
+   delta: Claims up to  | done: {"status":"failed","reason":"provider_error"}
+  PASS  a provider timeout mid-stream ends with done/failed provider_error, not time_budget
+   server log: the run ended Cancelled
+  PASS  a client that disconnects mid-stream is logged Cancelled and the model call is stopped
+
+RESULT 14/14

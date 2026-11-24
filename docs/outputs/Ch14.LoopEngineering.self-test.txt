@@ -1,0 +1,16 @@
+# Ch14.LoopEngineering --self-test
+# code: CodeSample 2ffd837, Release build (dotnet build -c Release -warnaserror, SDK 11.0.100)
+# platform: Windows 11, dotnet Ch14.LoopEngineering.dll --self-test, env: none, exit 0
+
+=== Loop Engineering self-test (offline) ===
+
+  PASS  2 -> 1 -> 0 errors: SUCCESS after 2 turns, exit 0
+  PASS  already clean: SUCCESS with no turn
+  PASS  2 -> 2 errors: NO PROGRESS after 1 turn, exit 2
+  PASS  2 -> 3 errors (worse): NO PROGRESS
+  PASS  9 -> 8 -> 7 -> 6 with cap 3: CAP REACHED with 6 errors left, exit 2 (cap is not success)
+  PASS  cancelled is not success
+  PASS  verifier parser: 2 structured errors, duplicate dropped, project suffix stripped
+  PASS  verifier parser: a clean log has no errors
+
+RESULT 8/8

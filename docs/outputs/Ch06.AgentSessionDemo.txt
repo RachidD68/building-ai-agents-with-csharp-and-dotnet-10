@@ -1,0 +1,63 @@
+# Ch06.AgentSessionDemo (live)
+# code: CodeSample c2b22e0, Release build (SDK 11.0.100)
+# platform: Windows 11, dotnet Ch06.AgentSessionDemo.dll, env: LlmProvider__Provider=ollama (llama3.2), stdin: none, exit 0, started 2026-11-20 11:38 UTC
+
+=== Agent Session with Memory ===
+
+Agent: MemoryBot
+Session created. The agent will now remember the conversation.
+
+You: My name is Rachid. I work on the Contoso expense app and I love C# programming.
+Agent: Hello Rachid, 
+
+It's great to meet you. The Contoso expense app sounds like an interesting project, and C# is a versatile and widely-used programming language. What specific areas of the app are you working on, and what kind of features are you looking to implement next?
+
+You: What's my name? What do I work on? What programming language do I love?
+Agent: You told me earlier:
+
+* Your name is Rachid.
+* You work on the Contoso expense app.
+* Your favorite programming language is C#.
+
+You: Based on what you know about me, suggest a weekend project.
+Agent: Based on your love for C# and your work on the Contoso expense app, I'd suggest a weekend project that combines both:
+
+**Create a simple expense tracker for personal use**
+
+Using C#, create a console or Windows Forms app that allows you to track your personal expenses. You could include features like:
+
+* Adding, editing, and deleting expense entries
+* Calculating total expenses and averages
+* Saving and loading data to a file (e.g., CSV or JSON)
+* Displaying a graph or chart to show your spending habits over time
+
+This project should be a great way to apply your existing knowledge and skills to a new scenario, and it could help you develop a personal expense tracker that you can use and customize to your liking.
+
+How does that sound?
+
+============================================================
+SESSION HISTORY INSPECTION
+============================================================
+Total messages in history: 6
+
+  [user      ] My name is Rachid. I work on the Contoso expense app and I love C# programming.
+  [assistant ] Hello Rachid, 
+
+It's great to meet you. The Contoso expense app sounds like an i...
+  [user      ] What's my name? What do I work on? What programming language do I love?
+  [assistant ] You told me earlier:
+
+* Your name is Rachid.
+* You work on the Contoso expense a...
+  [user      ] Based on what you know about me, suggest a weekend project.
+  [assistant ] Based on your love for C# and your work on the Contoso expense app, I'd suggest ...
+
+============================================================
+SESSION ISOLATION
+============================================================
+New session - asking 'What is my name?'
+Agent: I don't have any information about your name. We've just started our conversation, and I don't have any prior knowledge about you. Would you like to tell me your name?
+
+As expected, the new session has no memory of the first conversation.
+
+=== Agent Session Demo complete! ===

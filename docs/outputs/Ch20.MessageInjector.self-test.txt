@@ -1,0 +1,22 @@
+# Ch20.MessageInjector --self-test
+# code: CodeSample 591b926, Release build (dotnet build -c Release -warnaserror, SDK 11.0.100)
+# platform: Windows 11, dotnet Ch20.MessageInjector.dll --self-test, env: none, exit 0, 12.9 s
+
+=== Safety context: self-test ===
+
+-- Mid-run: a tool result with instructions --
+  PASS  one run, 2 model calls (tool call, then answer)
+  PASS  model call 1 carries no safety note
+  PASS  model call 2 carries the safety note the tool enqueued
+  PASS  DEFECT REPRODUCED: the provider ran 1 time(s) for 2 model calls (the first edition said: before every model invocation)
+  PASS  a clean document adds no note
+
+-- Per run: instructions for the request in hand --
+  PASS  an action request gets the action notice
+  PASS  a question does not
+
+-- Concurrent runs share one provider instance --
+  PASS  16 concurrent runs (Task.Run): 16 provider runs, 0 with the wrong notice
+  PASS  DEFECT REPRODUCED: with a CurrentQuery singleton, request A runs without its notice
+
+RESULT 9/9
