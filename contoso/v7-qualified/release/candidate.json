@@ -1,6 +1,6 @@
 {
-  "candidate": "contoso-v7.1",
-  "description": "Contoso v7: v6's claims API and interface over v5's durable store, v3's FAQ desks, and the inputs reused from the durable-execution, skills, hosting, security, evaluation and capacity chapters. Simulated payment provider only. Supersedes contoso-v7, whose evidence-live step crashed in the evidence scorer (FJ-01); the scorer fix is CodeSample 956c463.",
+  "candidate": "contoso-v7.2",
+  "description": "Contoso v7: v6's claims API and interface over v5's durable store, v3's FAQ desks, and the inputs reused from the durable-execution, skills, hosting, security, evaluation and capacity chapters. Simulated payment provider only. Supersedes contoso-v7.1, whose live layer failed F6, F9 and C8 (FJ-09, FJ-03, FJ-04): the live steps now run the configuration v7 ships (the requester assistant, with tools chosen by the caller's role and the answer contract; v3's FAQ desks behind the same contract), not the evaluation chapter's demonstration agent. contoso-v7.1 superseded contoso-v7, whose evidence-live step crashed in the evidence scorer (FJ-01, fixed by CodeSample 956c463).",
   "profile": {
     "provider": "ollama",
     "chatModel": "llama3.2",
@@ -24,7 +24,9 @@
     "prompts": [
       { "id": "faq-agent", "project": "src/Ch10.RAGBaseline/Ch10.FaqAgent/Ch10.FaqAgent.csproj", "type": "Ch10.FaqAgent.FaqAgentFactory", "field": "Instructions" },
       { "id": "policy-evidence-agent", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "type": "Ch11.AuthorizedSearch.EvidenceAgent", "field": "Instructions" },
-      { "id": "policy-faq-version", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "type": "Contoso.FaqEvidence.PolicyFaq", "field": "PromptVersion" }
+      { "id": "policy-faq-version", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "type": "Contoso.FaqEvidence.PolicyFaq", "field": "PromptVersion" },
+      { "id": "requester-assistant", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "type": "Contoso.Qualified.RequesterAssistant", "field": "Instructions" },
+      { "id": "answer-contract-retry", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "type": "Contoso.Qualified.AnswerContract", "field": "RetryInstruction" }
     ],
     "skills": [
       { "folder": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/skills", "lock": "src/Ch16.SkillsHarnesses/Ch16.SkillLifecycle/skills.lock.json" }
@@ -84,11 +86,11 @@
       "doesNotProve": "another model, other data, the same result on the next run",
       "steps": [
         { "id": "model-identity", "kind": "probe", "provider": "ollama", "maxSeconds": 120 },
-        { "id": "faq-live", "kind": "run", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "provider": "ollama",
+        { "id": "faq-live", "kind": "run", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "args": ["--faq-live"], "provider": "ollama",
           "count": { "kind": "tally", "pass": "^\\s+as expected", "fail": "^\\s+differs" }, "maxSeconds": 400, "completedExitCodes": [0, 1] },
-        { "id": "evidence-live", "kind": "run", "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj", "provider": "ollama",
+        { "id": "evidence-live", "kind": "run", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "args": ["--evidence-live"], "provider": "ollama",
           "count": { "kind": "ratio", "pattern": "Passed (?<pass>\\d+)/(?<total>\\d+)" }, "maxSeconds": 900, "completedExitCodes": [0, 1] },
-        { "id": "faq-azure", "kind": "run", "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj", "provider": "azure",
+        { "id": "faq-azure", "kind": "run", "project": "contoso/v7-qualified/Contoso.Qualified.csproj", "args": ["--faq-live"], "provider": "azure",
           "env": { "LlmProvider__Provider": "azure" }, "requiresEnv": ["LlmProvider__AzureOpenAI__Endpoint"],
           "count": { "kind": "tally", "pass": "^\\s+as expected", "fail": "^\\s+differs" }, "maxSeconds": 400, "completedExitCodes": [0, 1] }
       ]
@@ -126,6 +128,8 @@
       "step": "evidence-live", "ratio": "^\\s+evidence\\.support\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 0.8, "data": "evidence-cases.v1", "expected": ">= 0.8 of applicable items" },
     { "id": "F10", "promise": "The same FAQ scenarios hold on the Azure OpenAI deployment", "evidence": "provider",
       "step": "faq-azure", "threshold": 1.0, "data": "faq-handbook, policy-corpus", "expected": "all 'as expected'" },
+    { "id": "F11", "promise": "An answer whose stated values are not cited is never shown as an answer", "evidence": "contract",
+      "step": "qualified", "check": "never cites: after one retry the assistant abstains", "data": "evidence-cases.v1", "expected": "the abstention, after two model calls" },
     { "id": "C1", "promise": "A valid but unauthorized claim id answers 404, like an unknown one", "evidence": "integration",
       "step": "api-ui", "check": "bob (same tenant, not his claim): 404", "data": "v5 store (fresh)", "expected": "404" },
     { "id": "C2", "promise": "The same subject in another tenant sees neither the claim nor the conversation", "evidence": "integration",
@@ -142,6 +146,8 @@
       "step": "identity-tests", "check": "signed with another key: 401", "data": "minted tokens", "expected": "401" },
     { "id": "C8", "promise": "On the live model, no forbidden action tool is called", "evidence": "provider",
       "step": "evidence-live", "ratio": "^\\s+action\\.allowed\\s+(?<pass>\\d+)/(?<total>\\d+)", "threshold": 1.0, "data": "evidence-cases.v1", "expected": "every action item" },
+    { "id": "C9", "promise": "The requester-facing assistant is never offered a tool its caller may not use", "evidence": "contract",
+      "step": "qualified", "check": "each saw only its caller's tools", "data": "scripted callers", "expected": "approve_reimbursement for a finance reviewer only, while claims.decide ships" },
     { "id": "S1", "promise": "Every threat in the register has a passing test", "evidence": "contract",
       "step": "threat-register", "data": "threat register", "expected": "n/n" },
     { "id": "W1", "promise": "At the declared concurrency (4), at least 75% of requests are accepted", "evidence": "workload",
@@ -156,8 +162,8 @@
     "The gate is on the HTTP API. v5's worker command line keeps its review verb; the release runbook does not hand it out.",
     "The real-provider layer ran one small local model once; its counts describe that run only.",
     "No cloud provider has credentials on the qualification machine: the Azure OpenAI step is compiled and declared, not run.",
-    "The host agent behind /ask and /conversations has no real-provider evaluation in this campaign; the evaluated answer paths are v3's FAQ desks and the evidence cases.",
-    "The evidence-evaluation agent's instructions are inline in its Program.cs, not a constant, so the runner does not hash them; the commit and lock files identify them.",
+    "The host agent behind /ask and /conversations has no real-provider evaluation in this campaign; the evaluated answer paths are v3's FAQ desks and v7's requester assistant, console entry points that no HTTP route serves.",
+    "The answer contract attaches a citation only where every number a sentence states appears in exactly one supplied chunk; that proves where the number came from, not that the sentence is supported.",
     "The refund-escalation skill is frozen with the candidate, but no v7 route loads it.",
     "Event logs and the FAQ indexes are in memory: a restarted process rebuilds them.",
     "One machine: no test covers two API instances or two workers on different hosts."
