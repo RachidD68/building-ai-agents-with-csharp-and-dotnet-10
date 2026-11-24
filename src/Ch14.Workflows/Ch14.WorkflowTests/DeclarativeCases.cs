@@ -162,6 +162,7 @@ internal static class DeclarativeCases
         Harness.Check("allow-list entries are host[:port]: a scheme or a wildcard is refused when the handler is built",
             badEntries is not null);
     }
+
     private static string HttpYaml(string url) => $"""
         kind: Workflow
         trigger:
