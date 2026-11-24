@@ -5,7 +5,9 @@
        capability states, failure journal), a capability gate that keeps a
        disabled capability's routes refused with its recorded reason, a check
        that every mapped route belongs to a declared capability, GET /release,
-       and the handoff drill. Microsoft.Agents.AI.Hosting stays a preview
+       the handoff drill, and (contoso-v7.2) the assistant configuration the live
+       layer evaluates: tools chosen by the caller's role, and an answer contract
+       that checks citations after generation. Microsoft.Agents.AI.Hosting stays a preview
        package (via v6 and Ch17.AspNetCoreHost). TestHost is used by the
        self-test and the drill only. Simulated effects only. -->
   <PropertyGroup>
@@ -19,6 +21,17 @@
   <ItemGroup>
     <!-- The previous snapshot, used as it is (and through it v5, v4, v2). -->
     <ProjectReference Include="../v6-api-ui/Contoso.ApiUi.csproj" />
+    <!-- v3's FAQ desks, used as they are, behind the answer contract (the faq-live run). -->
+    <ProjectReference Include="../v3-faq-evidence/Contoso.FaqEvidence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The evaluation chapter's case book and scorer, compiled in as linked files, so the
+         live layer scores Contoso's own assistant with the same five layers (the evidence-live run). -->
+    <Compile Include="../../src/Ch21.Evaluation/Ch21.EvidenceEval/EvidenceCase.cs" Link="Ch21/EvidenceCase.cs" />
+    <Compile Include="../../src/Ch21.Evaluation/Ch21.EvidenceEval/EvidenceChecks.cs" Link="Ch21/EvidenceChecks.cs" />
+    <Compile Include="../../src/Ch21.Evaluation/Ch21.EvidenceEval/EvidenceScorer.cs" Link="Ch21/EvidenceScorer.cs" />
+    <Content Include="../../src/Ch21.Evaluation/Ch21.EvidenceEval/cases/*.json" LinkBase="cases" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -41,6 +41,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- v7 runs the same live scenarios with its answer contract around the model (its faq-live run). -->
+    <InternalsVisibleTo Include="Contoso.Qualified" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

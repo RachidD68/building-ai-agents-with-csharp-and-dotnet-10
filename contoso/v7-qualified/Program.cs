@@ -18,6 +18,10 @@
 //   dotnet run                    the release profile (Release:Profile=release)
 //   dotnet run -- --self-test     the gate, the refusals and the drill, offline
 //   dotnet run -- --drill         the handoff drill alone, with its business state
+//   dotnet run -- --evidence-live the requester assistant as shipped (tools by role, answer
+//                                 contract) on the evaluation chapter's cases; Ollama
+//   dotnet run -- --faq-live      v3's FAQ desks on v3's live scenarios, behind the answer
+//                                 contract; Ollama (nomic-embed-text + llama3.2)
 // Simulated effects only; Microsoft.Agents.AI.Hosting is a preview package.
 // ============================================================================
 
@@ -27,6 +31,8 @@ using Contoso.Qualified;
 
 if (args.Contains("--self-test")) return await V7SelfTest.RunAsync(drillOnly: false);
 if (args.Contains("--drill")) return await V7SelfTest.RunAsync(drillOnly: true);
+if (args.Contains("--evidence-live")) return await LiveRuns.EvidenceAsync(args);
+if (args.Contains("--faq-live")) return await LiveRuns.FaqAsync(args);
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 string store = builder.Configuration["Contoso:Store"] ?? ClaimsApi.DefaultStore;

@@ -8,10 +8,27 @@
         "resolved": "10.0.13",
         "contentHash": "8xzbDfEOWg5GRp5byA42Axr4TbockbxCvdHTYk27ZIdst79DO0CLBp/Zw5sduK2goRii7of4EeuTjG/yPH4tsg=="
       },
+      "Azure.Core": {
+        "type": "Transitive",
+        "resolved": "1.53.0",
+        "contentHash": "x9c/toFMOtRrlTdFuE7rlGCVAduQzWVfKmLz5juj41zJAXEhYD5hluiUyyAEzJ6OxpBnKtiaBztzwpZITAVjtg==",
+        "dependencies": {
+          "Microsoft.Bcl.AsyncInterfaces": "10.0.3",
+          "Microsoft.Identity.Client": "4.83.1",
+          "Microsoft.Identity.Client.Extensions.Msal": "4.83.1",
+          "System.ClientModel": "1.10.0",
+          "System.Memory.Data": "10.0.3"
+        }
+      },
       "Google.Protobuf": {
         "type": "Transitive",
         "resolved": "3.30.2",
         "contentHash": "Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw=="
+      },
+      "Microsoft.Bcl.AsyncInterfaces": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "TV62UsrJZPX6gbt3c4WrtXh7bmaDIcMqf9uft1cc4L6gJXOU07hDGEh+bFQh/L2Az0R1WVOkiT66lFqS6G2NmA=="
       },
       "Microsoft.Bcl.Cryptography": {
         "type": "Transitive",
@@ -62,6 +79,23 @@
         "contentHash": "ir1QKShZzfEmqO9LUWESVMUDZdnxYBSKQyulYPMeaye531lAuT8YTotthx+htrrS8hZY52HANeqowLQyCYBCZg==",
         "dependencies": {
           "Microsoft.Extensions.Compliance.Abstractions": "10.7.0"
+        }
+      },
+      "Microsoft.Identity.Client": {
+        "type": "Transitive",
+        "resolved": "4.83.1",
+        "contentHash": "jOLIrZ3cynoqHLLO1cXplFFabrhrMEYs/EuKHvmCyrOm1axqiVFT6nCSnHxk7w5+d2BeQfCdM12Yf/0X7OeS1g==",
+        "dependencies": {
+          "Microsoft.IdentityModel.Abstractions": "8.14.0"
+        }
+      },
+      "Microsoft.Identity.Client.Extensions.Msal": {
+        "type": "Transitive",
+        "resolved": "4.83.1",
+        "contentHash": "I3k4J4Hj4KbLEFanjeUzzDOVecukETaTgEkJ7h2pP/Yazs6SLp6TVUTo/Eo+ptPXMwvc+iX7rBFtMSUrA7R+Mg==",
+        "dependencies": {
+          "Microsoft.Identity.Client": "4.83.1",
+          "System.Security.Cryptography.ProtectedData": "4.5.0"
         }
       },
       "Microsoft.IdentityModel.Abstractions": {
@@ -168,10 +202,10 @@
       },
       "System.ClientModel": {
         "type": "Transitive",
-        "resolved": "1.15.0",
-        "contentHash": "y6zQLInrpX+oGL1gXM04DrUSu1O1esWxt4rD/zrujTnzIFChn/noD1OiVVpTrU8ZvglwqO2Uw038svUR3SiAOg==",
+        "resolved": "1.16.0",
+        "contentHash": "vLljZON+8lXDUtsPP8uwsPvsBSQaUHhh8NvB+D9TQsXu5n622RLtuLyZAcyIFc98b8ixrwD0AhzUQhtg2NwJnQ==",
         "dependencies": {
-          "System.Memory.Data": "10.0.9"
+          "System.Memory.Data": "10.0.10"
         }
       },
       "System.IdentityModel.Tokens.Jwt": {
@@ -185,13 +219,18 @@
       },
       "System.Memory.Data": {
         "type": "Transitive",
-        "resolved": "10.0.9",
-        "contentHash": "YweovHiLUoEdbr2Xv8eRqCSkTu1vMms4a6xBHaQiMSFVy32PL+hXv6Vhol2NWOmLHjaVgTyhJ3R52U6JxS6w3Q=="
+        "resolved": "10.0.10",
+        "contentHash": "roR+5AeOpflUxJQlqSfsZs/Bvi1uw4KBuTkIgF1e8l0RdalG4AUn84+sjJLclEfOV85gAjc8+Pp540qjDE5UIg=="
       },
       "System.Numerics.Tensors": {
         "type": "Transitive",
         "resolved": "10.0.13",
         "contentHash": "E4JC7KcY4j1yx9uy8tVsHlGThnwLdUWtUz6aLHCqbN/jbtwbwbZgnVEF9atUr/7ynFCbo8Rbij056Y9bWM9ALg=="
+      },
+      "System.Security.Cryptography.ProtectedData": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "wLBKzFnDCxP12VL9ANydSYhk59fC4cvOr9ypYQLPnAj48NQIhqnjdD2yhP8yEKyBJEjERWS9DisKL7rX5eU25Q=="
       },
       "agenticai.common": {
         "type": "Project",
@@ -202,6 +241,14 @@
           "Microsoft.Extensions.Http.Resilience": "[10.7.0, )",
           "Microsoft.Extensions.Resilience": "[10.7.0, )",
           "OllamaSharp": "[5.4.25, )"
+        }
+      },
+      "agenticai.common.azure": {
+        "type": "Project",
+        "dependencies": {
+          "AgenticAI.Common": "[1.0.0, )",
+          "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
+          "Azure.Identity": "[1.21.0, )"
         }
       },
       "ch08.actionpolicy": {
@@ -220,6 +267,23 @@
         "dependencies": {
           "Microsoft.Data.Sqlite.Core": "[10.0.13, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[2.1.13, )"
+        }
+      },
+      "ch10.faqagent": {
+        "type": "Project",
+        "dependencies": {
+          "AgenticAI.Common": "[1.0.0, )",
+          "AgenticAI.Common.Azure": "[1.0.0, )",
+          "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
+          "Azure.Identity": "[1.21.0, )",
+          "CommunityToolkit.VectorData.InMemory": "[1.0.1, )",
+          "Microsoft.Agents.AI": "[1.28.0, )",
+          "Microsoft.Agents.AI.OpenAI": "[1.28.0, )",
+          "Microsoft.Extensions.AI": "[10.11.0, )",
+          "Microsoft.Extensions.AI.Abstractions": "[10.11.0, )",
+          "Microsoft.Extensions.AI.OpenAI": "[10.11.0, )",
+          "Microsoft.Extensions.VectorData.Abstractions": "[10.10.0, )",
+          "OllamaSharp": "[5.4.25, )"
         }
       },
       "ch17.aspireorchestration.servicedefaults": {
@@ -289,6 +353,18 @@
           "SQLitePCLRaw.bundle_e_sqlite3": "[2.1.13, )"
         }
       },
+      "contoso.faqevidence": {
+        "type": "Project",
+        "dependencies": {
+          "AgenticAI.Common": "[1.0.0, )",
+          "Ch10.FaqAgent": "[1.0.0, )",
+          "CommunityToolkit.VectorData.InMemory": "[1.0.1, )",
+          "Contoso.AuthorizedReimbursement": "[1.0.0, )",
+          "Microsoft.Agents.AI": "[1.28.0, )",
+          "Microsoft.Extensions.AI": "[10.11.0, )",
+          "OllamaSharp": "[5.4.25, )"
+        }
+      },
       "contoso.receipts": {
         "type": "Project",
         "dependencies": {
@@ -297,6 +373,36 @@
           "Microsoft.Extensions.AI": "[10.11.0, )",
           "Microsoft.Extensions.AI.OpenAI": "[10.11.0, )",
           "OllamaSharp": "[5.4.25, )"
+        }
+      },
+      "Azure.AI.OpenAI": {
+        "type": "CentralTransitive",
+        "requested": "[2.9.0-beta.1, )",
+        "resolved": "2.9.0-beta.1",
+        "contentHash": "CgIYDuCSOFx+yPuCdK7iz71OW2envfVeIE/YoNYK+mhr6bxgIJV6jfBF+mV9aHDQ6KVQjeSL6OZ7x90XrvsoRg==",
+        "dependencies": {
+          "Azure.Core": "1.51.1",
+          "OpenAI": "2.9.1"
+        }
+      },
+      "Azure.Identity": {
+        "type": "CentralTransitive",
+        "requested": "[1.21.0, )",
+        "resolved": "1.21.0",
+        "contentHash": "GeFv8sGwRKvDKwI2WFy8r0mhmlxEVZg24Sit2NogTjiSO8RVjllWM65OT6e1sKjOvG8V74y7hAbaELUUPjZQSw==",
+        "dependencies": {
+          "Azure.Core": "1.53.0"
+        }
+      },
+      "CommunityToolkit.VectorData.InMemory": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1, )",
+        "resolved": "1.0.1",
+        "contentHash": "vsal3mLLG4DEr/PFC3SXTIfvKs1579tqP3nLU/cXxsO7qy6ZEx22vmfaxpoQBgruiMywmzZmC7kClEaeCIHwtw==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.8.2",
+          "System.Numerics.Tensors": "10.0.10"
         }
       },
       "Microsoft.Agents.AI": {
@@ -339,6 +445,24 @@
           "Microsoft.Extensions.VectorData.Abstractions": "10.10.0",
           "Microsoft.ML.Tokenizers": "2.0.0",
           "OpenTelemetry.Api": "1.18.0"
+        }
+      },
+      "Microsoft.Agents.AI.OpenAI": {
+        "type": "CentralTransitive",
+        "requested": "[1.28.0, )",
+        "resolved": "1.28.0",
+        "contentHash": "XkcsKTJW2dI4lmNaRHptiouXK/mFwN9zxVG1zi57kBM6Boq8YtIKeAP5hy+Tuw3ua+70HkOEbewO/gRpAyrvzA==",
+        "dependencies": {
+          "Microsoft.Agents.AI": "1.28.0",
+          "Microsoft.Extensions.AI": "10.11.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.11.0",
+          "Microsoft.Extensions.AI.Evaluation": "10.11.0",
+          "Microsoft.Extensions.AI.OpenAI": "10.11.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.10.0",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.10.0",
+          "Microsoft.ML.Tokenizers": "2.0.0",
+          "OpenAI": "2.14.0",
+          "System.ClientModel": "1.16.0"
         }
       },
       "Microsoft.Agents.AI.Workflows": {

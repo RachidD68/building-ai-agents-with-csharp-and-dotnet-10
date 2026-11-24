@@ -16,11 +16,12 @@ namespace Contoso.Qualified;
 /// <summary>
 /// --self-test: (1) the release profile on a TestServer: reads answer, a disabled
 /// capability is refused with its reason, after authentication; (2) the profile's
-/// refusals; (3) the handoff drill on the qualification profile. --drill runs (3)
-/// alone. v5's verbs run as child processes on the same store; tokens minted here;
+/// refusals; (3) the handoff drill on the qualification profile; (4) the tools each
+/// caller is offered and (5) the answer contract, on scripted models
+/// (V7SelfTest.Assistant.cs). --drill runs (3) alone. v5's verbs run as child processes on the same store; tokens minted here;
 /// fake model; offline. Simulated effects only.
 /// </summary>
-internal static class V7SelfTest
+internal static partial class V7SelfTest
 {
     private static int _passed, _total;
 
@@ -39,6 +40,11 @@ internal static class V7SelfTest
                 Refusals(store + "-refusals");
             }
             await DrillAsync(store, key);
+            if (!drillOnly)
+            {
+                await ToolsByRoleAsync();
+                await AnswerContractAsync();
+            }
         }
         finally
         {
