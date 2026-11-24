@@ -22,7 +22,7 @@
       "row": "F9",
       "finding": "contoso-v7: not measured (FJ-01). contoso-v7.1: no live answer cited a chunk it was given (citation.issued 0/9), so no stated value sat in a cited supporting chunk. The step evaluated the evaluation chapter's demonstration agent, which asks for citations and checks none, not a configuration Contoso ships. contoso-v7.2: evidence.support 9/9, citation.issued 9/9.",
       "disposition": "fixed",
-      "reason": "Fixed in contoso-v7.2 by CodeSample 78bc373 (the answer contract: every stated value carries a supplied evidence id, checked by code after generation; a citation is attached only where the numbers are in exactly one supplied chunk; otherwise one retry, then abstention) and 81bc32b (evidence-live runs v7's requester assistant). The run's contract log shows 'attached 9': all nine value answers were cited by the code's attachment, none by the model, so F9 shows where each number came from, not that the model cites. One run of one small local model."
+      "reason": "Fixed in contoso-v7.2 by CodeSample 78bc373 (the answer contract: every stated value carries a supplied evidence id, checked by code after generation; a citation is attached only where the numbers are in exactly one supplied chunk; otherwise one retry, then abstention) and 81bc32b (evidence-live runs v7's requester assistant). The run's contract log shows 'attached 9': each of the nine value answers failed the contract as the model wrote it and passed only after the code attached the citation of the one chunk holding its numbers. F9 shows where each number came from, not that the model cites. One run of one small local model."
     },
     {
       "id": "FJ-04",
@@ -86,7 +86,7 @@
     "acceptance": "pending: human acceptance is recorded apart from this campaign (rows H1 and H2)",
     "conditions": [
       "Ship the release profile only: claims.decide disabled, simulated payments.",
-      "The live rows describe one run of llama3.2 on one machine; the value answers' citations were attached by the answer contract, not written by the model (FJ-03).",
+      "The live rows describe one run of llama3.2 on one machine; every value answer passed F9 only after the answer contract attached its citation (FJ-03).",
       "The Azure OpenAI path stays unqualified (FJ-05)."
     ]
   }
