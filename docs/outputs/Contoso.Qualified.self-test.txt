@@ -1,4 +1,4 @@
-# code ac87fe0 | SDK 11.0.100 | Windows 11 | env: none
+# code c86d7ac | SDK 11.0.100 | Windows 11 | env: none
 # note: also passes 18/18 on Linux (aspnet:10.0-noble, --network none), body identical
 $ dotnet run -- --self-test
 === Contoso v7: the qualified version (self-test, offline) ===
@@ -9,7 +9,7 @@ $ dotnet run -- --self-test
   PASS  rita approves: 503 capability_disabled (claims.decide)
   PASS  POST /decision: 503; with no token: 401 (authentication runs before the gate)
   PASS  the claim is still AwaitingReview: nothing was recorded
-  PASS  GET /release: candidate contoso-v7, profile release, disabled: claims.decide
+  PASS  GET /release: candidate contoso-v7.1, profile release, disabled: claims.decide
 
 -- 2. Refusals at start
   PASS  a capability disabled with no reason: release profile refused: claims.decide is disabled with no reason

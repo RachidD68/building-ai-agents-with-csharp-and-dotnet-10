@@ -5,14 +5,14 @@
     "offline",
     "real"
   ],
-  "startedUtc": "2026-11-20 21:28:19",
-  "finishedUtc": "2026-11-20 21:40:30",
+  "startedUtc": "2026-11-24 14:09:43",
+  "finishedUtc": "2026-11-24 14:23:48",
   "platform": "Microsoft Windows 10.0.26200 (X64)",
   "sdkUsed": "11.0.100",
-  "candidateSha256": "ea7cd2d837d315cb20ce5292b4be3cd77b76d733e0f7774ac3c845fb93746525",
+  "candidateSha256": "409e33f1ec138b1a64c680886c0f3eb9107491c637e60a8584f3eaaa63720932",
   "candidate": {
-    "candidate": "contoso-v7",
-    "manifestSha256": "e19762ff0b9b1a07267c922e6202c34a18887b29a354791499534b0669760a32",
+    "candidate": "contoso-v7.1",
+    "manifestSha256": "69b8ffa66754ce7b7649acf50ab70cf89b818bb7695caa3628d0f2e44103d5d7",
     "globalJsonSdk": "10.0.100",
     "packages": [
       {
@@ -309,7 +309,7 @@
         "id": "faq-handbook",
         "path": "src/Ch10.RAGBaseline/Ch10.FaqAgent/docs",
         "files": 11,
-        "sha256": "93b334e4f3b4384d6a27a0ca6f0577d7d570736f927aafff1cf1a38c3d5b8159"
+        "sha256": "bbb8bacd309b9875c9f855a5a20b51d0092b5336b4cb98fbc33934a6c914bb2c"
       },
       {
         "id": "policy-corpus",
@@ -333,7 +333,7 @@
         "id": "capabilities",
         "path": "contoso/v7-qualified/release/capabilities.json",
         "files": 1,
-        "sha256": "ddfd12accf9f4ef434dda70933f374ce69a889465aa3f65459ea5138f40cf73f"
+        "sha256": "ded014397657303cd2b095117f011c980c674e616d3b854e898e150a8ee1ec50"
       }
     ],
     "profile": {
@@ -344,7 +344,7 @@
       "configurationProfile": "release"
     },
     "problems": [],
-    "sha256": "ea7cd2d837d315cb20ce5292b4be3cd77b76d733e0f7774ac3c845fb93746525"
+    "sha256": "409e33f1ec138b1a64c680886c0f3eb9107491c637e60a8584f3eaaa63720932"
   },
   "identityUnchangedAfterRun": true,
   "model": {
@@ -372,7 +372,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 4,
+          "seconds": 1.2,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Contoso.Qualified.log"
@@ -386,7 +386,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 11.4,
+          "seconds": 12,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Contoso.Qualified.log"
@@ -414,7 +414,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 6.7,
+          "seconds": 3.8,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Contoso.FaqEvidence.log"
@@ -428,7 +428,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.7,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch15.ExternalEffects.log"
@@ -442,7 +442,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.2,
+          "seconds": 1.4,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch15.ExternalEffects.log"
@@ -470,7 +470,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.4,
+          "seconds": 2.2,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch15.DurableReview.log"
@@ -526,7 +526,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.7,
+          "seconds": 0.8,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch16.SkillLifecycle.log"
@@ -540,7 +540,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.8,
+          "seconds": 0.7,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch17.IdentityTests.log"
@@ -554,7 +554,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.5,
+          "seconds": 2.1,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch17.IdentityTests.log"
@@ -568,7 +568,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.1,
+          "seconds": 0.8,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch20.ThreatRegisterTests.log"
@@ -582,7 +582,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.3,
+          "seconds": 1.5,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch20.ThreatRegisterTests.log"
@@ -596,7 +596,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.7,
+          "seconds": 0.5,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch21.EvidenceEval.log"
@@ -610,7 +610,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.5,
+          "seconds": 0.9,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch21.EvidenceEval.log"
@@ -638,7 +638,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.5,
+          "seconds": 1.7,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch22.LoadProfile.log"
@@ -662,7 +662,7 @@
           "exitCode": 0,
           "passed": 16,
           "total": 16,
-          "seconds": 3.1,
+          "seconds": 2.3,
           "status": "passed",
           "reason": null,
           "log": "logs/threat-register.log"
@@ -674,9 +674,9 @@
           "command": "dotnet run --project src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-build --no-launch-profile -- --self-test",
           "provider": "fake",
           "exitCode": 0,
-          "passed": 23,
-          "total": 23,
-          "seconds": 2,
+          "passed": 24,
+          "total": 24,
+          "seconds": 1.7,
           "status": "passed",
           "reason": null,
           "log": "logs/evidence-scorer.log"
@@ -690,7 +690,7 @@
           "exitCode": 0,
           "passed": 18,
           "total": 18,
-          "seconds": 2.5,
+          "seconds": 2.2,
           "status": "passed",
           "reason": null,
           "log": "logs/skill-lifecycle.log"
@@ -704,7 +704,7 @@
           "exitCode": 0,
           "passed": 17,
           "total": 17,
-          "seconds": 6.1,
+          "seconds": 6.2,
           "status": "passed",
           "reason": null,
           "log": "logs/load-profile.log"
@@ -718,7 +718,7 @@
           "exitCode": 0,
           "passed": 33,
           "total": 33,
-          "seconds": 5.8,
+          "seconds": 27,
           "status": "passed",
           "reason": null,
           "log": "logs/reimbursement.log"
@@ -732,7 +732,7 @@
           "exitCode": 0,
           "passed": 22,
           "total": 22,
-          "seconds": 6.8,
+          "seconds": 13.6,
           "status": "passed",
           "reason": null,
           "log": "logs/faq-evidence.log"
@@ -746,7 +746,7 @@
           "exitCode": 0,
           "passed": 12,
           "total": 12,
-          "seconds": 3.4,
+          "seconds": 10.9,
           "status": "passed",
           "reason": null,
           "log": "logs/receipts.log"
@@ -770,7 +770,7 @@
           "exitCode": 0,
           "passed": 11,
           "total": 11,
-          "seconds": 13.4,
+          "seconds": 15.5,
           "status": "passed",
           "reason": null,
           "log": "logs/durable-resume.log"
@@ -784,7 +784,7 @@
           "exitCode": 0,
           "passed": 33,
           "total": 33,
-          "seconds": 84.7,
+          "seconds": 101.7,
           "status": "passed",
           "reason": null,
           "log": "logs/restart-tests.log"
@@ -798,7 +798,7 @@
           "exitCode": 0,
           "passed": 22,
           "total": 22,
-          "seconds": 4.2,
+          "seconds": 26,
           "status": "passed",
           "reason": null,
           "log": "logs/identity-tests.log"
@@ -812,7 +812,7 @@
           "exitCode": 0,
           "passed": 25,
           "total": 25,
-          "seconds": 11.3,
+          "seconds": 24.7,
           "status": "passed",
           "reason": null,
           "log": "logs/api-ui.log"
@@ -826,7 +826,7 @@
           "exitCode": 0,
           "passed": 18,
           "total": 18,
-          "seconds": 11.5,
+          "seconds": 17.8,
           "status": "passed",
           "reason": null,
           "log": "logs/qualified.log"
@@ -850,7 +850,7 @@
           "exitCode": 0,
           "passed": 2,
           "total": 2,
-          "seconds": 27,
+          "seconds": 3.7,
           "status": "completed",
           "reason": null,
           "log": "logs/model-identity.log"
@@ -862,9 +862,9 @@
           "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile --",
           "provider": "ollama",
           "exitCode": 0,
-          "passed": 3,
+          "passed": 2,
           "total": 3,
-          "seconds": 182.7,
+          "seconds": 216.8,
           "status": "completed",
           "reason": null,
           "log": "logs/faq-live.log"
@@ -875,12 +875,12 @@
           "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
           "command": "dotnet run --project src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-build --no-launch-profile --",
           "provider": "ollama",
-          "exitCode": -532462766,
-          "passed": 0,
-          "total": 0,
-          "seconds": 241.1,
-          "status": "refused",
-          "reason": "selected 0 cases (exit -532462766)",
+          "exitCode": 1,
+          "passed": 9,
+          "total": 21,
+          "seconds": 232.3,
+          "status": "completed",
+          "reason": null,
           "log": "logs/evidence-live.log"
         },
         {
@@ -916,7 +916,7 @@
           "exitCode": 0,
           "passed": 30,
           "total": 32,
-          "seconds": 55.4,
+          "seconds": 33.5,
           "status": "completed",
           "reason": null,
           "log": "logs/load-live.log"
@@ -987,8 +987,8 @@
       "test": "faq-live",
       "data": "faq-handbook, policy-corpus",
       "expected": "all \u0027as expected\u0027",
-      "status": "passed",
-      "observed": "3/3",
+      "status": "failed",
+      "observed": "2/3",
       "artifact": "logs/faq-live.log"
     },
     {
@@ -998,8 +998,8 @@
       "test": "evidence-live: /^\\s\u002Babstention\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 1",
       "data": "evidence-cases.v1",
       "expected": "every item",
-      "status": "not-run",
-      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "status": "passed",
+      "observed": "21/21",
       "artifact": "logs/evidence-live.log"
     },
     {
@@ -1009,8 +1009,8 @@
       "test": "evidence-live: /^\\s\u002Bfact\\.value\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 0.8",
       "data": "evidence-cases.v1",
       "expected": "\u003E= 0.8 of applicable items",
-      "status": "not-run",
-      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "status": "passed",
+      "observed": "9/9",
       "artifact": "logs/evidence-live.log"
     },
     {
@@ -1020,8 +1020,8 @@
       "test": "evidence-live: /^\\s\u002Bevidence\\.support\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 0.8",
       "data": "evidence-cases.v1",
       "expected": "\u003E= 0.8 of applicable items",
-      "status": "not-run",
-      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "status": "failed",
+      "observed": "0/9",
       "artifact": "logs/evidence-live.log"
     },
     {
@@ -1119,8 +1119,8 @@
       "test": "evidence-live: /^\\s\u002Baction\\.allowed\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 1",
       "data": "evidence-cases.v1",
       "expected": "every action item",
-      "status": "not-run",
-      "observed": "step refused: selected 0 cases (exit -532462766)",
+      "status": "failed",
+      "observed": "3/6",
       "artifact": "logs/evidence-live.log"
     },
     {
@@ -1171,29 +1171,29 @@
   "totals": {
     "steps": 37,
     "stepsPassed": 32,
-    "stepsCompleted": 3,
-    "stepsRefused": 1,
+    "stepsCompleted": 4,
+    "stepsRefused": 0,
     "stepsNotRun": 1,
     "stepsFailed": 0,
-    "cases": 307,
-    "casesPassed": 305,
+    "cases": 329,
+    "casesPassed": 314,
     "rows": 22,
-    "rowsPassed": 15,
-    "rowsFailed": 0,
-    "rowsNotRun": 5,
+    "rowsPassed": 16,
+    "rowsFailed": 3,
+    "rowsNotRun": 1,
     "rowsRefused": 0,
     "rowsPendingHuman": 2
   },
   "budgets": [
     {
       "budgetMinutes": null,
-      "spentSeconds": 194.1,
+      "spentSeconds": 284.3,
       "modelLockSeconds": 0
     },
     {
       "budgetMinutes": 25,
-      "spentSeconds": 506.2,
-      "modelLockSeconds": 506.3
+      "spentSeconds": 486.2,
+      "modelLockSeconds": 486.4
     }
   ]
 }

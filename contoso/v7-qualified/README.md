@@ -36,6 +36,13 @@ dotnet run --project src/Ch23.Qualification/Ch23.QualificationRunner -- --real -
 dotnet run --project src/Ch23.Qualification/Ch23.QualificationRunner -- --dossier <dir>/qualification-results.json
 ```
 
+The release folder names candidate `contoso-v7.1`. The first candidate,
+`contoso-v7`, stopped when the evidence scorer crashed (journal FJ-01, fixed by
+956c463). On `contoso-v7.1` the real-provider layer completed, and three rows
+failed: F6, F9 and C8 (journal FJ-09, FJ-03, FJ-04). The evidence does not support
+calling this candidate qualified. The runs of record are
+`docs/outputs/Ch23.release-dossier.md` and `Ch23.contoso-v7.release-dossier.md`.
+
 ## The handoff drill
 
 `--drill` runs four situations on a fresh store and prints the business state
