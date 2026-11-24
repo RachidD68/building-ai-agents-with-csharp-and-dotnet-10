@@ -175,7 +175,7 @@ On Windows, if the clone fails with "Filename too long", run `git config --globa
 
 Every project except the Aspire AppHost commits a `packages.lock.json`, and `--locked-mode` fails if the dependency graph has drifted from it. The AppHost has no lock file, because its SDK pulls per-OS packages, and restores normally in the same command. After changing a version in `Directory.Packages.props`, a plain `dotnet restore AgenticAI.slnx` refreshes the lock files.
 
-Every package version is pinned once, in `Directory.Packages.props` (Central Package Management); the `.csproj` files carry no version numbers. The exceptions are the Aspire AppHost, which pins its own Aspire packages, and the Hosting override in `Ch18.AguiServer` described under [Framework exceptions](#framework-exceptions). Appendix B of the book lists every package with its version and status.
+Every package version is pinned once, in `Directory.Packages.props` (Central Package Management); the `.csproj` files carry no version numbers. The exception is the Aspire AppHost, which pins its own Aspire packages; the one package not on the 1.28 line is described under [Framework exceptions](#framework-exceptions). Appendix B of the book lists every package with its version and status.
 
 ### Run the self-tests
 
@@ -215,12 +215,13 @@ Treat the cloud paths as code you still have to qualify against your own subscri
 
 ## Framework exceptions
 
-Every `Microsoft.Agents.AI*` package is on 1.28.0 (the preview packages on `1.28.0-preview.261106.1`), with two exceptions:
+Every `Microsoft.Agents.AI*` package is on 1.28.0 (the preview packages on `1.28.0-preview.261106.1`), with one exception:
 
-- **Declarative workflows are pinned at 1.20.** `Microsoft.Agents.AI.Workflows.Declarative` is `1.20.0`, because 1.28.0 was not in the offline package cache this repository restores from. 1.20.0 runs on Workflows 1.28.0, and `Ch14.WorkflowTests` exercises that pairing.
-- **AG-UI is on a 1.5 preview.** `Microsoft.Agents.AI.AGUI` and `Microsoft.Agents.AI.Hosting.AGUI.AspNetCore` are `1.5.0-preview.260507.1`, the only AG-UI build in that cache. Its hosting package is compiled against `Microsoft.Agents.AI.Hosting` 1.5 (with Hosting 1.28, `MapAGUI` throws a `TypeLoadException`), so `Ch18.AguiServer` sets `VersionOverride="1.5.0-preview.260507.1"` on `Microsoft.Agents.AI.Hosting`. Only `Ch18.AguiServer` and `Ch18.AguiClient` reference AG-UI.
+- **The AG-UI client is on 1.13.0-preview.** NuGet has no 1.28 build of `Microsoft.Agents.AI.AGUI`; `1.13.0-preview.260703.1` is the newest published, and `Ch18.AguiClient` uses it. The server side, `Microsoft.Agents.AI.Hosting.AGUI.AspNetCore`, is `1.28.0-preview.261106.1`, on the same line as `Microsoft.Agents.AI.Hosting`, with no version override. `Ch18.AguiClient`'s self-test runs `AGUIChatClient` 1.13 against that server, and the streamed run, with a server-side tool call, completes. Only `Ch18.AguiServer` and `Ch18.AguiClient` reference AG-UI (`Ch18.InterfaceTests` through them).
 
-The comments in `Directory.Packages.props` record both, and when to re-pin.
+`Microsoft.Agents.AI.Workflows.Declarative` is on 1.28.0 with the rest. `Ch14.WorkflowTests` records two behaviours that changed from 1.20.0: a reused built workflow no longer carries `Global` state into the next run, and `MaximumExpressionLength` is no longer enforced on the expressions it tests (a `DEFECT REPRODUCED` line). Its `DefaultHttpRequestHandler` now takes an allow-list of hosts and checks every redirect hop against it.
+
+The comment in `Directory.Packages.props` records the client exception.
 
 ## Configuration
 
