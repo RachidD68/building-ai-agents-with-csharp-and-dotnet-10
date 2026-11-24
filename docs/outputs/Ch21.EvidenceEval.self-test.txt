@@ -1,5 +1,5 @@
-# code 775fda5 | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 23/23 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
+# code e13fe19 | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 24/24 in mcr.microsoft.com/dotnet/runtime:10.0-noble with --network none
 $ dotnet run -- --self-test
 === Evidence evaluation: self-test (hand-written answers, no model) ===
 
@@ -75,4 +75,7 @@ $ dotnet run -- --self-test
   0 failures in 10 items x 4 paraphrases: 3/40 = 0.075, 3/10 = 0.300
   PASS  paraphrases of one item are not independent trials: the bound is 0.30, not 0.075
 
-RESULT 23/23
+-- 7. Scorer robustness (live answer that crashed the generated regex) --
+  PASS  "rather than . s" scores without throwing and states no day count
+
+RESULT 24/24
