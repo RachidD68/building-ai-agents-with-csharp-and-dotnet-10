@@ -2,7 +2,7 @@
 
 What each Semantic Kernel idea is called in MAF, the rewrites you'll make most, and the traps to check first.
 
-> **Where this comes from.** This guide was Appendix C of the second edition of *Building AI Agents with C# and .NET 10*; the book now prints a two-page summary and points here. The Semantic Kernel side is text from the first edition (its Appendix B). The MAF side is verified at 1.28, the package set this repository pins (`Directory.Packages.props`; the book's Appendix B lists it). The first edition's map named no SK version; every SK name printed here was checked against Semantic Kernel 1.77.0 (`Microsoft.SemanticKernel.Core` and `.Abstractions`), except the planner and process rows. On another release, check the names against your own packages.
+> **Where this comes from.** This guide was Appendix C in the drafts of the second edition of *Building AI Agents with C# and .NET 10*; the book now prints a two-page summary, Appendix C, and points here. The Semantic Kernel side is text from the first edition (its Appendix B). The MAF side is verified at 1.28, the package set this repository pins (`Directory.Packages.props`; the book's Appendix B lists it). The first edition's map named no SK version; every SK name printed here was checked against Semantic Kernel 1.77.0 (`Microsoft.SemanticKernel.Core` and `.Abstractions`), except the planner and process rows. On another release, check the names against your own packages.
 
 Chapter numbers below are the second edition's.
 

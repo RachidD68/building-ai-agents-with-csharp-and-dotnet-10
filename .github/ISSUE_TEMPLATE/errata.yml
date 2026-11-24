@@ -67,9 +67,9 @@ body:
   - type: input
     id: book-version
     attributes:
-      label: Book version
-      description: Found on the title page / "A Note on Versions" section of the book.
-      placeholder: v1.0
+      label: Book edition and version
+      description: The edition (first or second) and, if you know it, the version or download date of your copy.
+      placeholder: e.g. Second Edition
     validations:
       required: true
 

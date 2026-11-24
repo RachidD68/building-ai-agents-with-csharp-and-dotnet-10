@@ -23,8 +23,8 @@ Your first real conversation with an AI model. This project connects to an LLM p
 
 > **Anthropic (Claude)** is also wired up, but it returns an `AIAgent` (not an `IChatClient`), so it
 > registers through `AddAnthropicAgent(...)` (in `AgenticAI.Common.Anthropic`) rather than `AddLlmChatClient(...)`. Set
-> `LlmProvider:Anthropic:ApiKey` (or the `ANTHROPIC_API_KEY` environment variable). See Appendix A
-> for the full Anthropic treatment.
+> `LlmProvider:Anthropic:ApiKey` (or the `ANTHROPIC_API_KEY` environment variable). See
+> `Ch03.AnthropicCall` in this chapter for the Anthropic path.
 
 ### 2. Get Your API Key
 
