@@ -30,7 +30,7 @@ Most samples have a `--self-test` mode. It runs against a scripted chat client, 
 - **47** worked exercise solutions under [`exercises/`](./exercises), in 18 folders
 - **8** Contoso versions under [`contoso/`](./contoso) (v0-v7)
 
-171 are runnable and 6 are libraries (`AgenticAI.Common`, `AgenticAI.Common.Anthropic`, `AgenticAI.Common.Azure`, `AgenticAI.Common.Foundry`, `AgenticAI.Testing`, `Ch17.AspireOrchestration.ServiceDefaults`). 124 projects have an offline `--self-test` mode.
+171 are runnable and 6 are libraries (`AgenticAI.Common`, `AgenticAI.Common.Anthropic`, `AgenticAI.Common.Azure`, `AgenticAI.Common.Foundry`, `AgenticAI.Testing`, `Ch17.AspireOrchestration.ServiceDefaults`).
 <!-- END generated:counts -->
 
 Each project is self-contained, so pick the one for the chapter you're reading. Open `AgenticAI.slnx` once and every project loads together.

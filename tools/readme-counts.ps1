@@ -101,7 +101,9 @@ foreach ($f in $onDisk) {
     if (-not $inSolution.Contains($rel)) { $problems.Add("On disk but not in AgenticAI.slnx: $rel") }
 }
 
-# Projects with a --self-test mode, found the way the build workflow finds them.
+# Projects with a --self-test mode, found the way the build workflow finds them. Reported on
+# the console only: the README does not print this number, so editing a self-test never
+# makes the README check fail.
 $selfTest = [System.Collections.Generic.HashSet[string]]::new()
 foreach ($top in 'src', 'exercises', 'contoso') {
     Get-ChildItem (Join-Path $root $top) -Recurse -File -Filter '*.cs' |
@@ -139,7 +141,7 @@ $counts = @(
     "- **$($ex.Count)** worked exercise solutions under [``exercises/``](./exercises), in $($exFolders.Count) folders"
     "- **$($co.Count)** Contoso versions under [``contoso/``](./contoso) ($coRange)"
     ''
-    "$runnable are runnable and $($libs.Count) are libraries ($(Join-Names $libs)). $($selfTest.Count) projects have an offline ``--self-test`` mode."
+    "$runnable are runnable and $($libs.Count) are libraries ($(Join-Names $libs))."
 ) -join "`n"
 
 $lines = [System.Collections.Generic.List[string]]::new()
