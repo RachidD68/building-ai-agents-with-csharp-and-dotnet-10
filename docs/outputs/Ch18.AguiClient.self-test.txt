@@ -6,7 +6,7 @@
 === Ch18.AguiClient (self-test, offline, AG-UI client 1.13.0-preview, hosting 1.28.0-preview) ===
 
 -- 1. A whole run, applied by identity
-  PASS  RUN_FINISHED for run run_c5b4b101b8; text "The application says: claim 368c0a23-0e8..."; tools submit_claim: finished
+  PASS  RUN_FINISHED for run run_10f88dbe05; text "The application says: claim afcea1d3-7b7..."; tools submit_claim: finished
   PASS  a duplicated TEXT_MESSAGE_START and another run's RUN_FINISHED are discarded (2); not finished yet
   PASS  screen after RUN_FINISHED: response: finished | operation: AwaitingApproval (amount_above_review_limit) | not done
 
@@ -23,6 +23,6 @@
 
 -- 5. MAF's AGUIChatClient against the same host
      client Microsoft.Agents.AI.AGUI 1.13.0-preview, server Microsoft.Agents.AI.Hosting.AGUI.AspNetCore 1.28.0-preview
-  PASS  RunStreamingAsync over AG-UI: "The application says: 75 EUR (c59491f0-922f-4a6d-b2c1-c74d9d..."
+  PASS  RunStreamingAsync over AG-UI: "The application says: 120 EUR (afcea1d3-7b71-4f5f-bd26-0857d..."
 
 RESULT 9/9

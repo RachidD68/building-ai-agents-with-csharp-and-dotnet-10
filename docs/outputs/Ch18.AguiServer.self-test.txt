@@ -22,7 +22,7 @@
 -- 3. AG-UI carries the response; the status stream carries the operation
      AG-UI event types: RUN_STARTED, TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END, TOOL_CALL_RESULT, TEXT_MESSAGE_START, TEXT_MESSAGE_CONTENT, TEXT_MESSAGE_END, RUN_FINISHED
   PASS  RUN_STARTED ... RUN_FINISHED with the client's run id
-  PASS  the reply streams the tool's result: "The application says: claim 5607ec5d-104e-499c-8c7b-d906a1ab8d5a for 120 EUR: waiting for a finance reviewer."
+  PASS  the reply streams the tool's result: "The application says: claim b40df168-3add-4a4f-8d57-e979180a079e for 120 EUR: waiting for a finance reviewer."
   PASS  after RUN_FINISHED the operation is AwaitingApproval (amount_above_review_limit): not done
   PASS  bob reads alice's thread status: 404
 
