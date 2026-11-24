@@ -1,7 +1,9 @@
 # Contoso v7: the qualified version
 
 v6 as it is, frozen as a candidate that a team who did not build it can
-identify, run and check. Nothing in v6, v5, v4, v3 or v2 changes.
+identify, run and check, plus the assistant configuration its live layer
+evaluates. Nothing in v6, v5, v4 or v2 changes; v3's project file gains one line
+(`InternalsVisibleTo`) so v7 can run v3's live scenarios as they are.
 
 ```
 release/candidate.json        the candidate manifest (no secrets): projects, compiled prompts,
@@ -24,6 +26,25 @@ is paid through the simulated `FakePaymentProvider`, and no real payment
 provider is integrated or qualified. The `qualification` profile turns every
 capability on; the campaign and the drill use it, with simulated effects only.
 
+## The assistant the live layer evaluates
+
+```
+RequesterAssistant.ToolsFor   tools per caller: submit_for_review for a requester;
+                              approve_reimbursement only for a finance reviewer, and
+                              only while claims.decide ships enabled
+ClaimActions                  the effects behind the tools (simulated); rights re-read
+                              from the directory, capability, separation of duties
+AnswerContractClient          after generation: every stated value carries a supplied
+                              evidence id; a value sentence with none gets the id of the
+                              one supplied chunk that holds all its numbers; otherwise
+                              one retry without tools; still unbacked -> the desk's
+                              abstention (or, on an action turn, the tool's result)
+--evidence-live               the requester assistant on evidence-cases.v1, scored with
+                              the evaluation chapter's five layers (linked files)
+--faq-live                    v3's two FAQ desks, unchanged, on v3's live scenarios,
+                              behind the contract
+```
+
 ## The campaign
 
 `src/Ch23.Qualification/Ch23.QualificationRunner` reads `release/candidate.json`
@@ -36,12 +57,17 @@ dotnet run --project src/Ch23.Qualification/Ch23.QualificationRunner -- --real -
 dotnet run --project src/Ch23.Qualification/Ch23.QualificationRunner -- --dossier <dir>/qualification-results.json
 ```
 
-The release folder names candidate `contoso-v7.1`. The first candidate,
+The release folder names candidate `contoso-v7.2`. The first candidate,
 `contoso-v7`, stopped when the evidence scorer crashed (journal FJ-01, fixed by
-956c463). On `contoso-v7.1` the real-provider layer completed, and three rows
-failed: F6, F9 and C8 (journal FJ-09, FJ-03, FJ-04). The evidence does not support
-calling this candidate qualified. The runs of record are
-`docs/outputs/Ch23.release-dossier.md` and `Ch23.contoso-v7.release-dossier.md`.
+956c463). On `contoso-v7.1` three rows failed, F6, F9 and C8: its live evidence
+step evaluated the evaluation chapter's demonstration agent, which offers the
+approve tool to every caller and checks no citation. `contoso-v7.2` (fixes
+78bc373, manifest 81bc32b) evaluates the configuration above: every row that
+applies passed, F10 (Azure) was not run, and H1 and H2 wait for people. The nine
+value answers were cited by the contract's attachment, not by the model (FJ-03).
+That supports calling `contoso-v7.2` qualified within the limits below, no
+further. The runs of record are `docs/outputs/Ch23.release-dossier.md`,
+`Ch23.contoso-v7.1.release-dossier.md` and `Ch23.contoso-v7.release-dossier.md`.
 
 ## The handoff drill
 
@@ -53,8 +79,10 @@ still waits); a worker killed after the provider accepted a payment (the claim
 shows OutcomeUnknown; a new worker reconciles by reference, one payment).
 
 ```bash
-dotnet run --project contoso/v7-qualified -- --self-test   # gate, refusals, drill; RESULT n/n
+dotnet run --project contoso/v7-qualified -- --self-test   # gate, refusals, drill, tools, contract; RESULT n/n
 dotnet run --project contoso/v7-qualified -- --drill
+dotnet run --project contoso/v7-qualified -- --evidence-live   # Ollama
+dotnet run --project contoso/v7-qualified -- --faq-live        # Ollama + nomic-embed-text
 ```
 
 The drill is scripted. Having an engineer who did not build Contoso run it from
@@ -66,7 +94,10 @@ human row H1; the runner never marks it.
 The `limits` list in `release/candidate.json` is the source; the dossier prints it.
 In short: simulated payments only; the gate is on the HTTP API, not on v5's
 command line; the real-provider layer is one small local model, one run; no cloud
-provider was run; the host agent's free-text answers are not evaluated; one machine.
+provider was run; the host agent's free-text answers are not evaluated (the
+requester assistant and v3's desks are console entry points no route serves); the
+contract proves where a cited number came from, not that the sentence is supported;
+in-memory indexes; one machine.
 
 ## Running
 
@@ -78,4 +109,5 @@ dotnet run
 curl http://localhost:5000/release -H "Authorization: Bearer <token>"
 ```
 
-The build output's `appsettings.json` is v5's, as in v6.
+The build output's `appsettings.json` is v7's own: v3's `LlmProvider` section and
+v5's `VisionModel` section.

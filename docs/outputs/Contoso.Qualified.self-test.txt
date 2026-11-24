@@ -1,5 +1,5 @@
-# code c86d7ac | SDK 11.0.100 | Windows 11 | env: none
-# note: also passes 18/18 on Linux (aspnet:10.0-noble, --network none), body identical
+# code 81bc32b | SDK 11.0.100 | Windows 11 | env: none
+# note: also passes 36/36 on Linux (aspnet:10.0-noble, --network none), body identical
 $ dotnet run -- --self-test
 === Contoso v7: the qualified version (self-test, offline) ===
 
@@ -9,7 +9,7 @@ $ dotnet run -- --self-test
   PASS  rita approves: 503 capability_disabled (claims.decide)
   PASS  POST /decision: 503; with no token: 401 (authentication runs before the gate)
   PASS  the claim is still AwaitingReview: nothing was recorded
-  PASS  GET /release: candidate contoso-v7.1, profile release, disabled: claims.decide
+  PASS  GET /release: candidate contoso-v7.2, profile release, disabled: claims.decide
 
 -- 2. Refusals at start
   PASS  a capability disabled with no reason: release profile refused: claims.decide is disabled with no reason
@@ -31,4 +31,26 @@ $ dotnet run -- --self-test
   PASS  the worker is killed after the provider accepted the payment: 1 payment in the provider's journal, the claim shows OutcomeUnknown
   PASS  a new worker reconciles by reference: "by reference"; the claim is Reconciled; payments 1
 
-RESULT 18/18
+-- 4. Tools by role: the requester's agent never holds the approve tool
+  PASS  alice (requester), release profile: offered submit_for_review
+  PASS  alice, qualification profile: offered submit_for_review
+  PASS  rita (finance reviewer), release profile: offered submit_for_review (claims.decide ships disabled)
+  PASS  rita, qualification profile: offered submit_for_review, approve_reimbursement
+  PASS  a model that calls approve_reimbursement(C-1002) as alice: offered [submit_for_review]; effects: none
+  PASS  rita approves her own C-2001: refused: separation_of_duties; alice's C-1002: Claim C-1002 is approved.
+  PASS  rita's role revoked after her agent was built, the tool she still holds: refused: reviewer_not_authorized
+  PASS  an approval in the release profile, called directly: refused: capability_disabled
+  PASS  8 requests from alice and rita at once (Task.Run, Barrier, all 8 in the model together: yes): each saw only its caller's tools (8/8)
+
+-- 5. The answer contract: every stated value carries its evidence id, or no answer is shown
+  PASS  an uncited value: "Employees with 0-2 years of service get 15 days of PTO per year [pto-policy@v1#2]."; model calls 1; Ch21's scorer: fact pass, support pass, citation pass
+  PASS  a value in two supplied chunks: not attached, one retry (2 calls; tools offered 1, then 0 on the retry): "Submit it at least 30 days ahead [pto-policy@v1#5]."
+  PASS  never cites: after one retry the assistant abstains: "I can't give a checked answer to this one." (2 calls)
+  PASS  cites an id it was not given: after one retry the assistant abstains: "I can't give a checked answer to this one." (2 calls)
+  PASS  states a value with no evidence: after one retry the assistant abstains: "I can't give a checked answer to this one." (2 calls)
+  PASS  v3's handbook desk: cited on the retry: Answered [expense-policy]; never cited: Declined, shown "I don't have information about that in our knowledge base. Please contact HR."
+  PASS  a structured (JSON) proposal passes through unchanged (1 call)
+  PASS  6 answers at once on one contract client (Task.Run, Barrier, all 6 in the model together: yes): each cites only its own chunk (6/6)
+  PASS  detector: 2 answers one after the other are not reported as concurrent (not reported)
+
+RESULT 36/36

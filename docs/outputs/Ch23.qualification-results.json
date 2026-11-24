@@ -5,14 +5,14 @@
     "offline",
     "real"
   ],
-  "startedUtc": "2026-11-24 14:09:43",
-  "finishedUtc": "2026-11-24 14:23:48",
+  "startedUtc": "2026-11-24 15:20:04",
+  "finishedUtc": "2026-11-24 15:30:09",
   "platform": "Microsoft Windows 10.0.26200 (X64)",
   "sdkUsed": "11.0.100",
-  "candidateSha256": "409e33f1ec138b1a64c680886c0f3eb9107491c637e60a8584f3eaaa63720932",
+  "candidateSha256": "54c51751581f43def13d0b4d19dee7bc5bfff5ff0a0d1317fb2ed9cae2bd2d0b",
   "candidate": {
-    "candidate": "contoso-v7.1",
-    "manifestSha256": "69b8ffa66754ce7b7649acf50ab70cf89b818bb7695caa3628d0f2e44103d5d7",
+    "candidate": "contoso-v7.2",
+    "manifestSha256": "5207729b87b5f97b28617c0907ea2b887838c58970c8231689640ee1a7285bbf",
     "globalJsonSdk": "10.0.100",
     "packages": [
       {
@@ -199,7 +199,7 @@
       },
       {
         "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
-        "sha256": "3a314a525916361b2b11237755c4894b936965955ebedab4f20c823740b12211"
+        "sha256": "c603f1cc068ec4357a718b6424d9e63e1ce09376768ef90691a8ed4cbed7407d"
       },
       {
         "project": "src/Ch08.AuthorizedActions/Ch08.ActionPolicy/Ch08.ActionPolicy.csproj",
@@ -293,6 +293,16 @@
         "id": "policy-faq-version",
         "sha256": "ef1ced164faca4ee0ee202573868f5d77a968459943ae799b6db8756e13d5f5c",
         "chars": 14
+      },
+      {
+        "id": "requester-assistant",
+        "sha256": "e33f534b5d659d029c413289d27e167f1e6cbaef0b9474af0d3a4cc174e9ae5d",
+        "chars": 574
+      },
+      {
+        "id": "answer-contract-retry",
+        "sha256": "4ee0842eef35dae4bf9cffbde5e5ba5f24da7df7f1ab72a1bc803a867747573c",
+        "chars": 312
       }
     ],
     "skills": [
@@ -333,7 +343,7 @@
         "id": "capabilities",
         "path": "contoso/v7-qualified/release/capabilities.json",
         "files": 1,
-        "sha256": "ded014397657303cd2b095117f011c980c674e616d3b854e898e150a8ee1ec50"
+        "sha256": "eab3d0d433f9e27cf18638d7027a82a06e1aa7793bde70ef9dc5b827904e0f5e"
       }
     ],
     "profile": {
@@ -344,7 +354,7 @@
       "configurationProfile": "release"
     },
     "problems": [],
-    "sha256": "409e33f1ec138b1a64c680886c0f3eb9107491c637e60a8584f3eaaa63720932"
+    "sha256": "54c51751581f43def13d0b4d19dee7bc5bfff5ff0a0d1317fb2ed9cae2bd2d0b"
   },
   "identityUnchangedAfterRun": true,
   "model": {
@@ -372,7 +382,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.2,
+          "seconds": 1.1,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Contoso.Qualified.log"
@@ -386,7 +396,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 12,
+          "seconds": 9.1,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Contoso.Qualified.log"
@@ -400,7 +410,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.2,
+          "seconds": 0.7,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Contoso.FaqEvidence.log"
@@ -414,7 +424,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 3.8,
+          "seconds": 1.4,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Contoso.FaqEvidence.log"
@@ -428,7 +438,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.6,
+          "seconds": 0.5,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch15.ExternalEffects.log"
@@ -442,7 +452,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.4,
+          "seconds": 0.9,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch15.ExternalEffects.log"
@@ -456,7 +466,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.8,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch15.DurableReview.log"
@@ -470,7 +480,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 2.2,
+          "seconds": 1,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch15.DurableReview.log"
@@ -484,7 +494,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.5,
+          "seconds": 0.4,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch15.RestartTests.log"
@@ -498,7 +508,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.8,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch15.RestartTests.log"
@@ -512,7 +522,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.6,
+          "seconds": 0.5,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch16.SkillLifecycle.log"
@@ -526,7 +536,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.8,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch16.SkillLifecycle.log"
@@ -554,7 +564,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 2.1,
+          "seconds": 1.3,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch17.IdentityTests.log"
@@ -568,7 +578,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.8,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch20.ThreatRegisterTests.log"
@@ -582,7 +592,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.5,
+          "seconds": 1.2,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch20.ThreatRegisterTests.log"
@@ -596,7 +606,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.5,
+          "seconds": 0.6,
           "status": "passed",
           "reason": null,
           "log": "logs/restore_Ch21.EvidenceEval.log"
@@ -610,7 +620,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 0.9,
+          "seconds": 0.8,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch21.EvidenceEval.log"
@@ -638,7 +648,7 @@
           "exitCode": 0,
           "passed": 1,
           "total": 1,
-          "seconds": 1.7,
+          "seconds": 1.4,
           "status": "passed",
           "reason": null,
           "log": "logs/build_Ch22.LoadProfile.log"
@@ -662,7 +672,7 @@
           "exitCode": 0,
           "passed": 16,
           "total": 16,
-          "seconds": 2.3,
+          "seconds": 2.1,
           "status": "passed",
           "reason": null,
           "log": "logs/threat-register.log"
@@ -676,7 +686,7 @@
           "exitCode": 0,
           "passed": 24,
           "total": 24,
-          "seconds": 1.7,
+          "seconds": 1.6,
           "status": "passed",
           "reason": null,
           "log": "logs/evidence-scorer.log"
@@ -690,7 +700,7 @@
           "exitCode": 0,
           "passed": 18,
           "total": 18,
-          "seconds": 2.2,
+          "seconds": 1.9,
           "status": "passed",
           "reason": null,
           "log": "logs/skill-lifecycle.log"
@@ -704,7 +714,7 @@
           "exitCode": 0,
           "passed": 17,
           "total": 17,
-          "seconds": 6.2,
+          "seconds": 5.9,
           "status": "passed",
           "reason": null,
           "log": "logs/load-profile.log"
@@ -718,7 +728,7 @@
           "exitCode": 0,
           "passed": 33,
           "total": 33,
-          "seconds": 27,
+          "seconds": 4.6,
           "status": "passed",
           "reason": null,
           "log": "logs/reimbursement.log"
@@ -732,7 +742,7 @@
           "exitCode": 0,
           "passed": 22,
           "total": 22,
-          "seconds": 13.6,
+          "seconds": 6.1,
           "status": "passed",
           "reason": null,
           "log": "logs/faq-evidence.log"
@@ -746,7 +756,7 @@
           "exitCode": 0,
           "passed": 12,
           "total": 12,
-          "seconds": 10.9,
+          "seconds": 2.3,
           "status": "passed",
           "reason": null,
           "log": "logs/receipts.log"
@@ -770,7 +780,7 @@
           "exitCode": 0,
           "passed": 11,
           "total": 11,
-          "seconds": 15.5,
+          "seconds": 8.7,
           "status": "passed",
           "reason": null,
           "log": "logs/durable-resume.log"
@@ -784,7 +794,7 @@
           "exitCode": 0,
           "passed": 33,
           "total": 33,
-          "seconds": 101.7,
+          "seconds": 79.2,
           "status": "passed",
           "reason": null,
           "log": "logs/restart-tests.log"
@@ -798,7 +808,7 @@
           "exitCode": 0,
           "passed": 22,
           "total": 22,
-          "seconds": 26,
+          "seconds": 3,
           "status": "passed",
           "reason": null,
           "log": "logs/identity-tests.log"
@@ -812,7 +822,7 @@
           "exitCode": 0,
           "passed": 25,
           "total": 25,
-          "seconds": 24.7,
+          "seconds": 6.4,
           "status": "passed",
           "reason": null,
           "log": "logs/api-ui.log"
@@ -824,9 +834,9 @@
           "command": "dotnet run --project contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-build --no-launch-profile -- --self-test",
           "provider": "fake",
           "exitCode": 0,
-          "passed": 18,
-          "total": 18,
-          "seconds": 17.8,
+          "passed": 36,
+          "total": 36,
+          "seconds": 11.2,
           "status": "passed",
           "reason": null,
           "log": "logs/qualified.log"
@@ -850,7 +860,7 @@
           "exitCode": 0,
           "passed": 2,
           "total": 2,
-          "seconds": 3.7,
+          "seconds": 35.6,
           "status": "completed",
           "reason": null,
           "log": "logs/model-identity.log"
@@ -858,13 +868,13 @@
         {
           "id": "faq-live",
           "kind": "run",
-          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
-          "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile --",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet run --project contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-build --no-launch-profile -- --faq-live",
           "provider": "ollama",
           "exitCode": 0,
-          "passed": 2,
+          "passed": 3,
           "total": 3,
-          "seconds": 216.8,
+          "seconds": 142.6,
           "status": "completed",
           "reason": null,
           "log": "logs/faq-live.log"
@@ -872,13 +882,13 @@
         {
           "id": "evidence-live",
           "kind": "run",
-          "project": "src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj",
-          "command": "dotnet run --project src/Ch21.Evaluation/Ch21.EvidenceEval/Ch21.EvidenceEval.csproj -c Release --no-build --no-launch-profile --",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet run --project contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-build --no-launch-profile -- --evidence-live",
           "provider": "ollama",
-          "exitCode": 1,
-          "passed": 9,
+          "exitCode": 0,
+          "passed": 21,
           "total": 21,
-          "seconds": 232.3,
+          "seconds": 184,
           "status": "completed",
           "reason": null,
           "log": "logs/evidence-live.log"
@@ -886,8 +896,8 @@
         {
           "id": "faq-azure",
           "kind": "run",
-          "project": "contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj",
-          "command": "dotnet run --project contoso/v3-faq-evidence/Contoso.FaqEvidence.csproj -c Release --no-build --no-launch-profile --",
+          "project": "contoso/v7-qualified/Contoso.Qualified.csproj",
+          "command": "dotnet run --project contoso/v7-qualified/Contoso.Qualified.csproj -c Release --no-build --no-launch-profile -- --faq-live",
           "provider": "azure",
           "exitCode": null,
           "passed": 0,
@@ -916,7 +926,7 @@
           "exitCode": 0,
           "passed": 30,
           "total": 32,
-          "seconds": 33.5,
+          "seconds": 38.1,
           "status": "completed",
           "reason": null,
           "log": "logs/load-live.log"
@@ -987,8 +997,8 @@
       "test": "faq-live",
       "data": "faq-handbook, policy-corpus",
       "expected": "all \u0027as expected\u0027",
-      "status": "failed",
-      "observed": "2/3",
+      "status": "passed",
+      "observed": "3/3",
       "artifact": "logs/faq-live.log"
     },
     {
@@ -1020,8 +1030,8 @@
       "test": "evidence-live: /^\\s\u002Bevidence\\.support\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 0.8",
       "data": "evidence-cases.v1",
       "expected": "\u003E= 0.8 of applicable items",
-      "status": "failed",
-      "observed": "0/9",
+      "status": "passed",
+      "observed": "9/9",
       "artifact": "logs/evidence-live.log"
     },
     {
@@ -1034,6 +1044,17 @@
       "status": "not-run",
       "observed": "step not-run: not configured: LlmProvider__AzureOpenAI__Endpoint is not set",
       "artifact": null
+    },
+    {
+      "id": "F11",
+      "promise": "An answer whose stated values are not cited is never shown as an answer",
+      "evidence": "contract",
+      "test": "qualified: never cites: after one retry the assistant abstains",
+      "data": "evidence-cases.v1",
+      "expected": "the abstention, after two model calls",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
     },
     {
       "id": "C1",
@@ -1119,9 +1140,20 @@
       "test": "evidence-live: /^\\s\u002Baction\\.allowed\\s\u002B(?\u003Cpass\u003E\\d\u002B)/(?\u003Ctotal\u003E\\d\u002B)/ \u003E= 1",
       "data": "evidence-cases.v1",
       "expected": "every action item",
-      "status": "failed",
-      "observed": "3/6",
+      "status": "passed",
+      "observed": "6/6",
       "artifact": "logs/evidence-live.log"
+    },
+    {
+      "id": "C9",
+      "promise": "The requester-facing assistant is never offered a tool its caller may not use",
+      "evidence": "contract",
+      "test": "qualified: each saw only its caller\u0027s tools",
+      "data": "scripted callers",
+      "expected": "approve_reimbursement for a finance reviewer only, while claims.decide ships",
+      "status": "passed",
+      "observed": "PASS line found",
+      "artifact": "logs/qualified.log"
     },
     {
       "id": "S1",
@@ -1175,11 +1207,11 @@
     "stepsRefused": 0,
     "stepsNotRun": 1,
     "stepsFailed": 0,
-    "cases": 329,
-    "casesPassed": 314,
-    "rows": 22,
-    "rowsPassed": 16,
-    "rowsFailed": 3,
+    "cases": 347,
+    "casesPassed": 345,
+    "rows": 24,
+    "rowsPassed": 21,
+    "rowsFailed": 0,
     "rowsNotRun": 1,
     "rowsRefused": 0,
     "rowsPendingHuman": 2
@@ -1187,13 +1219,13 @@
   "budgets": [
     {
       "budgetMinutes": null,
-      "spentSeconds": 284.3,
+      "spentSeconds": 157.8,
       "modelLockSeconds": 0
     },
     {
       "budgetMinutes": 25,
-      "spentSeconds": 486.2,
-      "modelLockSeconds": 486.4
+      "spentSeconds": 400.4,
+      "modelLockSeconds": 400.4
     }
   ]
 }

@@ -120,7 +120,7 @@ Folder and project names carry the second-edition chapter number. The **Exercise
 
 ### Contoso, v0 to v7
 
-Each version has its own folder under [`contoso/`](./contoso) and a README. v0, v1 and v2 stand alone. From v3 on, a version references the one it extends: v3 and v4 build on v2, v5 on v4, v6 on v5 and v7 on v6. Opening v5 brings v4 and v2 along, so any version runs without the earlier chapters.
+Each version has its own folder under [`contoso/`](./contoso) and a README. v0, v1 and v2 stand alone. From v3 on, a version references the one it extends: v3 and v4 build on v2, v5 on v4, v6 on v5, and v7 on v6 (and on v3, whose FAQ desks it runs behind its answer contract). Opening v5 brings v4 and v2 along, so any version runs without the earlier chapters.
 
 | Version | Folder | Built in | What it adds |
 |---|---|---|---|
@@ -131,7 +131,7 @@ Each version has its own folder under [`contoso/`](./contoso) and a README. v0, 
 | v4 · Receipts | [`v4-receipts`](./contoso/v4-receipts) | Chapter 12 | Receipt images read into typed fields and validated; an amount nobody can read goes to a reviewer, not to payment |
 | v5 · Durable resume | [`v5-durable-resume`](./contoso/v5-durable-resume) | Chapter 15 | A claim waiting for review survives the loss of its process; the payment happens once or ends as an explicit unknown |
 | v6 · API and interface | [`v6-api-ui`](./contoso/v6-api-ui) | Chapters 17 and 18 | An HTTP API with a validated identity on every request, and an interface that shows operation state and lets a reviewer approve exact arguments |
-| v7 · Qualified version | [`v7-qualified`](./contoso/v7-qualified) | Chapter 23 | v6 frozen as an identifiable candidate, with a candidate manifest, an acceptance matrix, a release dossier and its known limits |
+| v7 · Qualified version | [`v7-qualified`](./contoso/v7-qualified) | Chapter 23 | v6 frozen as an identifiable candidate, with a candidate manifest, an acceptance matrix, a release dossier and its known limits; the requester assistant with tools by role and an answer contract |
 
 ## Recommended path
 
