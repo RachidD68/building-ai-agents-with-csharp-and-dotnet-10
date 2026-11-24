@@ -1,12 +1,14 @@
 # note: also passes on Linux (mcr.microsoft.com/dotnet/aspnet:10.0-noble, --network none); the output is identical apart from GUIDs, which concurrent request wins, and the stalled-reader count where there is one
 # Ch18.AguiServer --self-test
-# code: CodeSample 1cdebf9, Release build on Windows (-warnaserror, clean worktree, locked restore)
+# code: CodeSample 499c08f, Release build on Windows (-warnaserror, clean worktree, locked restore)
 # platform: Windows 11, dotnet Ch18.AguiServer.dll --self-test, exit 0
 
-=== Ch18.AguiServer (self-test, offline, AG-UI 1.5.0-preview) ===
+=== Ch18.AguiServer (self-test, offline, AG-UI hosting 1.28.0-preview) ===
 
 -- 1. The thread id is a locator, not an authorization
-  PASS  DEFECT REPRODUCED: no guard, bob posts alice's thread id and the model answers "I see 2 user message(s); the first: 'My hotel receipt: 412 EUR, room 18'."
+  PASS  DEFECT REPRODUCED: no guard, no isolation key, bob posts alice's thread id and the model answers "I see 2 user message(s); the first: 'My hotel receipt: 412 EUR, room 18'."
+  PASS  no guard, isolation key (tid, sub): bob on alice's thread id gets his own session: "I see 1 user message(s); the first: 'hello'."
+  PASS  WithInMemorySessionStore() isolates by default; with no AgentIsolationKeyProvider registered the run fails: Agent isolation key is required but was not provided by the configured AgentIsolationKeyProvider.
   PASS  guarded: bob on alice's thread id: 404
   PASS  fabrikam/E-1001 (same subject, other tenant) on it: 403, refused before the thread is looked up
 
@@ -20,13 +22,13 @@
 -- 3. AG-UI carries the response; the status stream carries the operation
      AG-UI event types: RUN_STARTED, TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END, TOOL_CALL_RESULT, TEXT_MESSAGE_START, TEXT_MESSAGE_CONTENT, TEXT_MESSAGE_END, RUN_FINISHED
   PASS  RUN_STARTED ... RUN_FINISHED with the client's run id
-  PASS  the reply streams the tool's result: "The application says: claim ad1bb088-164d-4edb-aaf9-1fcfb37c2552 for 120 EUR: waiting for a finance reviewer."
+  PASS  the reply streams the tool's result: "The application says: claim 5607ec5d-104e-499c-8c7b-d906a1ab8d5a for 120 EUR: waiting for a finance reviewer."
   PASS  after RUN_FINISHED the operation is AwaitingApproval (amount_above_review_limit): not done
   PASS  bob reads alice's thread status: 404
 
--- 4. One agent instance, an identity per request
+-- 4. An agent instance per request, the caller read per call
   PASS  alice and bob list their claims at once (Task.Run): alice sees 120 only, bob 40 only
-  PASS  agent instances built: assistant 1, review 1, after every AG-UI request above (registered Transient)
+  PASS  agent instances built: assistant 6, review 1: one per AG-UI request that reached the agent (registered Transient)
   PASS  bob's 40 EUR: Completed (committed_low_value), under the review limit
 
 -- 5. The review screen decides; the application commits
@@ -38,4 +40,4 @@
 -- 6. A reviewer revoked mid-review
   PASS  after the revocation: review agent 403, decision POST 403 reviewer_not_authorized
 
-RESULT 18/18
+RESULT 20/20

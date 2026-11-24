@@ -1,4 +1,4 @@
-# code 17e93de | SDK 11.0.100 | Windows 11 | none (scripted models)
+# code 499c08f | SDK 11.0.100 | Windows 11 | none (scripted models)
 $ dotnet run -- --self-test
 
 === Workflow Tests (offline) ===
@@ -37,13 +37,17 @@ $ dotnet run -- --self-test
 -- Declarative workflow (YAML)
   PASS  YAML builds an ordinary Workflow; each declared action raises its events
   PASS  the declared expression routes a long claim to review
-  DEFECT REPRODUCED  reuse one built declarative workflow: Global.Runs carries into run 2 (Declarative 1.20.0)
-  PASS  fixed: build per run -> identical output twice
+  PASS  reuse one built declarative workflow: Global.Runs does not carry into run 2 (Declarative 1.28.0)
+  PASS  build per run -> identical output twice
   PASS  restore: a fresh build resumed from the checkpoint after set_route finishes the run
-  PASS  MaximumExpressionLength 10: Build accepts the file; the run refuses the expression, nothing is sent
-        refused with: InvalidOperationException: Errors: Error 0-57: Expression can't be more than 10 characters. The expression is 57 characters.
-  DEFECT REPRODUCED  DefaultHttpRequestHandler on a default HttpClient follows a 302 to another authority (host:port)
-  PASS  allow-list handler: the redirect is not followed, the HTTP step fails
-  PASS  allow-list handler: a host not on the list is refused before any connection
+  DEFECT REPRODUCED  MaximumExpressionLength 10 (Declarative 1.28.0): Build accepts the file and the run still evaluates the 57-character expression
+  PASS  DefaultHttpRequestHandler refuses a primary handler that follows redirects; nothing is sent
+        refused with: InvalidOperationException: The primary HTTP handler must disable automatic redirects and cookies.
+  PASS  allow-list: the 302 to an authority not on the list is refused, the HTTP step fails
+  PASS  allow-list: a host not on the list is refused before any connection
+        refused with: HttpRequestException: The request host and port are not in the allowed hosts list.
+  PASS  allow-list: an entry without a port does not admit 127.0.0.1 on another port
+  PASS  allow-list: a 302 to another listed authority is followed (each hop is checked)
+  PASS  allow-list entries are host[:port]: a scheme or a wildcard is refused when the handler is built
 
-RESULT 34/34
+RESULT 37/37
