@@ -11,7 +11,8 @@
 //                              the LlmProvider model (Ollama by default),
 //                              minted tokens; then MAF's AGUIChatClient
 //   dotnet run -- --self-test  offline: fake model (RESULT n/n)
-// PREVIEW: Microsoft.Agents.AI.AGUI 1.5.0-preview. Simulated effects only.
+// PREVIEW: Microsoft.Agents.AI.AGUI 1.13.0-preview (no 1.28 build on NuGet)
+// against AG-UI hosting 1.28.0-preview. Simulated effects only.
 // ============================================================================
 
 using System.Net.Http.Json;

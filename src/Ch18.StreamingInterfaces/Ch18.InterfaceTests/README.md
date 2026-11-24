@@ -17,4 +17,5 @@ and review routes, the client's views, the approval desk.
 dotnet run --project src/Ch18.StreamingInterfaces/Ch18.InterfaceTests -- --self-test
 ```
 
-Fake model, TestServer, minted tokens. AG-UI packages are 1.5.0-preview.
+Fake model, TestServer, minted tokens. AG-UI hosting is 1.28.0-preview; the
+client package is 1.13.0-preview (NuGet has no 1.28 build of it).

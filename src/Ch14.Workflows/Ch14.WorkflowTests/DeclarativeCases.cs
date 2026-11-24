@@ -6,6 +6,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Agents.AI.Workflows.Declarative;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ch14.WorkflowTests;
 
@@ -59,24 +60,25 @@ internal static class DeclarativeCases
 
         Workflow shared = Build(TriageYaml);
         DeclaredRun a = await RunAsync(shared, LongClaim), b = await RunAsync(shared, LongClaim);
-        Harness.Defect("reuse one built declarative workflow: Global.Runs carries into run 2 (Declarative 1.20.0)",
-            a.Text.Contains("runs: 1") && b.Text.Contains("runs: 2"));
+        // Declarative 1.20.0 carried Global.Runs into run 2 ("runs: 2"); 1.28.0 starts each run with Global blank.
+        Harness.Check("reuse one built declarative workflow: Global.Runs does not carry into run 2 (Declarative 1.28.0)",
+            a.Text.Contains("runs: 1") && b.Text.Contains("runs: 1"), $"{a.Text} / {b.Text}");
         DeclaredRun c = await RunAsync(Build(TriageYaml), LongClaim), d = await RunAsync(Build(TriageYaml), LongClaim);
-        Harness.Check("fixed: build per run -> identical output twice", c.Text == d.Text && c.Text.Contains("runs: 1"));
+        Harness.Check("build per run -> identical output twice", c.Text == d.Text && c.Text.Contains("runs: 1"));
 
         Harness.Check("restore: a fresh build resumed from the checkpoint after set_route finishes the run",
             await RestoreAsync() is { } restored && restored.Text.Contains("route: review, runs: 1") &&
             !restored.Invoked.Contains("set_route") && restored.Invoked.Contains("send_route"));
 
-        // Build and run apart: the limit is enforced when the run evaluates the expression, not by Build.
+        // Declarative 1.20.0 refused the 57-character expression when the run evaluated it. 1.28.0 still passes the
+        // limit to the Power Fx engine it creates, but the run evaluates the expression anyway.
         Workflow? tight = null;
         string? buildError = null;
         try { tight = Build(TriageYaml, new DeclarativeWorkflowOptions(new InMemoryAgentProvider()) { MaximumExpressionLength = 10 }); }
         catch (Exception ex) { buildError = Flatten(ex); }
         DeclaredRun tooLong = tight is null ? new DeclaredRun([], [], "", [buildError ?? "build failed"]) : await RunAsync(tight, LongClaim);
-        Harness.Check("MaximumExpressionLength 10: Build accepts the file; the run refuses the expression, nothing is sent",
-            tight is not null && tooLong.Text.Length == 0 && tooLong.Errors.Count > 0, string.Join(" | ", tooLong.Errors));
-        Console.WriteLine($"        refused with: {tooLong.Errors.FirstOrDefault()?.Split(" -> ").Last()}");
+        Harness.Defect("MaximumExpressionLength 10 (Declarative 1.28.0): Build accepts the file and the run still evaluates the 57-character expression",
+            tight is not null && tooLong.Errors.Count == 0 && tooLong.Text.Contains("route: review, runs: 1"));
 
         await HttpContractAsync();
     }
@@ -113,30 +115,53 @@ internal static class DeclarativeCases
     // ---------------------------------------------------------------
     // The redirect contract: a declared HTTP step may reach only the hosts
     // the host program allows, and a redirect never takes it elsewhere.
+    // Declarative 1.28's DefaultHttpRequestHandler enforces both itself.
     // ---------------------------------------------------------------
     private static async Task HttpContractAsync()
     {
-        // Two loopback listeners on different ports stand in for two hosts: the allow-list compares authorities.
+        // Two loopback listeners on different ports stand in for two hosts: the allow-list compares host and port.
         await using LoopbackServer elsewhere = LoopbackServer.Start(_ => "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
         await using LoopbackServer policy = LoopbackServer.Start(_ =>
             $"HTTP/1.1 302 Found\r\nLocation: {elsewhere.BaseUrl}/collect\r\nContent-Length: 0\r\n\r\n");
+        string policyHost = new Uri(policy.BaseUrl).Authority, elsewhereHost = new Uri(elsewhere.BaseUrl).Authority;
         string yaml = HttpYaml(policy.BaseUrl + "/limits");
 
-        await using (DefaultHttpRequestHandler plain = new())
-            await RunAsync(Build(yaml, Options(plain)), "go");
-        Harness.Defect("DefaultHttpRequestHandler on a default HttpClient follows a 302 to another authority (host:port)",
-            policy.Hits == 1 && elsewhere.Hits == 1);
+        // A primary handler that follows redirects itself (the HttpClientHandler default) is refused before any request.
+        DeclaredRun plain = await RunAsync(Build(yaml, Options(new DefaultHttpRequestHandler([policyHost], HttpHandlers.Factory, "default"))), "go");
+        Harness.Check("DefaultHttpRequestHandler refuses a primary handler that follows redirects; nothing is sent",
+            policy.Hits == 0 && elsewhere.Hits == 0 && plain.Errors.Any(e => e.Contains("must disable automatic redirects")));
+        Console.WriteLine($"        refused with: {plain.Errors.FirstOrDefault()?.Split(" -> ").Last()}");
 
-        await using AllowListHttpRequestHandler guarded = new([new Uri(policy.BaseUrl).Authority]);
+        DefaultHttpRequestHandler guarded = new([policyHost], HttpHandlers.Factory, HttpHandlers.Declarative);
         DeclaredRun blocked = await RunAsync(Build(yaml, Options(guarded)), "go");
-        Harness.Check("allow-list handler: the redirect is not followed, the HTTP step fails",
-            policy.Hits == 2 && elsewhere.Hits == 1 && blocked.Errors.Count > 0 && blocked.Text.Length == 0);
+        Harness.Check("allow-list: the 302 to an authority not on the list is refused, the HTTP step fails",
+            policy.Hits == 1 && elsewhere.Hits == 0 && blocked.Errors.Count > 0 && blocked.Text.Length == 0);
 
         DeclaredRun refused = await RunAsync(Build(HttpYaml(elsewhere.BaseUrl + "/collect"), Options(guarded)), "go");
-        Harness.Check("allow-list handler: a host not on the list is refused before any connection",
-            elsewhere.Hits == 1 && refused.Errors.Any(e => e.Contains("not on the allow-list")));
-    }
+        Harness.Check("allow-list: a host not on the list is refused before any connection",
+            elsewhere.Hits == 0 && refused.Errors.Any(e => e.Contains("not in the allowed hosts list")));
+        Console.WriteLine($"        refused with: {refused.Errors.FirstOrDefault()?.Split(" -> ").Last()}");
 
+        DeclaredRun portless = await RunAsync(Build(yaml, Options(new DefaultHttpRequestHandler(["127.0.0.1"], HttpHandlers.Factory, HttpHandlers.Declarative))), "go");
+        Harness.Check("allow-list: an entry without a port does not admit 127.0.0.1 on another port",
+            policy.Hits == 1 && portless.Errors.Any(e => e.Contains("not in the allowed hosts list")));
+
+        DefaultHttpRequestHandler both = new([policyHost, elsewhereHost], HttpHandlers.Factory, HttpHandlers.Declarative);
+        DeclaredRun followed = await RunAsync(Build(yaml, Options(both)), "go");
+        Harness.Check("allow-list: a 302 to another listed authority is followed (each hop is checked)",
+            policy.Hits == 2 && elsewhere.Hits == 1 && followed.Errors.Count == 0 && followed.Text.Contains("ok"),
+            string.Join(" | ", followed.Errors));
+
+        string? badEntries = null;
+        foreach (string entry in new[] { "http://127.0.0.1", "*" })
+        {
+            try { _ = new DefaultHttpRequestHandler([entry], HttpHandlers.Factory, HttpHandlers.Declarative); }
+            catch (ArgumentException ex) { badEntries ??= ex.Message; continue; }
+            badEntries = null; break;
+        }
+        Harness.Check("allow-list entries are host[:port]: a scheme or a wildcard is refused when the handler is built",
+            badEntries is not null);
+    }
     private static string HttpYaml(string url) => $"""
         kind: Workflow
         trigger:
@@ -154,6 +179,7 @@ internal static class DeclarativeCases
         """;
 
     internal sealed record DeclaredRun(List<string> Invoked, List<string> Completed, string Text, List<string> Errors);
+
 
     private static async Task<DeclaredRun> RunAsync(Workflow workflow, string input)
     {
@@ -186,36 +212,25 @@ internal static class DeclarativeCases
 }
 
 /// <summary>
-/// The host's HTTP seam for declared workflows: only allow-listed authorities,
-/// and redirects are returned, never followed.
+/// The host's HTTP seam for declared workflows. DefaultHttpRequestHandler 1.28 takes the
+/// allow-list and an IHttpMessageHandlerFactory; it requires a primary handler with automatic
+/// redirects and cookies off, and follows redirects itself, checking every hop against the list.
 /// </summary>
-internal sealed class AllowListHttpRequestHandler : IHttpRequestHandler, IAsyncDisposable
+internal static class HttpHandlers
 {
-    private readonly HashSet<string> _allowed;
-    private readonly HttpClient _client = new(new SocketsHttpHandler { AllowAutoRedirect = false });
-    private readonly DefaultHttpRequestHandler _inner;
+    public const string Declarative = "declarative";
 
-    public AllowListHttpRequestHandler(IEnumerable<string> allowedAuthorities)
-    {
-        _allowed = new HashSet<string>(allowedAuthorities, StringComparer.OrdinalIgnoreCase);
-        _inner = new DefaultHttpRequestHandler(_client);
-    }
+    public static readonly IHttpMessageHandlerFactory Factory = Build();
 
-    public Task<HttpRequestResult> SendAsync(HttpRequestInfo request, CancellationToken cancellationToken = default)
+    private static IHttpMessageHandlerFactory Build()
     {
-        Uri uri = new(request.Url);
-        if (!_allowed.Contains(uri.Authority))
-            throw new InvalidOperationException($"refused: {uri.Authority} is not on the allow-list");
-        return _inner.SendAsync(request, cancellationToken);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _inner.DisposeAsync();
-        _client.Dispose();
+        ServiceCollection services = new();
+        services.AddHttpClient(Declarative).ConfigurePrimaryHttpMessageHandler(() =>
+            new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false });
+        services.AddHttpClient("default");             // the default primary handler: follows redirects
+        return services.BuildServiceProvider().GetRequiredService<IHttpMessageHandlerFactory>();
     }
 }
-
 /// <summary>
 /// The YAML declares no agent, so the provider only keeps conversations in
 /// memory. No hosted service and no preview package are involved.

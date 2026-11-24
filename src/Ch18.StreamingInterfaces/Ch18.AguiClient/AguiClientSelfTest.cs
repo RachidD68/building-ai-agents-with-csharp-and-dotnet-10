@@ -16,7 +16,7 @@ internal static class AguiClientSelfTest
 
     public static async Task<int> RunAsync()
     {
-        Console.WriteLine("=== Ch18.AguiClient (self-test, offline, AG-UI 1.5.0-preview) ===\n");
+        Console.WriteLine("=== Ch18.AguiClient (self-test, offline, AG-UI client 1.13.0-preview, hosting 1.28.0-preview) ===\n");
         await using TestHost host = await TestHost.StartAsync(new ToolScriptChatClient());
         string alice = host.Token("contoso", "E-1001"), bob = host.Token("contoso", "E-2002"), rita = host.Token("contoso", "rita");
         ContosoClient ui = new(host.Http, alice);
@@ -72,6 +72,7 @@ internal static class AguiClientSelfTest
             (int?)refused?.StatusCode == 404 && await bobUi.ResyncAsync("t-1") is null);
 
         Console.WriteLine("\n-- 5. MAF's AGUIChatClient against the same host");
+        Console.WriteLine($"     client {Version(typeof(AGUIChatClient))}, server {Version(typeof(Microsoft.Agents.AI.Hosting.AGUI.AspNetCore.AGUIEndpointRouteBuilderExtensions))}");
         HttpClient http = host.Http;
         http.DefaultRequestHeaders.Authorization = new("Bearer", alice);
         AIAgent remote = new AGUIChatClient(http, "/agui/assistant").AsAIAgent(name: "contoso-remote", instructions: null);
@@ -84,6 +85,10 @@ internal static class AguiClientSelfTest
         Console.WriteLine($"\nRESULT {_passed}/{_total}");
         return _passed == _total ? 0 : 1;
     }
+
+    private static string Version(Type t) =>
+        t.Assembly.GetName().Name + " " + (t.Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion.Split('+')[0] ?? "?");
 
     private static void Check(string name, bool ok)
     {

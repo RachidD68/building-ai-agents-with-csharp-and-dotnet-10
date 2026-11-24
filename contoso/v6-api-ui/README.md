@@ -53,10 +53,10 @@ because v5's worker runs in another process.
 - The event log is in memory. A restarted API starts new runs and cursors
   under a new epoch: a client that comes back with an old cursor gets a
   snapshot, and `StatusView` resets its cursor when the epoch changes.
-- No AG-UI route: the only cached AG-UI hosting build needs
-  `Microsoft.Agents.AI.Hosting` 1.5, and this host runs 1.28 (see
-  `src/Ch18.StreamingInterfaces/Ch18.AguiServer`). The SSE status stream is
-  the GA path.
+- No AG-UI route: AG-UI is a preview surface, mapped by
+  `src/Ch18.StreamingInterfaces/Ch18.AguiServer` (`MapAGUIServer`, on the same
+  1.28.0-preview `Microsoft.Agents.AI.Hosting` line as this host). The SSE
+  status stream is the GA path.
 - No revise: v5 has no proposal versions beyond (amount, account version).
   `Ch18.ApprovalUi` shows revise.
 - The build output's `appsettings.json` is v5's (a referenced project's content

@@ -4,7 +4,8 @@
        message identity, discards a cut run and resyncs the operation from the
        status snapshot, and shows "done" only for the operation's terminal
        state. Also drives MAF's AGUIChatClient. PREVIEW: Microsoft.Agents.AI.AGUI
-       1.5.0-preview (the only AG-UI build in the offline cache); the GA path is
+       1.13.0-preview (NuGet's newest; it has no 1.28 build), against the
+       server's AG-UI hosting 1.28.0-preview; the GA path is
        the status stream alone (Ch18.SseStatusStream's StatusStreamClient).
        References Ch18.AguiServer to run it in process for the self-test and the
        live run. -->

@@ -13,17 +13,38 @@ internal static class AguiSelfTest
 
     public static async Task<int> RunAsync()
     {
-        Console.WriteLine("=== Ch18.AguiServer (self-test, offline, AG-UI 1.5.0-preview) ===\n");
+        Console.WriteLine("=== Ch18.AguiServer (self-test, offline, AG-UI hosting 1.28.0-preview) ===\n");
 
         Console.WriteLine("-- 1. The thread id is a locator, not an authorization");
-        await using (TestHost open = await TestHost.StartAsync(new ToolScriptChatClient(), guardThreads: false))
+        await using (TestHost open = await TestHost.StartAsync(new ToolScriptChatClient(), guardThreads: false, isolateSessions: false))
         {
             await AguiWire.RunAsync(open.Http, "/agui/assistant", open.Token("contoso", "E-1001"),
                 AguiWire.Body("t-alice", "r1", ("m1", "My hotel receipt: 412 EUR, room 18")));
             (_, List<JsonElement> stolen) = await AguiWire.RunAsync(open.Http, "/agui/assistant", open.Token("contoso", "E-2002"),
                 AguiWire.Body("t-alice", "r2", ("m2", "hello")));
-            Check($"DEFECT REPRODUCED: no guard, bob posts alice's thread id and the model answers \"{AguiWire.Text(stolen).Trim()}\"",
+            Check($"DEFECT REPRODUCED: no guard, no isolation key, bob posts alice's thread id and the model answers \"{AguiWire.Text(stolen).Trim()}\"",
                 AguiWire.Text(stolen).Contains("412 EUR", StringComparison.Ordinal));
+        }
+        await using (TestHost keyed = await TestHost.StartAsync(new ToolScriptChatClient(), guardThreads: false))
+        {
+            await AguiWire.RunAsync(keyed.Http, "/agui/assistant", keyed.Token("contoso", "E-1001"),
+                AguiWire.Body("t-alice", "r1", ("m1", "My hotel receipt: 412 EUR, room 18")));
+            (_, List<JsonElement> apart) = await AguiWire.RunAsync(keyed.Http, "/agui/assistant", keyed.Token("contoso", "E-2002"),
+                AguiWire.Body("t-alice", "r2", ("m2", "hello")));
+            Check($"no guard, isolation key (tid, sub): bob on alice's thread id gets his own session: \"{AguiWire.Text(apart).Trim()}\"",
+                AguiWire.Text(apart).Contains("I see 1 user message(s); the first: 'hello'", StringComparison.Ordinal));
+        }
+        await using (TestHost unkeyed = await TestHost.StartAsync(new ToolScriptChatClient(), registerIsolationKey: false))
+        {
+            string? refused = null;
+            try
+            {
+                await AguiWire.RunAsync(unkeyed.Http, "/agui/assistant", unkeyed.Token("contoso", "E-1001"),
+                    AguiWire.Body("t-alice", "r1", ("m1", "hello")));
+            }
+            catch (InvalidOperationException ex) { refused = ex.Message; }
+            Check($"WithInMemorySessionStore() isolates by default; with no AgentIsolationKeyProvider registered the run fails: {refused}",
+                refused?.Contains("isolation key is required", StringComparison.Ordinal) == true);
         }
 
         Dictionary<string, int> built = [];
@@ -40,7 +61,7 @@ internal static class AguiSelfTest
         Check($"fabrikam/E-1001 (same subject, other tenant) on it: {sameSubject}, refused before the thread is looked up", sameSubject == 403);
 
         Console.WriteLine("\n-- 1b. The guard reads the thread id the way MAF does");
-        await using (TestHost loose = await TestHost.StartAsync(new ToolScriptChatClient(), readThreadIdLikeMaf: false))
+        await using (TestHost loose = await TestHost.StartAsync(new ToolScriptChatClient(), readThreadIdLikeMaf: false, isolateSessions: false))
         {
             await AguiWire.RunAsync(loose.Http, "/agui/assistant", loose.Token("contoso", "E-1001"),
                 AguiWire.Body("t-alice", "r1", ("m1", "My hotel receipt: 412 EUR, room 18")));
@@ -81,7 +102,7 @@ internal static class AguiSelfTest
         Check("bob reads alice's thread status: 404", (await Snapshot(http, bob, "t-alice-2")) is null);
         Guid proposal = Guid.Parse(System.Text.RegularExpressions.Regex.Match(AguiWire.Text(run), "[0-9a-f-]{36}").Value);
 
-        Console.WriteLine("\n-- 4. One agent instance, an identity per request");
+        Console.WriteLine("\n-- 4. An agent instance per request, the caller read per call");
         await AguiWire.RunAsync(http, "/agui/assistant", bob, AguiWire.Body("t-bob", "r1", ("m1", "submit a parking receipt of 40 EUR")));
         Task<(int, List<JsonElement>)> a = Task.Run(() => AguiWire.RunAsync(http, "/agui/assistant", alice, AguiWire.Body("t-alice-3", "r1", ("m1", "list my claims"))));
         Task<(int, List<JsonElement>)> b = Task.Run(() => AguiWire.RunAsync(http, "/agui/assistant", bob, AguiWire.Body("t-bob-2", "r1", ("m1", "list my claims"))));
@@ -89,8 +110,8 @@ internal static class AguiSelfTest
         Check($"alice and bob list their claims at once (Task.Run): alice sees 120 only, bob 40 only",
             aliceList.Contains("120", StringComparison.Ordinal) && !aliceList.Contains("40 EUR", StringComparison.Ordinal)
             && bobList.Contains("40", StringComparison.Ordinal) && !bobList.Contains("120", StringComparison.Ordinal));
-        Check($"agent instances built: assistant {built.GetValueOrDefault("assistant")}, review {built.GetValueOrDefault("review")}, after every AG-UI request above (registered Transient)",
-            built.GetValueOrDefault("assistant") == 1 && built.GetValueOrDefault("review") == 1);
+        Check($"agent instances built: assistant {built.GetValueOrDefault("assistant")}, review {built.GetValueOrDefault("review")}: one per AG-UI request that reached the agent (registered Transient)",
+            built.GetValueOrDefault("assistant") == 6 && built.GetValueOrDefault("review") == 1);
         StatusEvent? bobSnap = await Snapshot(http, bob, "t-bob");
         Check($"bob's 40 EUR: {bobSnap?.State} ({bobSnap?.Reason}), under the review limit", bobSnap?.State == OperationState.Completed);
 

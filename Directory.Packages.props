@@ -8,19 +8,18 @@
     <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.28.0" />
-    <!-- Declarative workflows (YAML). 1.28.0 is on NuGet but not in the offline cache this repo restores from; 1.20.0 is, and runs on Workflows 1.28 (Ch14.WorkflowTests). Re-pin to 1.28.0 when it is restored. -->
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows.Declarative" Version="1.20.0" />
+    <!-- Declarative workflows (YAML), on the same 1.28.0 line as Workflows (Ch14.WorkflowTests). -->
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows.Declarative" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Harness" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.28.0-preview.261106.1" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" Version="1.28.0-preview.261106.1" />
-    <!-- AG-UI (Ch18.AguiServer, Ch18.AguiClient): 1.5.0-preview is the only AG-UI build in the offline cache.
-         Its hosting package is compiled against Microsoft.Agents.AI.Hosting 1.5 (AgentSessionStore moved in 1.28:
-         TypeLoadException on MapAGUI), so Ch18.AguiServer overrides Hosting to 1.5.0-preview locally.
-         Re-pin both to the 1.28 line when it is restored. -->
-    <PackageVersion Include="Microsoft.Agents.AI.AGUI" Version="1.5.0-preview.260507.1" />
-    <PackageVersion Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.5.0-preview.260507.1" />
+    <!-- AG-UI. Server (Ch18.AguiServer): the hosting package is on the same 1.28.0-preview line as
+         Microsoft.Agents.AI.Hosting, so no override is needed. Client (Ch18.AguiClient): NuGet has no
+         1.28 build of Microsoft.Agents.AI.AGUI; 1.13.0-preview.260703.1 is the newest published. -->
+    <PackageVersion Include="Microsoft.Agents.AI.AGUI" Version="1.13.0-preview.260703.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.28.0-preview.261106.1" />
     <!-- New provider packages (1.10) -->
     <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.28.0" />
     <!-- Foundry upstream: Azure AI Projects client used by AIProjectClient.AsAIAgent(...).

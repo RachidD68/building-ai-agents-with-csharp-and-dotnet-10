@@ -1,13 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- The Contoso assistant over AG-UI (MapAGUI), behind JWT bearer, with the
+  <!-- The Contoso assistant over AG-UI (MapAGUIServer), behind JWT bearer, with the
        operation's state on the GA status stream and approvals on the review
-       routes. PREVIEW: Microsoft.Agents.AI.Hosting.AGUI.AspNetCore
-       1.5.0-preview is the only AG-UI build in the offline cache, and it needs
-       Microsoft.Agents.AI.Hosting 1.5.0-preview (overridden below): against
-       Hosting 1.28 MapAGUI throws TypeLoadException (AgentSessionStore moved).
-       So this host cannot share a process with Contoso v6 (Hosting 1.28); the
-       GA alternative is Ch18.SseStatusStream, which v6 maps. -->
+       routes. PREVIEW: Microsoft.Agents.AI.Hosting.AGUI.AspNetCore is on the
+       same 1.28.0-preview line as Microsoft.Agents.AI.Hosting. The GA
+       alternative is Ch18.SseStatusStream, which Contoso v6 maps. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <NoWarn>$(NoWarn);MAAI001;MEAI001</NoWarn>
@@ -15,7 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Agents.AI" />
-    <PackageReference Include="Microsoft.Agents.AI.Hosting" VersionOverride="1.5.0-preview.260507.1" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting" />
     <PackageReference Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />

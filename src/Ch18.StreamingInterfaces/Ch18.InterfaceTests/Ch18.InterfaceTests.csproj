@@ -4,8 +4,8 @@
        (Ch18.AguiServer) in process with its status stream and review routes,
        the console client's views (Ch18.AguiClient, Ch18.SseStatusStream), and
        the approval desk (Ch18.ApprovalUi). A console harness (RESULT n/n),
-       offline: fake model, minted tokens. AG-UI packages are 1.5.0-preview
-       (see Ch18.AguiServer). -->
+       offline: fake model, minted tokens. AG-UI: hosting 1.28.0-preview,
+       client 1.13.0-preview (see Ch18.AguiServer, Ch18.AguiClient). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <NoWarn>$(NoWarn);MAAI001;MEAI001</NoWarn>

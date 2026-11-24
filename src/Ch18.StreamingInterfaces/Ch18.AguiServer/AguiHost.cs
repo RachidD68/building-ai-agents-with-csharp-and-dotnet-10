@@ -19,7 +19,10 @@ public sealed record AguiHostOptions
     /// <summary>null: the model comes from the LlmProvider section (AgenticAI.Common).</summary>
     public IChatClient? ChatClient { get; init; }
 
-    /// <summary>false reproduces the defect: the AG-UI thread id alone finds a stored session.</summary>
+    /// <summary>
+    /// false: no thread guard. With IsolateSessions false as well, the AG-UI thread id alone
+    /// finds a stored session (the defect).
+    /// </summary>
     public bool GuardThreads { get; init; } = true;
 
     /// <summary>
@@ -27,6 +30,18 @@ public sealed record AguiHostOptions
     /// MAF's AG-UI parser matches it case-insensitively and keeps the last duplicate.
     /// </summary>
     public bool ReadThreadIdLikeMaf { get; init; } = true;
+
+    /// <summary>
+    /// false: WithInMemorySessionStore(withIsolation: false) and no isolation key provider, so a
+    /// stored session is keyed by the AG-UI thread id alone.
+    /// </summary>
+    public bool IsolateSessions { get; init; } = true;
+
+    /// <summary>
+    /// false (with IsolateSessions true) shows the 1.28 requirement: an isolated store with no
+    /// AgentIsolationKeyProvider registered refuses the request.
+    /// </summary>
+    public bool RegisterIsolationKey { get; init; } = true;
 
     /// <summary>Called each time an agent instance is built (the self-test counts them).</summary>
     public Action<string>? AgentBuilt { get; init; }
@@ -83,9 +98,14 @@ public static class AguiHost
             .AddPolicy("finance-reviewer", p => p.RequireAssertion(c =>
                 CallerKey.From(c.User) is { } who && rights.Of(who.TenantId, who.SubjectId).Contains(Roles.FinanceReviewer)));
 
-        builder.Services.AddAGUI();
-        // Registered Transient, as a per-request agent would be. MapAGUI 1.5 still builds it once,
-        // when the route is mapped (the self-test counts it), so the tools read the caller per call.
+        builder.Services.AddAGUIServer();
+        // Hosting 1.28 scopes each stored session by an isolation key; here it is the validated (tid, sub).
+        // The thread id still names the operation's status stream, so the thread guard in Map stays.
+        bool isolate = options.IsolateSessions;
+        if (isolate && options.RegisterIsolationKey)
+            builder.Services.AddSingleton<AgentIsolationKeyProvider, CallerIsolationKeyProvider>();
+        // Registered Transient, as a per-request agent would be. The self-test counts how often
+        // MapAGUIServer builds it; the tools read the caller per call either way.
         builder.AddAIAgent("assistant", (sp, name) => Built(options, name, sp).AsAIAgent(name: name,
             instructions: """
                 You are Contoso's expense assistant. To submit a claim, call submit_claim with the amount and
@@ -93,11 +113,11 @@ public static class AguiHost
                 Never say that a claim was approved or paid: the screen shows its state.
                 """,
             tools: [.. sp.GetRequiredService<ClaimOperations>().EmployeeTools()]), ServiceLifetime.Transient)
-            .WithInMemorySessionStore();
+            .WithInMemorySessionStore(withIsolation: isolate);
         builder.AddAIAgent("review", (sp, name) => Built(options, name, sp).AsAIAgent(name: name,
             instructions: "You help a Contoso finance reviewer. Call pending_reviews to list claims waiting for review. Two sentences.",
             tools: [.. sp.GetRequiredService<ClaimOperations>().ReviewerTools()]), ServiceLifetime.Transient)
-            .WithInMemorySessionStore();
+            .WithInMemorySessionStore(withIsolation: isolate);
         return builder;
     }
 
@@ -132,8 +152,8 @@ public static class AguiHost
             await next(http);
         });
 
-        app.MapAGUI("assistant", "/agui/assistant").RequireAuthorization("employee");
-        app.MapAGUI("review", "/agui/review").RequireAuthorization("finance-reviewer");
+        app.MapAGUIServer("assistant", "/agui/assistant").RequireAuthorization("employee");
+        app.MapAGUIServer("review", "/agui/review").RequireAuthorization("finance-reviewer");
 
         OperationLog log = app.Services.GetRequiredService<OperationLog>();
         app.MapStatusStream("/conversations", log, (http, thread) =>
@@ -187,6 +207,17 @@ public sealed record CallerKey(string TenantId, string SubjectId)
             : null;
 
     public static CallerKey? From(IHttpContextAccessor accessor) => accessor.HttpContext is { } http ? From(http.User) : null;
+}
+
+/// <summary>
+/// The isolation key Hosting 1.28 puts on every stored session: the validated (tid, sub) of the
+/// current request, never a value from the payload. (Both AG-UI routes require authorization, so
+/// a request without a validated caller never reaches the store.)
+/// </summary>
+public sealed class CallerIsolationKeyProvider(IHttpContextAccessor accessor) : AgentIsolationKeyProvider
+{
+    public override ValueTask<string?> GetIsolationKeyAsync(CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(CallerKey.From(accessor) is { } who ? JsonSerializer.Serialize(new[] { who.TenantId, who.SubjectId }) : null);
 }
 
 /// <summary>The identity system's answer, asked on every request: a revoked right is gone at once.</summary>

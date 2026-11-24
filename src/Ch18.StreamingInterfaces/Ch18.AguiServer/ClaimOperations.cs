@@ -8,10 +8,10 @@ using Microsoft.Extensions.AI;
 namespace Ch18.AguiServer;
 
 /// <summary>
-/// The application behind the agent's tools. The agent instance is built once
-/// (MapAGUI resolves it when the route is mapped, whatever the lifetime), so
+/// The application behind the agent's tools. This class is a singleton, so
 /// nothing here holds an identity: every tool call reads the caller from the
-/// current request. The model proposes; this class decides the operation's
+/// current request (MapAGUIServer builds the Transient agent per request, but
+/// the tools it is built with are this instance's). The model proposes; this class decides the operation's
 /// state and writes it to the status stream of the AG-UI thread.
 /// </summary>
 public sealed class ClaimOperations(IHttpContextAccessor accessor, ApprovalDesk desk, OperationLog log, Rights rights)

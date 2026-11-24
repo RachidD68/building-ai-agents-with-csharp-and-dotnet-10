@@ -25,4 +25,8 @@ self-test uses a fake model; `dotnet run` uses the `LlmProvider` model
 (Ollama llama3.2 by default); when the model submits the claim, a reviewer
 approves it and the client follows the status stream to its terminal state.
 
-**Preview.** `Microsoft.Agents.AI.AGUI` 1.5.0-preview. Simulated effects only.
+**Preview.** `Microsoft.Agents.AI.AGUI` 1.13.0-preview.260703.1, the newest
+build on NuGet (there is no 1.28 build of the client package), against the
+server's `Microsoft.Agents.AI.Hosting.AGUI.AspNetCore` 1.28.0-preview; the
+self-test's last check runs `AGUIChatClient` against that server. Simulated
+effects only.

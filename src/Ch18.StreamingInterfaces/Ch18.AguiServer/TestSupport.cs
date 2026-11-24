@@ -80,7 +80,7 @@ public sealed class TestHost : IAsyncDisposable
     public ClaimOperations Claims => App.Services.GetRequiredService<ClaimOperations>();
 
     public static async Task<TestHost> StartAsync(IChatClient model, bool guardThreads = true, Action<string>? agentBuilt = null,
-        bool readThreadIdLikeMaf = true)
+        bool readThreadIdLikeMaf = true, bool isolateSessions = true, bool registerIsolationKey = true)
     {
         string db = Path.Combine(Path.GetTempPath(), $"ch18-agui-{Guid.NewGuid():N}.db");
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
@@ -96,7 +96,8 @@ public sealed class TestHost : IAsyncDisposable
         });
         AguiHost.Configure(builder, new AguiHostOptions
         {
-            ChatClient = model, GuardThreads = guardThreads, ReadThreadIdLikeMaf = readThreadIdLikeMaf, DatabasePath = db, AgentBuilt = agentBuilt,
+            ChatClient = model, GuardThreads = guardThreads, ReadThreadIdLikeMaf = readThreadIdLikeMaf, IsolateSessions = isolateSessions,
+            RegisterIsolationKey = registerIsolationKey, DatabasePath = db, AgentBuilt = agentBuilt,
         });
         WebApplication app = builder.Build();
         AguiHost.Map(app);

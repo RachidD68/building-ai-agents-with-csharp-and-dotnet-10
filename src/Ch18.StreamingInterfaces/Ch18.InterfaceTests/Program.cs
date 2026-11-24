@@ -14,7 +14,7 @@
 //                     and a body that names a second thread id in another case
 //
 //   dotnet run -- --self-test   (dotnet run alone does the same)
-// Fake model, TestServer, minted tokens. AG-UI 1.5.0-preview.
+// Fake model, TestServer, minted tokens. AG-UI hosting 1.28.0-preview.
 // ============================================================================
 
 using System.Net.Http.Json;

@@ -7,8 +7,8 @@
        state as typed, resumable SSE (Ch18.SseStatusStream, GA) and a review
        and approval bound to the exact arguments (ch. 8's digest).
        Microsoft.Agents.AI.Hosting is a preview package (via Ch17.AspNetCoreHost);
-       AG-UI is not mapped here (its only cached build needs Hosting 1.5, see
-       Ch18.AguiServer). TestHost is used by the self-test only. Simulated
+       AG-UI is not mapped here (a preview surface; Ch18.AguiServer maps it on
+       the same Hosting 1.28.0-preview line). TestHost is used by the self-test only. Simulated
        effects only. -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);MAAI001</NoWarn>
